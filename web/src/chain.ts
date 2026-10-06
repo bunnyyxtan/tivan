@@ -18,10 +18,12 @@ async function limitedFetch(_input: string | URL | Request, init?: RequestInit):
   const calls: { method?: string }[] = Array.isArray(body) ? body : body ? [body] : []
   const n = calls.length || 1
   const write = calls.some((c) => /^eth_(send|getTransaction|estimateGas)/.test(c.method ?? ''))
+  // Free-tier endpoints cap eth_getLogs at a few blocks, so log queries only go to endpoints that serve real ranges.
+  const pool = calls.some((c) => c.method === 'eth_getLogs') ? net.rpcs.filter((x) => x.logs !== false) : net.rpcs
   for (let attempt = 0; ; attempt++) {
     let e = net.rpcs[0]
     for (;;) {
-      if (!write) e = net.rpcs.reduce((best, x) => (room(x, n) > room(best, n) ? x : best))
+      if (!write) e = pool.reduce((best, x) => (room(x, n) > room(best, n) ? x : best))
       if (room(e, n) >= 0) break
       await sleep(120)
     }
@@ -331,11 +333,8 @@ export async function foundingCollectors(market: Address, n = 5): Promise<Founde
   }
 }
 
-const orderCreated = parseAbiItem('event OrderCreated(uint40 orderId, address owner, uint96 size, uint32 price, bool isBuy)')
 export type Order = { id: number; price: number; size: number; isBuy: boolean }
-/** This account's resting orders on one market: OrderCreated logs, then s_orders for what is still open. */
-const orderScan = new Map<string, { block: bigint; ids: bigint[] }>()
-/** Order ids this owner placed on a market: Envio's Order index, or an incremental OrderCreated log scan. */
+/** Order ids this owner placed on a market: Envio's Order index, or a walk over the book's order slots. */
 async function orderIds(market: Address, owner: Address): Promise<bigint[]> {
   if (indexerUrl) {
     try {
@@ -345,23 +344,28 @@ async function orderIds(market: Address, owner: Address): Promise<bigint[]> {
       })
       return Order.map((o) => BigInt(o.orderId))
     } catch (e) {
-      console.warn('indexer down, scanning orders over RPC', e)
+      console.warn('indexer down, reading order slots over RPC', e)
     }
   }
-  // NOTE: RPC fallback scans OrderCreated from at most ~3k blocks (~20 min) back, then incrementally (in memory).
-  // Limit: older resting orders are missed on a fresh page load; the indexer has them all.
-  const key = `${market}:${owner}`.toLowerCase()
-  const seen = orderScan.get(key) ?? { block: 0n, ids: [] }
-  const head = await pub.getBlockNumber()
-  let start = seen.block ? seen.block + 1n : head - 3000n
-  if (start < net.deployBlock) start = net.deployBlock
-  const chunks = []
-  for (let b = start; b <= head; b += 100n) chunks.push(pub.getLogs({ address: market, event: orderCreated, fromBlock: b, toBlock: b + 99n > head ? head : b + 99n }))
-  const fresh = (await Promise.all(chunks)).flat().filter((l) => l.args.owner?.toLowerCase() === owner.toLowerCase())
-  const ids = [...seen.ids, ...fresh.map((l) => BigInt(l.args.orderId!))]
-  orderScan.set(key, { block: head, ids })
-  return ids
+  // NOTE: Kuru numbers orders 1, 2, 3... per market and keeps each slot's owner, so the RPC fallback reads s_orders
+  // slot by slot (10 per round) until 10 empty slots in a row, then only re-reads the tail on later polls. Limit: cost
+  // grows with a market's total order count; the indexer replaces this at scale.
+  const key = market.toLowerCase()
+  const s = slots.get(key) ?? { owner: new Map<number, string>(), tail: 0 }
+  slots.set(key, s)
+  for (let from = s.tail + 1, empty = 0; empty < 10; from += 10) {
+    const ids = Array.from({ length: 10 }, (_, i) => from + i)
+    const rows = await Promise.all(ids.map((id) => pub.readContract({ address: market, abi: bookAbi, functionName: 's_orders', args: [id] })))
+    rows.forEach(([o], i) => {
+      if (o === ZERO) return void empty++
+      empty = 0
+      s.owner.set(ids[i], o.toLowerCase())
+      s.tail = ids[i]
+    })
+  }
+  return [...s.owner].filter(([, o]) => o === owner.toLowerCase()).map(([id]) => BigInt(id))
 }
+const slots = new Map<string, { owner: Map<number, string>; tail: number }>()
 
 /** This account's resting orders on one market; the chain (s_orders) decides what is still open. */
 export async function openOrders(market: Address, owner: Address): Promise<Order[]> {

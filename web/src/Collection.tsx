@@ -41,12 +41,12 @@ export function Collection({ account }: { account: LocalAccount }) {
       </section>
 
       <section className="section">
-        {data && !mine.length && (
+        {data && orders && !mine.length && (
           <div className="empty">
             No cards yet. <a className="u" href="#/">Buy one</a> or <a className="u" href="#/vault">vault your own</a>.
           </div>
         )}
-        {!data && [0, 1].map((i) => <div key={i} className="skeleton" />)}
+        {(!data || (!orders && !mine.length)) && [0, 1].map((i) => <div key={i} className="skeleton" />)}
         <div className="rows">
           {mine.map((h) => {
             const v = value(h)

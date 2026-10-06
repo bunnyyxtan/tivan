@@ -114,6 +114,7 @@ cd web && npm install && npm run dev        # http://localhost:5173
 | `VITE_INDEXER_URL` | unset | Envio GraphQL endpoint; without it the app reads the chain directly |
 | `VITE_RPC_URL` | unset | Dedicated RPC endpoint tried first (restrict it to your domain); the public RPCs stay as extra capacity |
 | `VITE_RPC_LIMIT` | `40` | Requests per second that endpoint tolerates |
+| `VITE_RPC_LOGS` | `false` | Set `true` only if that endpoint allows 100-block `eth_getLogs` ranges (free Quicknode caps it at 5) |
 | `VITE_BASE` | `/` | Public base path, set by the Pages workflow |
 
 **Indexer** (needs a free Envio token, see [indexer/README.md](indexer/README.md))
