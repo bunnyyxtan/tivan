@@ -40,8 +40,9 @@ export async function createAccount(name: string): Promise<LocalAccount> {
   return fromPrf(res.prfOutput)
 }
 
-export async function signIn(): Promise<LocalAccount> {
-  const credential = savedPasskey()
+// `pick` ignores the remembered passkey so the browser lists every passkey for this site.
+export async function signIn(pick = false): Promise<LocalAccount> {
+  const credential = pick ? undefined : savedPasskey()
   const res = await getPasskeyPrfOutput({ rpId: location.hostname, credential })
   if (!credential) localStorage.setItem(CRED, JSON.stringify({ credentialId: res.credentialId }))
   return fromPrf(res.prfOutput)
@@ -60,9 +61,20 @@ export function deviceAccount(): LocalAccount {
   return privateKeyToAccount(key)
 }
 
-export function signOut() {
-  localStorage.removeItem(CRED)
+/**
+ * Asks for the passkey again (Face ID, fingerprint, Windows Hello) right before money or a card moves, and checks it is
+ * the passkey this account came from. The signing key stays in memory for the session, so this is a confirmation gate.
+ * Device-key test accounts have no passkey and skip it.
+ */
+export async function confirmPasskey(expected: string) {
+  const res = await getPasskeyPrfOutput({ rpId: location.hostname, credential: savedPasskey() })
+  if (fromPrf(res.prfOutput).address.toLowerCase() !== expected.toLowerCase()) throw new Error('That passkey is not the one this account was created with.')
 }
+export const confirmStep = (a: LocalAccount): [string, () => Promise<void>][] => (a.source === 'mera' ? [['Confirming with your passkey', () => confirmPasskey(a.address)]] : [])
+
+// NOTE: only a public hint (which passkey to ask for) is remembered, so signing out keeps it. That way the next visit says
+// "Continue with your passkey" and cannot start a second, empty account by accident.
+export function signOut() {}
 
 export const friendlyError = (e: unknown): string => {
   if (isMeraError(e)) {

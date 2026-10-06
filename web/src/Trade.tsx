@@ -3,6 +3,7 @@ import { parseEventLogs, type LocalAccount } from 'viem'
 import { net } from './config'
 import { bookAbi, decodeL2, erc20Abi, explorerTx, hasMarket, lastPaid, loadSkus, marginAbi, marginAccount, pub, send, tradeHistory } from './chain'
 import { usePortfolio } from './portfolio'
+import { confirmStep } from './account'
 import { logActivity } from './activity'
 import { useAlerts } from './alerts'
 import { Header, Slab, Steps, Toast, cardSub, cardTitle, delta, useFlow, usePoll, useTint, usd } from './ui'
@@ -171,6 +172,7 @@ export function BuyFlow({ sku, account }: { sku: string; account: LocalAccount }
     const needFromExchange = port.cash * 100 < cents ? toUnits(price - port.cash) : 0n
     let tx: string | void = undefined
     const ok = await flow.run([
+      ...confirmStep(account),
       ...(needFromExchange > 0n
         ? ([['Using your exchange cash', async () => (await send(account, { address: port.ma, abi: marginAbi, functionName: 'withdraw', args: [needFromExchange, net.quote] })).transactionHash]] as [string, () => Promise<string>][])
         : []),

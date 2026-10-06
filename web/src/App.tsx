@@ -136,7 +136,7 @@ function SignIn({ onReady, onGuest, inline }: { onReady: (a: LocalAccount) => vo
           Continue with a passkey
         </button>
       )}
-      <button className="ghost" disabled={busy} onClick={() => go(returning ? () => createAccount('Collector') : signIn)}>
+      <button className="ghost" disabled={busy} onClick={() => go(returning ? () => signIn(true) : signIn)}>
         {returning ? 'Use a different passkey' : 'I already have an account'}
       </button>
       {net.name === 'testnet' && (err || hasDeviceKey()) && (

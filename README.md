@@ -165,6 +165,7 @@ MAKER_KEY=0x... node maker.mjs --once   # one pass
 - The team key is both attestor and custodian on testnet. In production the custodian confirms only after physically
   receiving and inspecting the slab, and the demo's open custody endpoint would not exist.
 - No physical cards are held. The mainnet tokens are labelled DEMO and the redeem flow records a request only.
+- The demo market maker is ours and quotes every card. When a card sells out it vaults a fresh copy using a synthetic testnet cert (numbers from 90,000,000, accepted only on testnet). Its trades are not user traction.
 - Certs are checked against demo fixtures shaped like PSA responses. The PSA API code path exists and is tested with
   mocks, but has not run against the live API.
 - Chainlink CRE does not write to Monad in production yet, so the attestor relay performs the same registry check. The

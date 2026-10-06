@@ -12,8 +12,14 @@ const QUOTE = '0x8C43e58dFAcF7Ee589b45EB7d0C61559F7413578' // TestUSD, 6 decimal
 const ROUTER = '0x7EFbE105Ca7415dE98F96622173458ac1c054630'
 // specId, grade, reference price in dollars (testnet demo values)
 const CARDS = [
-  [4n, 10, 5000], [4n, 9, 450], [58n, 10, 1500], [2003111n, 10, 17500], [1993232n, 9, 500000],
+  [4n, 10, 5000, 'Base Set Charizard Holo', 'CHZ'], [4n, 9, 450, 'Base Set Charizard Holo', 'CHZ'], [58n, 10, 1500, 'Base Set Pikachu Red Cheeks', 'PIKA'],
+  [2003111n, 10, 17500, 'Topps Chrome LeBron James Rookie #111', 'LBJ03'], [1993232n, 9, 500000, 'Alpha Black Lotus', 'LOTUS'],
 ]
+// When a card sells out the maker has nothing to list, so it vaults a fresh demo copy through the attestor (testnet demo
+// certs 9xxxxxxx, see attestor/src/psa.ts). Capped per hour so a buying spree cannot burn the faucet account's gas.
+const ATTESTOR = process.env.ATTESTOR_URL ?? `http://localhost:${process.env.PORT ?? 8787}`
+const RESTOCKS_PER_HOUR = 20
+const restocked = []
 const SPREAD = 0.06 // quote 3% either side of the reference
 
 const key = process.env.MAKER_KEY
@@ -41,15 +47,39 @@ console.log('maker', account.address)
 let quiet = false
 const seen = new Set()
 const say = (m) => (/exists$|: no /.test(m) && quiet && seen.has(m) ? undefined : (seen.add(m), console.log(m)))
+async function restock(idx, spec, grade, title, short, label) {
+  const now = Date.now()
+  while (restocked.length && now - restocked[0] > 3600_000) restocked.shift()
+  if (restocked.length >= RESTOCKS_PER_HOUR) return false
+  const post = async (path, body) => {
+    const r = await fetch(ATTESTOR + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+    return { ok: r.ok, text: await r.text() }
+  }
+  for (let i = 0; i < 5; i++) {
+    const certId = String(90_000_000 + idx * 10_000 + Math.floor(Math.random() * 10_000))
+    const a = await post('/attest', { certId, specId: String(spec), grade, holder: account.address, name: `PSA ${grade} ${title}`, symbol: `PSA${grade}-${short}` })
+    if (!a.ok && /cert known/.test(a.text)) continue
+    if (!a.ok) return void say(`${label}: restock failed (${a.text.slice(0, 100)})`)
+    const c = await post('/custody', { certId })
+    if (!c.ok) return void say(`${label}: restock custody failed (${c.text.slice(0, 100)})`)
+    restocked.push(now)
+    say(`${label}: restocked with demo cert ${certId}`)
+    return true
+  }
+  return false
+}
+
 async function pass() {
-  for (const [spec, grade, ref] of CARDS) {
+  for (const [idx, [spec, grade, ref, title, short]] of CARDS.entries()) {
     const sku = keccak256(encodeAbiParameters([{ type: 'uint256' }, { type: 'uint8' }], [spec, grade]))
     const [token, market] = await pub.readContract({ address: VAULT, abi: vaultAbi, functionName: 'skuInfo', args: [sku] })
     if (token === '0x0000000000000000000000000000000000000000' || market === '0x0000000000000000000000000000000000000000') { say(`#${spec} PSA ${grade}: no market`); continue }
     const [bid, ask] = await pub.readContract({ address: market, abi: book, functionName: 'bestBidAsk' })
     const label = `#${spec} PSA ${grade}`
     if (!live(ask)) {
-      const have = (await pub.readContract({ address: token, abi: erc20, functionName: 'balanceOf', args: [account.address] })) + (await pub.readContract({ address: ma, abi: margin, functionName: 'getBalance', args: [account.address, token] }))
+      const held = async () => (await pub.readContract({ address: token, abi: erc20, functionName: 'balanceOf', args: [account.address] })) + (await pub.readContract({ address: ma, abi: margin, functionName: 'getBalance', args: [account.address, token] }))
+      let have = await held()
+      if (have < 1n && (await restock(idx, spec, grade, title, short, label))) have = await held()
       if (have < 1n) say(`${label}: no ask, maker holds no card to sell`)
       else {
         const onBook = await pub.readContract({ address: ma, abi: margin, functionName: 'getBalance', args: [account.address, token] })

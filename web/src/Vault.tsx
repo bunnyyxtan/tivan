@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { keccak256, parseEventLogs, toBytes, type LocalAccount } from 'viem'
+import { confirmStep } from './account'
 import { attestorUrl, catalog, net } from './config'
 import { erc20Abi, loadSkus, marginAbi, marginAccount, pub, send, vaultAbi } from './chain'
 import { usePortfolio } from './portfolio'
@@ -263,6 +264,7 @@ export function Redeem({ sku, account }: { sku: string; account: LocalAccount })
   const flow = useFlow()
   const go = () =>
     flow.run([
+      ...confirmStep(account),
       // A card from a filled offer or cancelled listing sits on the exchange; bring one back first.
       ...(data && data.held < 1n
         ? [['Bringing your card off the exchange', async () => (await send(account, { address: data.ma, abi: marginAbi, functionName: 'withdraw', args: [1n, data.s.token] })).transactionHash] as [string, () => Promise<string>]]
