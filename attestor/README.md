@@ -20,4 +20,4 @@ Reads `../.env` (`DEPLOYER_KEY`, optional `PSA_TOKEN`, `CUSTODY_TOKEN`). Without
 
 Errors are `{error}` with 400 (bad input), 403, 422 (registry mismatch), 409 (still has enough MON), 429 (dripped in the last 10 minutes, or hourly cap reached), 503 (faucet low), 502 (revert, with the reason).
 
-`npm` scripts set `NODE_USE_ENV_PROXY=1` so Node's fetch honours `HTTPS_PROXY` where one is set (no effect otherwise).
+Behind an HTTPS proxy, start it with `NODE_USE_ENV_PROXY=1` so Node's fetch honours `HTTPS_PROXY`.
