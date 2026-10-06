@@ -327,13 +327,13 @@ function Activity({ fills, book }: { fills: Fill[]; book: { bids: Level[]; asks:
   const t = (x: number) => new Date(x * 1000).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
   const asks = [...book.asks].sort((a, b) => a.price - b.price).slice(0, 3)
   const bids = [...book.bids].sort((a, b) => b.price - a.price).slice(0, 3)
-  const change = fills.length > 1 ? (fills.at(-1)!.price - fills[0].price) / fills[0].price : undefined
+  const change = fills.length > 1 ? (fills.at(-1)!.price - fills.at(-2)!.price) / fills.at(-2)!.price : undefined
   return (
     <section className="section">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
         <span className="cap">Activity</span>
         <span className="fine">
-          {change !== undefined ? <span className={change >= 0 ? 'up' : 'down'}>{`${change >= 0 ? '▲' : '▼'} ${Math.abs(change * 100).toFixed(1)}% since the first sale`}</span> : fills.length ? '1 sale so far' : 'No sales yet'}
+          {change !== undefined ? change === 0 ? 'Flat since the previous sale' : <span className={change > 0 ? 'up' : 'down'}>{`${change > 0 ? '▲' : '▼'} ${Math.abs(change * 100).toFixed(1)}% since the previous sale`}</span> : fills.length ? '1 sale so far' : 'No sales yet'}
         </span>
       </div>
       {fills.length > 1 && <Chart fills={fills} />}

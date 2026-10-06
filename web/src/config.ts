@@ -68,8 +68,22 @@ if (!(which in networks)) throw new Error(`VITE_NETWORK must be testnet or mainn
 const ownRpc = import.meta.env.VITE_RPC_URL
 export const net: Network = ownRpc ? { ...networks[which], rpcs: [{ url: ownRpc, limit: Number(import.meta.env.VITE_RPC_LIMIT) || 40, logs: import.meta.env.VITE_RPC_LOGS === 'true' }, ...networks[which].rpcs] } : networks[which]
 
-/** Our own accounts (market maker, faucet/attestor, a test user). They quote and seed markets, so they never rank in the League. */
-export const house = ['0x9037a6733a9bd1641357ae5a12338378d3977911', '0xb9a34bd07273913f10012a74521a045e99c79098', '0x659d3d5edb7bca50054a4b1f9bb4f6483f61818d']
+/** Every wallet that traded before launch: the market maker, faucet/attestor and our seed and test runs. They quote and seed markets, so they never rank in the League. */
+export const house = [
+  '0x9037a6733a9bd1641357ae5a12338378d3977911',
+  '0xb9a34bd07273913f10012a74521a045e99c79098',
+  '0x659d3d5edb7bca50054a4b1f9bb4f6483f61818d',
+  '0x317b8059028090aadca1c677ffd90dfdc588fc39',
+  '0x8a23a1155f16bea7f7ea6771c43380d1c16a7f2a',
+  '0xfc447926d4fb10ef62e24c92086df15a8cefa7ac',
+  '0x8e131bd4de8eaa058865255f7272582bb4bf021f',
+  '0x52b1672b2c2a8283fcecd57f4507477eb09a1873',
+  '0xba0250e333d9b70f823828de7dffc6ec5dcfe467',
+  '0x69eb82bc8041277e9f6c9e074a4d0d9429475783',
+  '0x09f730d2916e649648faa53ba45262dac8a2d7db',
+  '0x49cfd3e052e1369c5c02606c7e92ddcbde11118f',
+  '0x8d9907f2899e9648372c3164199e1134f3578397',
+]
 
 export const attestorUrl: string = import.meta.env.VITE_ATTESTOR_URL || 'http://localhost:8787'
 /** Envio HyperIndex GraphQL (indexer/). Optional: without it the app reads SKUs and trades straight from the RPC. */

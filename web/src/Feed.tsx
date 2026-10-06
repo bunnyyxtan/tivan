@@ -1,4 +1,5 @@
 import { foundingCollectors, recentFills, type Founder } from './chain'
+import { house } from './config'
 import { Slab, cardTitle, short, usePoll, usd } from './ui'
 
 const ago = (t: number) => {
@@ -22,7 +23,7 @@ export function ActivityFeed({ me }: { me?: string }) {
             <Slab name={f.name} size="xs" />
             <span className="feed-info">
               <span>
-                <b>{f.taker === me?.toLowerCase() ? 'You' : short(f.taker)}</b> {f.takerBuy ? 'bought' : 'sold'} {cardTitle(f.name)}
+                <b>{f.taker === me?.toLowerCase() ? 'You' : house.includes(f.taker) ? 'Tivan team' : short(f.taker)}</b> {f.takerBuy ? 'bought' : 'sold'} {cardTitle(f.name)}
               </span>
               <span className="muted">{ago(f.t)}</span>
             </span>
@@ -48,12 +49,12 @@ export function FoundingCollectors({ market, me }: { market: `0x${string}`; me?:
         {data.map((f: Founder, i) => (
           <span key={i} className={`founder ${f.owner === me?.toLowerCase() ? 'me' : ''}`}>
             <span className="founder-rank">{i + 1}</span>
-            {f.owner === me?.toLowerCase() ? 'You' : short(f.owner)}
+            {f.owner === me?.toLowerCase() ? 'You' : house.includes(f.owner) ? 'Tivan team' : short(f.owner)}
           </span>
         ))}
       </div>
       <p className="fine" style={{ marginTop: 8 }}>
-        On a 0% market, whoever posts a price keeps the whole spread a platform would take. These wallets opened this market.
+        On a 0% market, whoever posts a price keeps the whole spread a platform would take. The Tivan team posted the first prices to seed each market; any collector who posts a price after that is listed here.
       </p>
     </section>
   )
