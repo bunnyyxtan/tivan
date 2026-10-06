@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+.env.local
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+attestor/drips.json
+indexer/.envio/
+indexer/generated/
+*.log
+.DS_Store
