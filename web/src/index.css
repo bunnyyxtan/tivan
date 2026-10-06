@@ -183,7 +183,7 @@ label.lab { display: flex; flex-direction: column; gap: 8px; font-size: 13px; fo
 .mrow-px > :first-child { font-size: 16px; font-weight: 500; }
 .mrow-px > :last-child { font-size: 13px; color: var(--tx2); }
 .mrow-cells { display: none; }
-.skeleton { height: 68px; border-radius: 14px; background: var(--quiet); margin: 4px 0; animation: pulse 1.4s ease-in-out infinite; }
+.skeleton { height: 68px; border-radius: 14px; background: var(--quiet2); margin: 4px 0; animation: pulse 1.4s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: 0.5; } }
 
 /* card page */

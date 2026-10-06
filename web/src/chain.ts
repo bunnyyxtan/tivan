@@ -117,7 +117,8 @@ async function indexedSkus(): Promise<Listed[]> {
   return Market.map((m) => (m.market.length === 42 ? m : { ...m, market: ZERO }))
 }
 
-/** Every SKU the vault has listed: seeded SKUs + SkuListed logs, scanned incrementally and cached per browser. */
+/** Every SKU the vault has listed: seeded SKUs now, plus SkuListed logs found by a background scan cached per browser. */
+let backfill: Promise<void> | undefined
 async function scan(): Promise<Listed[]> {
   const vault = net.vault!
   let cache: { block: string; skus: Listed[] } = {
@@ -127,22 +128,9 @@ async function scan(): Promise<Listed[]> {
   try {
     cache = JSON.parse(localStorage.getItem(scanKey) ?? '') ?? cache
   } catch {}
-  const head = await pub.getBlockNumber()
-  // Monad RPC caps eth_getLogs at 100 blocks per call.
-  // NOTE: client-side log scan of at most the last 3k blocks (~20 min) per visit; older SKUs come from seedSkus.
-  // Limit: a SKU listed >3k blocks before a fresh browser's first visit and not seeded is missed; the Envio indexer replaces this.
-  const from = BigInt(cache.block) + 1n > head - 3000n ? BigInt(cache.block) + 1n : head - 3000n
-  const ranges: [bigint, bigint][] = []
-  for (let b = from; b <= head; b += 100n) ranges.push([b, b + 99n > head ? head : b + 99n])
-  const found = [...cache.skus]
-  for (let i = 0; i < ranges.length; i += 4) {
-    const logs = await Promise.all(ranges.slice(i, i + 4).map(([fromBlock, toBlock]) => pub.getLogs({ address: vault, event: skuListed, fromBlock, toBlock })))
-    for (const l of logs.flat()) found.push(l.args as Listed)
-  }
   const seeds = await Promise.all(
     net.seedSkus.map(async (s) => {
       const sku = keccak256(encodeAbiParameters([{ type: 'uint256' }, { type: 'uint8' }], [s.specId, s.grade])) // SlabVault.skuOf
-      if (found.some((f) => f.sku === sku)) return []
       const [token, market] = await pub.readContract({
         address: vault,
         abi: vaultAbi,
@@ -158,11 +146,30 @@ async function scan(): Promise<Listed[]> {
       return [{ sku, token, market, name }]
     }),
   )
-  const unique = [...new Map([...seeds.flat(), ...found].map((s) => [s.sku, s])).values()]
+  // The log scan only adds SKUs beyond the seeds, so it runs behind the first paint; the next poll picks up what it finds.
+  backfill ??= scanLogs(cache)
+    .catch((e) => console.warn('log scan failed', e))
+    .finally(() => (backfill = undefined))
+  return [...new Map([...seeds.flat(), ...cache.skus].map((s) => [s.sku, s])).values()]
+}
+
+async function scanLogs(cache: { block: string; skus: Listed[] }) {
+  const head = await pub.getBlockNumber()
+  // Monad RPC caps eth_getLogs at 100 blocks per call.
+  // NOTE: client-side log scan of at most the last 3k blocks (~20 min) per visit; older SKUs come from seedSkus.
+  // Limit: a SKU listed >3k blocks before a fresh browser's first visit and not seeded is missed; the Envio indexer replaces this.
+  const from = BigInt(cache.block) + 1n > head - 3000n ? BigInt(cache.block) + 1n : head - 3000n
+  const ranges: [bigint, bigint][] = []
+  for (let b = from; b <= head; b += 100n) ranges.push([b, b + 99n > head ? head : b + 99n])
+  const found = [...cache.skus]
+  for (let i = 0; i < ranges.length; i += 4) {
+    const logs = await Promise.all(ranges.slice(i, i + 4).map(([fromBlock, toBlock]) => pub.getLogs({ address: net.vault!, event: skuListed, fromBlock, toBlock })))
+    for (const l of logs.flat()) found.push(l.args as Listed)
+  }
+  const unique = [...new Map(found.map((s) => [s.sku, s])).values()]
   try {
     localStorage.setItem(scanKey, JSON.stringify({ block: String(head), skus: unique }))
   } catch {}
-  return unique
 }
 
 // bestBidAsk is 1e18-scaled; an empty side reads as 0 or uint256 max.
