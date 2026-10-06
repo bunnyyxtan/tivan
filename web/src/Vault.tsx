@@ -317,6 +317,10 @@ export function Redeem({ sku, account }: { sku: string; account: LocalAccount })
               <span>They contact you to arrange it</span>
             </div>
             <div className="kv">
+              <span>Shipping cost</span>
+              <span>Quoted by the custodian</span>
+            </div>
+            <div className="kv">
               <span>Recorded publicly</span>
               <span>Only a fingerprint of your address</span>
             </div>
@@ -330,7 +334,7 @@ export function Redeem({ sku, account }: { sku: string; account: LocalAccount })
           <Steps steps={flow.steps} error={flow.error} />
           <button className="btn wide" disabled={!data || own < 1n || ship.trim().length < 10 || !ok || flow.busy} onClick={go}>
             {flow.busy && <span className="spin" aria-hidden />}
-            {flow.doing ?? 'Request the card'}
+            {flow.doing ?? (account.source === 'mera' ? 'Request it with Face ID' : 'Request the card')}
           </button>
         </>
       )}

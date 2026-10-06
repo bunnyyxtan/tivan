@@ -3,6 +3,7 @@ import { parseEventLogs, type LocalAccount } from 'viem'
 import { net } from './config'
 import { bookAbi, decodeL2, erc20Abi, explorerTx, hasMarket, lastPaid, loadSkus, marginAbi, marginAccount, pub, send, tradeHistory } from './chain'
 import { usePortfolio } from './portfolio'
+import { logActivity } from './activity'
 import { useAlerts } from './alerts'
 import { Header, Slab, Steps, Toast, cardSub, cardTitle, delta, useFlow, usePoll, useTint, usd } from './ui'
 
@@ -44,7 +45,7 @@ function ListedAlert({ sku }: { sku: string }) {
   return (
     <button className="kv" style={{ width: '100%' }} onClick={async () => (on ? al.off(sku, 'listed') : await al.on({ sku, kind: 'listed' }))}>
       <span style={{ color: 'var(--tx)' }}>{on ? 'We’ll tell you when one is listed' : 'Tell me when one is listed'}</span>
-      <span className="muted">{on ? 'On' : '›'}</span>
+      <i className="switch" role="switch" aria-checked={!!on} />
     </button>
   )
 }
@@ -180,7 +181,10 @@ export function BuyFlow({ sku, account }: { sku: string; account: LocalAccount }
         async () => (tx = (await send(account, { address: data.s.market, abi: bookAbi, functionName: 'placeAndExecuteMarketBuy', args: [BigInt(cents), 0n, false, true] })).transactionHash),
       ],
     ])
-    if (ok && tx) return void (location.hash = `#/done/${sku}/${price}/${tx}`)
+    if (ok && tx) {
+      logActivity(account.address, { text: `Bought ${cardTitle(data.s.name)}`, amount: -price })
+      return void (location.hash = `#/done/${sku}/${price}/${tx}`)
+    }
     refresh()
     // If the price we agreed to is gone, someone else was faster; say so instead of showing a raw error.
     const fresh = (await loadSkus()).find((x) => x.sku === sku)
@@ -189,8 +193,12 @@ export function BuyFlow({ sku, account }: { sku: string; account: LocalAccount }
   }
 
   return (
-    <div className="flow">
-      {back}
+    <div className="sheet-page">
+      <div className="sheet-top">
+        <Slab name={data.s.name} size="md" />
+      </div>
+      <div className="flow sheet">
+      <i className="sheet-handle" aria-hidden />
       <Item name={data.s.name} note={cardSub(data.s.name)} />
       <div className="rows">
         <div className="kv">
@@ -221,7 +229,7 @@ export function BuyFlow({ sku, account }: { sku: string; account: LocalAccount }
       <p className="fine">You pay {usd(price)} or nothing. If someone buys it a moment before you, the order cancels and your cash stays put.</p>
       <button className="btn wide" disabled={flow.busy || !port} onClick={buy}>
         {flow.busy && <span className="spin" aria-hidden />}
-        {flow.doing ?? `Buy for ${usd(price)}`}
+        {flow.doing ?? (account.source === 'mera' ? `Pay ${usd(price)} with Face ID` : `Buy for ${usd(price)}`)}
       </button>
       <Steps steps={flow.steps} error={flow.error} />
       {!flow.busy && (
@@ -229,6 +237,7 @@ export function BuyFlow({ sku, account }: { sku: string; account: LocalAccount }
           Not now
         </a>
       )}
+      </div>
     </div>
   )
 }
@@ -343,7 +352,10 @@ export function TradeFlow({ side, sku, account }: { side: 'sell' | 'offer'; sku:
         // Fill-or-kill with a floor at the shown offer: it sells at that price or not at all.
         async () => (await send(account, { address: s.market, abi: bookAbi, functionName: 'placeAndExecuteMarketSell', args: [1n, toUnits(bid!), false, true] })).transactionHash,
       ])
-      if (await flow.run(steps)) setPlaced({ id: 0, text: `Sold for ${usd(bid)}. Cash is in your account.` })
+      if (await flow.run(steps)) {
+        logActivity(account.address, { text: `Sold ${cardTitle(s.name)}`, amount: bid })
+        setPlaced({ id: 0, text: `Sold for ${usd(bid)}. Cash is in your account.` })
+      }
     } else {
       const cents = Math.round(px * 100)
       const [token, need, have] = side === 'sell' ? [s.token, 1n, h?.onBook ?? 0n] : [net.quote, toUnits(px), toUnits(exCash)]
@@ -363,7 +375,10 @@ export function TradeFlow({ side, sku, account }: { side: 'sell' | 'offer'; sku:
           return r.transactionHash
         },
       ])
-      if (await flow.run(steps)) setPlaced({ id, text: side === 'sell' ? `Listed for ${usd(px)}.` : `Offer of ${usd(px)} placed.` })
+      if (await flow.run(steps)) {
+        logActivity(account.address, { text: `${side === 'sell' ? 'Listed' : 'Offered on'} ${cardTitle(s.name)}`, amount: px, wait: true })
+        setPlaced({ id, text: side === 'sell' ? `Listed for ${usd(px)}.` : `Offer of ${usd(px)} placed.` })
+      }
     }
     refresh()
     refreshPort()

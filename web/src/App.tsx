@@ -8,10 +8,11 @@ import { CardPage, MarketList } from './Market'
 import { BuyFlow, Receipt, TradeFlow } from './Trade'
 import { Collection } from './Collection'
 import { League } from './League'
+import { logActivity, useActivity, when } from './activity'
 import { askPermission, notifyState, useAlertWatcher } from './alerts'
 import { Redeem, VaultPage, drip } from './Vault'
 import { usePortfolio } from './portfolio'
-import { Header, Slab, Steps, getTheme, setTheme, short, useFlow, useTint, usd, type Theme } from './ui'
+import { Header, Slab, Steps, delta, getTheme, setTheme, short, useFlow, useTint, usd, type Theme } from './ui'
 
 function useHash() {
   const [h, setH] = useState(location.hash)
@@ -172,7 +173,7 @@ function SignIn({ onReady, onGuest, inline }: { onReady: (a: LocalAccount) => vo
         </button>
       </div>
       <div className="signin-hero">
-        <Slab name="PSA 10 Base Set Charizard Holo" size="md" tilt />
+        <Slab name="PSA 10 Base Set Charizard Holo" size="lg" tilt />
       </div>
       <div className="rise">
         <h1>
@@ -194,6 +195,7 @@ function You({ account, onSignOut }: { account: LocalAccount; onSignOut: () => v
   const [copied, setCopied] = useState(false)
   const [theme, setT] = useState<Theme>(getTheme)
   const [notif, setNotif] = useState(notifyState)
+  const recent = useActivity(me)
   const addFunds = async () => {
     const steps: [string, () => Promise<string | void>][] = []
     if ((data?.gas ?? 0n) < 5n * 10n ** 16n)
@@ -213,7 +215,10 @@ function You({ account, onSignOut }: { account: LocalAccount; onSignOut: () => v
       '$10,000 in test dollars added',
       async () => (await send(account, { address: net.quote, abi: erc20Abi, functionName: 'mint', args: [me, parseUnits('10000', net.quoteDecimals)] })).transactionHash,
     ])
-    if (await flow.run(steps)) refresh()
+    if (await flow.run(steps)) {
+      logActivity(me, { text: 'Added test cash', amount: 10000 })
+      refresh()
+    }
   }
   const toWallet = async () => {
     if (!data?.exCashRaw) return
@@ -251,6 +256,26 @@ function You({ account, onSignOut }: { account: LocalAccount; onSignOut: () => v
           <Steps steps={flow.steps} error={flow.error} />
         </div>
       </section>
+
+      {recent.length > 0 && (
+        <section className="section">
+          <span className="cap">Recent</span>
+          <div className="rows">
+            {recent.slice(0, 3).map((a) => (
+              <div className="kv" key={a.t}>
+                <span>
+                  {a.text}
+                  <span className="fine" style={{ display: 'block' }}>
+                    {when(a.t)}
+                    {a.wait ? ' · waiting' : ''}
+                  </span>
+                </span>
+                <span>{a.amount === undefined ? '' : a.wait ? usd(a.amount) : delta(a.amount)}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="section">
         <span className="cap">Sign-in and settings</span>

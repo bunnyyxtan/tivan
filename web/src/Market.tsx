@@ -162,6 +162,28 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
     const r = await shareCard(blob, `${cardTitle(s.name)} is ${s.ask ? usd(s.ask) : 'listed'} on ${brand}.`, location.href)
     if (r === 'saved') flash('Price card saved.')
   }
+  const buttons = (
+    <>
+              {own > 0 ? (
+                <a className="ghost line" href={`#/sell/${sku}`}>
+                  Sell
+                </a>
+              ) : (
+                <a className="ghost line" href={`#/offer/${sku}`}>
+                  Make offer
+                </a>
+              )}
+              {s.ask ? (
+                <a className="btn" href={`#/buy/${sku}`}>
+                  Buy for {usd(s.ask)}
+                </a>
+              ) : (
+                <a className="btn" href={`#/offer/${sku}`}>
+                  Make an offer
+                </a>
+              )}
+    </>
+  )
   return (
     <>
       <Header
@@ -220,6 +242,9 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
                   ? 'Nobody is selling right now. Make an offer and a seller can accept it instantly.'
                   : 'No offers yet. Yours would be the first.'}
             </p>
+            <div className="actions desk-only" style={{ marginTop: 16 }}>
+              {buttons}
+            </div>
             {s.ask && <AlertRow s={s} flash={flash} />}
             {own > 0 && (
               <div className="kv" style={{ marginTop: 10, borderTop: '1px solid var(--line)' }}>
@@ -263,27 +288,8 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
         </section>
 
         {live && (
-          <div className="sticky-bar" style={{ marginTop: 24 }}>
-            <div>
-              {own > 0 ? (
-                <a className="ghost line" href={`#/sell/${sku}`}>
-                  Sell
-                </a>
-              ) : (
-                <a className="ghost line" href={`#/offer/${sku}`}>
-                  Make offer
-                </a>
-              )}
-              {s.ask ? (
-                <a className="btn" href={`#/buy/${sku}`}>
-                  Buy for {usd(s.ask)}
-                </a>
-              ) : (
-                <a className="btn" href={`#/offer/${sku}`}>
-                  Make an offer
-                </a>
-              )}
-            </div>
+          <div className="sticky-bar mobile-only" style={{ marginTop: 24 }}>
+            <div>{buttons}</div>
           </div>
         )}
         <div style={{ height: 90 }} className="mobile-only" />
@@ -311,9 +317,7 @@ function AlertRow({ s, flash }: { s: Sku; flash: (t: string) => void }) {
           One notification, then it turns off. Works while {brand} is open.
         </span>
       </span>
-      <button className={`pill ${cur ? 'on' : ''}`} role="switch" aria-checked={!!cur} onClick={toggle}>
-        {cur ? 'On' : 'Off'}
-      </button>
+      <button className="switch" role="switch" aria-checked={!!cur} aria-label={`Alert when below ${usd(target)}`} onClick={toggle} />
     </div>
   )
 }
