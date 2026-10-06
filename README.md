@@ -69,7 +69,7 @@ browser (React, viem, passkey)  ──reads/writes──▶  Monad RPC ──▶
 
 ## Attribution
 
-Built on open-source work we did not write: [Kuru](https://kuru.io) contracts and router on Monad, [OpenZeppelin Contracts](https://github.com/OpenZeppelin/openzeppelin-contracts) (MIT), [forge-std](https://github.com/foundry-rs/forge-std), [viem](https://viem.sh), [React](https://react.dev), [Vite](https://vitejs.dev), [Mera](https://docs.monad.xyz/guides/mera) for passkey accounts, [Envio HyperIndex](https://envio.dev) and the Chainlink CRE SDK. Card artwork in `web/public/cards` is used for demonstration only. The repository history was consolidated on 6 October 2026, so the commit dates here start on that day.
+Built on open-source work we did not write: [Kuru](https://kuru.io) contracts and router on Monad, [OpenZeppelin Contracts](https://github.com/OpenZeppelin/openzeppelin-contracts) (MIT), [forge-std](https://github.com/foundry-rs/forge-std), [viem](https://viem.sh), [React](https://react.dev), [Vite](https://vitejs.dev), [Mera](https://docs.monad.xyz/guides/mera) for passkey accounts, [Envio HyperIndex](https://envio.dev) and the Chainlink CRE SDK. Card artwork in `web/public/cards` is used for demonstration only. Development started on 5 October 2026, inside the hackathon window. The history was consolidated into this repository on 6 October, so the commit dates here start that day and continue to the deadline.
 
 ## Stack
 
