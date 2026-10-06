@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=./node_modules/envio/evm.schema.json
+# Monad TESTNET (10143). Mainnet lives in config.mainnet.yaml (same contracts, other chain block)
+# and is selected with `--config config.mainnet.yaml` / ENVIO_CONFIG — a config switch, no code change.
+name: slab-indexer
+description: Tivan - SKUs, vault custody and Kuru trade history for graded cards
+contracts:
+  - name: SlabVault
+    events:
+      - event: SkuListed(bytes32 indexed sku, address token, address market, string name)
+      - event: Attested(uint256 indexed certId, bytes32 indexed sku, address indexed holder)
+      - event: Vaulted(uint256 indexed certId, bytes32 indexed sku, address indexed holder)
+      - event: Redeemed(uint256 indexed certId, bytes32 indexed sku, address indexed holder, bytes32 shippingHash)
+      - event: MarketLinked(bytes32 indexed sku, address market)
+  # One Kuru OrderBook per SKU, deployed by SlabVault.listSku -> registered from SkuListed.market, or from
+  # MarketLinked when the router gates deployment (Kuru mainnet) and SkuListed.market is zero.
+  - name: KuruMarket
+    events:
+      # Kuru OrderBook.Trade: one log per maker order filled. price is 1e18-scaled quote per card.
+      # Resting limit orders, so the app can list "your open orders" (liveness is re-checked on chain via s_orders).
+      - event: OrderCreated(uint40 orderId, address owner, uint96 size, uint32 price, bool isBuy)
+      - event: Trade(uint40 orderId, address makerAddress, bool isBuy, uint256 price, uint96 updatedSize, address takerAddress, address txOrigin, uint96 filledSize)
+        field_selection:
+          transaction_fields:
+            - hash
+chains:
+  - id: 10143
+    start_block: 68468000 # just before SlabVault deploy (tx 0xbb1a3473..., block 68468138)
+    # HyperSync (https://10143.hypersync.xyz) is the primary source when ENVIO_API_TOKEN is set;
+    # this public RPC is the fallback.
+    rpc:
+      - url: https://testnet-rpc.monad.xyz
+        for: ${ENVIO_RPC_FOR:-fallback} # "sync" = RPC-only, no API token needed
+        interval_ceiling: 100 # Monad public RPC caps eth_getLogs at 100 blocks
+    contracts:
+      - name: SlabVault
+        address: 0x998a3116dc9AaDb98AF27B31BeC93441E1991a12

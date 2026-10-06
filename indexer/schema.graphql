@@ -1,0 +1,50 @@
+# One row per listed SKU (= one Kuru market). Drives the market list.
+type Market {
+  id: ID!                  # Kuru OrderBook address, EIP-55 checksummed
+  sku: String! @index      # bytes32 SKU key from SlabVault
+  token: String!           # SlabToken (1 token = 1 vaulted card)
+  name: String!            # e.g. "PSA 10 Base Set Charizard Holo"
+  listedAt: Int!           # unix seconds
+  vaulted: Int!            # cards currently in custody (Vaulted - Redeemed)
+  lastPriceCents: BigInt   # last trade price, quote-token cents; null until first trade
+  volumeCards: BigInt!     # total cards traded
+  volumeCents: BigInt!     # total quote traded, cents
+  tradeCount: Int!
+  trades: [Trade!]! @derivedFrom(field: "market")
+}
+
+# One row per Kuru fill. Drives the price-history chart.
+type Trade {
+  id: ID!                  # chainId_block_logIndex
+  market: Market!
+  priceCents: BigInt! @index
+  sizeCards: BigInt!
+  takerBuy: Boolean!       # Kuru isBuy: true when the taker bought
+  maker: String!
+  taker: String!
+  timestamp: Int! @index
+  blockNumber: Int!
+  txHash: String!
+}
+
+# Graded certificate lifecycle: attested -> vaulted -> redeemed.
+type Cert {
+  id: ID!                  # grader cert number
+  sku: String!
+  holder: String!
+  status: String!          # ATTESTED | VAULTED | REDEEMED
+  updatedAt: Int!
+}
+
+# Every limit order placed on a card market. Fills/cancels are not tracked here: the app reads s_orders for what is
+# still open, so this is only the per-owner index the RPC can't give cheaply.
+type Order {
+  id: ID!                  # market_orderId
+  market: String! @index   # Kuru OrderBook address
+  owner: String! @index    # lowercased
+  orderId: BigInt!
+  priceCents: BigInt!      # Kuru order price (pricePrecision 100 = cents)
+  size: BigInt!            # whole cards
+  isBuy: Boolean!
+  createdAt: Int!
+}
