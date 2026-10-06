@@ -10,7 +10,7 @@ import { Collection } from './Collection'
 import { League } from './League'
 import { Redeem, VaultPage, drip } from './Vault'
 import { usePortfolio } from './portfolio'
-import { Header, Slab, Steps, getTheme, setTheme, short, useFlow, usd, type Theme } from './ui'
+import { Header, Slab, Steps, getTheme, setTheme, short, useFlow, useTint, usd, type Theme } from './ui'
 
 function useHash() {
   const [h, setH] = useState(location.hash)
@@ -107,6 +107,7 @@ function SignIn({ onReady, onGuest, inline }: { onReady: (a: LocalAccount) => vo
   const [err, setErr] = useState<string>()
   const [busy, setBusy] = useState(false)
   const returning = !!savedPasskey()
+  useTint(inline ? undefined : 'PSA 10 Base Set Charizard Holo') // landing takes the hero card's colour
   const go = async (fn: () => Promise<LocalAccount>) => {
     setBusy(true)
     setErr(undefined)
@@ -129,7 +130,7 @@ function SignIn({ onReady, onGuest, inline }: { onReady: (a: LocalAccount) => vo
       ) : (
         <button className="btn wide" disabled={busy} onClick={() => go(() => createAccount(`Collector ${new Date().toLocaleDateString()}`))}>
           {busy ? <span className="spin" aria-hidden /> : null}
-          Create an account with a passkey
+          Continue with a passkey
         </button>
       )}
       <button className="ghost" disabled={busy} onClick={() => go(returning ? () => createAccount('Collector') : signIn)}>
@@ -177,7 +178,7 @@ function SignIn({ onReady, onGuest, inline }: { onReady: (a: LocalAccount) => vo
           <br />
           Trade it in a second.
         </h1>
-        <p className="lead">Real graded cards, kept in a vault. Buy and sell them at a live price, and ask for the slab whenever you want it.</p>
+        <p className="lead">Real graded cards, kept in a vault. Buy and sell them like stocks. Ask for the slab whenever you want it.</p>
       </div>
       {actions}
     </div>

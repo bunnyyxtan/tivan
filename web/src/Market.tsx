@@ -16,7 +16,7 @@ export function MarketList({ account }: { account: Acct }) {
   const [cat, setCat] = useState<string>('All')
   const owned = (sku: string) => port?.holdings.find((h) => h.s.sku === sku)
   const list = (data ?? []).filter(
-    (s) => s.name.toLowerCase().includes(q.toLowerCase()) && (cat === 'All' || (cat === 'Watching' ? watch.list.includes(s.sku) : categoryOf(s.name) === cat)),
+    (s) => `${s.name} ${catalogOf(s.name)?.set ?? ''}`.toLowerCase().includes(q.toLowerCase()) && (cat === 'All' || (cat === 'Watching' ? watch.list.includes(s.sku) : categoryOf(s.name) === cat)),
   )
   return (
     <>

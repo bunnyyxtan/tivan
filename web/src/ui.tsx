@@ -25,7 +25,7 @@ export const cardTitle = (name: string) => parseName(name).title.replace(/^(Base
 export const cardSub = (name: string) => {
   const { grader, grade } = parseName(name)
   const c = catalogOf(name)
-  return [grader + (grade ? ` ${grade}` : ''), c?.set.split(' · ').reverse().join(' ')].filter(Boolean).join(' · ')
+  return [grader + (grade ? ` ${grade}` : ''), c?.set.replace(' · ', ' ')].filter(Boolean).join(' · ')
 }
 
 /** The page takes its colour from the card on it (solid tones, see index.css [data-tint]). */
@@ -77,7 +77,9 @@ export function useWatch() {
 /** A graded slab: acrylic case, grader label, the card photo (or an honest placeholder). Tilts under the pointer. */
 export function Slab({ name, size = 'md', tilt = false, vt }: { name: string; size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'; tilt?: boolean; vt?: string }) {
   const { grader, grade, title } = parseName(name)
-  const img = catalogOf(name)?.img
+  const c = catalogOf(name)
+  const img = c?.img
+  const [setName, year] = c?.set.split(' · ') ?? []
   const [tf, setTf] = useState('')
   const move = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!tilt || matchMedia('(prefers-reduced-motion: reduce)').matches) return
@@ -92,7 +94,7 @@ export function Slab({ name, size = 'md', tilt = false, vt }: { name: string; si
         {size !== 'xs' && size !== 'sm' && (
           <div className="slab-label">
             <span>
-              {grader} · {title.toUpperCase()}
+              {grader} · {(setName ? `${year} ${setName}` : title).toUpperCase()}
             </span>
             <b>{grade}</b>
           </div>
