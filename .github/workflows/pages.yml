@@ -1,5 +1,5 @@
 # Builds the web app and publishes it to GitHub Pages on every push to main.
-# Set repository Variables: VITE_ATTESTOR_URL (hosted attestor), VITE_INDEXER_URL (Envio GraphQL), VITE_RPC_URL and VITE_RPC_LIMIT (optional dedicated RPC).
+# Set repository Variables: VITE_ATTESTOR_URL (hosted attestor), VITE_INDEXER_URL (Envio GraphQL), VITE_RPC_URL, VITE_RPC_LIMIT and VITE_RPC_LOGS (optional dedicated RPC).
 name: Deploy to GitHub Pages
 on:
   push:
@@ -33,6 +33,7 @@ jobs:
           VITE_INDEXER_URL: ${{ vars.VITE_INDEXER_URL }}
           VITE_RPC_URL: ${{ vars.VITE_RPC_URL }}
           VITE_RPC_LIMIT: ${{ vars.VITE_RPC_LIMIT }}
+          VITE_RPC_LOGS: ${{ vars.VITE_RPC_LOGS }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: web/dist
