@@ -68,6 +68,9 @@ if (!(which in networks)) throw new Error(`VITE_NETWORK must be testnet or mainn
 const ownRpc = import.meta.env.VITE_RPC_URL
 export const net: Network = ownRpc ? { ...networks[which], rpcs: [{ url: ownRpc, limit: Number(import.meta.env.VITE_RPC_LIMIT) || 40, logs: import.meta.env.VITE_RPC_LOGS === 'true' }, ...networks[which].rpcs] } : networks[which]
 
+/** Our own accounts (market maker, faucet/attestor, a test user). They quote and seed markets, so they never rank in the League. */
+export const house = ['0x9037a6733a9bd1641357ae5a12338378d3977911', '0xb9a34bd07273913f10012a74521a045e99c79098', '0x659d3d5edb7bca50054a4b1f9bb4f6483f61818d']
+
 export const attestorUrl: string = import.meta.env.VITE_ATTESTOR_URL || 'http://localhost:8787'
 /** Envio HyperIndex GraphQL (indexer/). Optional: without it the app reads SKUs and trades straight from the RPC. */
 export const indexerUrl: string | undefined = import.meta.env.VITE_INDEXER_URL || undefined

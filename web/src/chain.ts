@@ -1,5 +1,5 @@
 import { createPublicClient, createWalletClient, encodeAbiParameters, getAddress, http, keccak256, parseAbi, parseAbiItem, type Account, type Address, type Hex } from 'viem'
-import { indexerUrl, net } from './config'
+import { house, indexerUrl, net } from './config'
 
 // NOTE: public Monad RPCs allow roughly 15-25 requests/sec per IP each (batched calls count individually). Every call
 // goes through one client-side limiter with a budget per endpoint: reads take whichever endpoint has room, writes and
@@ -293,16 +293,25 @@ export type Trader = { addr: string; trades: number; founded: number; score: num
 export async function leaderboard(): Promise<Trader[]> {
   if (!indexerUrl) return []
   try {
-    const { Trade, Order } = await gql<{ Trade: { taker: string }[]; Order: { owner: string; market: string; createdAt: number }[] }>(
-      '{ Trade(limit: 1000, order_by: { timestamp: desc }) { taker } Order(limit: 1000, order_by: { createdAt: asc }) { owner market createdAt } }',
+    const { Trade, Order } = await gql<{ Trade: { taker: string; maker: string; timestamp: number; market: { id: string } }[]; Order: { owner: string; market: string; createdAt: number }[] }>(
+      '{ Trade(limit: 1000, order_by: { timestamp: desc }) { taker maker timestamp market { id } } Order(limit: 1000, order_by: { createdAt: asc }) { owner market createdAt } }',
     )
     const t = new Map<string, Trader>()
     const get = (a: string) => t.get(a) ?? (t.set(a, { addr: a, trades: 0, founded: 0, score: 0 }), t.get(a)!)
-    for (const x of Trade) get(x.taker.toLowerCase()).trades++
+    // Anti-farming: a trade against yourself never scores, and a wallet scores at most once per card per hour.
+    const counted = new Set<string>()
+    for (const x of Trade) {
+      const taker = x.taker.toLowerCase()
+      if (taker === x.maker.toLowerCase() || house.includes(taker)) continue
+      const slot = `${taker}:${x.market.id}:${Math.floor(x.timestamp / 3600)}`
+      if (counted.has(slot)) continue
+      counted.add(slot)
+      get(taker).trades++
+    }
     // A wallet "founds" a market if it is the first to post a price there.
     const firstByMarket = new Map<string, string>()
     for (const o of Order) if (!firstByMarket.has(o.market)) firstByMarket.set(o.market, o.owner.toLowerCase())
-    for (const owner of firstByMarket.values()) get(owner).founded++
+    for (const owner of firstByMarket.values()) if (!house.includes(owner)) get(owner).founded++
     for (const tr of t.values()) tr.score = tr.trades + tr.founded * 2 // founding a market is worth more than a trade
     return [...t.values()].sort((a, b) => b.score - a.score)
   } catch (e) {

@@ -26,6 +26,9 @@ export function League({ account }: { account?: LocalAccount }) {
         <p className="muted" style={{ marginTop: 8, lineHeight: '22px' }}>
           Price real graded cards on testnet. Trade to earn a point, and be the first to price a card to found its market for two. Test dollars are free.
         </p>
+        <p className="fine" style={{ marginTop: 6 }}>
+          Fair play: trades against yourself never score, a wallet scores once per card per hour, and our own market-maker accounts are not ranked.
+        </p>
         <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
           <a className="btn" href="#/" style={{ flex: 1 }}>
             Start trading

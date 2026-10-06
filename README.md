@@ -51,6 +51,26 @@ flowchart LR
   I -.-> U
 ```
 
+## Monad integration
+
+- **Why Monad.** One order book per card only works if a trade is cheap and final within about a second. Monad's fast finality and low fees make a real on-chain book per card practical, where it would be too slow or too costly elsewhere.
+- **What runs on it.** `SlabVault` mints one whole-unit ERC-20 per (card, grade) and deploys each card's [Kuru](https://kuru.io) order book through the Kuru router. Buys, sells, offers, cancels and redemptions are all Monad transactions. Accounts are passkey wallets derived with [Mera](https://docs.monad.xyz/guides/mera).
+- **Addresses.** Monad testnet (10143): vault `0x998a3116dc9AaDb98AF27B31BeC93441E1991a12`. Monad mainnet (143): vault `0x5ad7d5e06df36415c6f3fA48299Bf92ed921859a`. Transaction hashes for the vaulting, listing, trading and redeeming runs are in [docs/DEPLOYMENTS.md](docs/DEPLOYMENTS.md).
+- **Verify it yourself.** Every receipt in the app links to the transaction on the Monad explorer.
+
+## Architecture
+
+```
+browser (React, viem, passkey)  ──reads/writes──▶  Monad RPC ──▶ SlabVault ──▶ Kuru router ──▶ one order book per card
+        │                                                 ▲
+        ├── attestor (Node)  ── checks the grader cert, signs attest/custody, drips testnet gas ──┘
+        └── Envio indexer (optional) ── trade history, League, open orders ◀── events from the vault and every book
+```
+
+## Attribution
+
+Built on open-source work we did not write: [Kuru](https://kuru.io) contracts and router on Monad, [OpenZeppelin Contracts](https://github.com/OpenZeppelin/openzeppelin-contracts) (MIT), [forge-std](https://github.com/foundry-rs/forge-std), [viem](https://viem.sh), [React](https://react.dev), [Vite](https://vitejs.dev), [Mera](https://docs.monad.xyz/guides/mera) for passkey accounts, [Envio HyperIndex](https://envio.dev) and the Chainlink CRE SDK. Card artwork in `web/public/cards` is used for demonstration only. The repository history was consolidated on 6 October 2026, so the commit dates here start on that day.
+
 ## Stack
 
 | Layer | Choice |
