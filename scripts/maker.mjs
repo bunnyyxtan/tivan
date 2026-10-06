@@ -78,7 +78,7 @@ async function pass() {
 }
 
 const once = process.argv.includes('--once')
-await pass()
+await pass().catch((e) => (once ? Promise.reject(e) : console.warn('first pass failed, retrying:', String(e.shortMessage ?? e.message ?? e).slice(0, 140))))
 quiet = true
 while (!once) {
   await new Promise((r) => setTimeout(r, 20000))

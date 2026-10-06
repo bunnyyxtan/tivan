@@ -6,8 +6,10 @@ services:
     runtime: node
     plan: free
     rootDir: attestor
-    buildCommand: npm ci
-    startCommand: npm start
+    # The market maker (scripts/maker.mjs) runs beside the attestor so books refill even when no laptop is on.
+    # It idles with a one-line error if MAKER_KEY is not set.
+    buildCommand: npm ci && npm ci --prefix ../scripts
+    startCommand: sh -c "node ../scripts/maker.mjs & exec npm start"
     healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
@@ -15,4 +17,6 @@ services:
       - key: NETWORK
         value: testnet
       - key: DEPLOYER_KEY
+        sync: false
+      - key: MAKER_KEY
         sync: false
