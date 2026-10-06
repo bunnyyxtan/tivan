@@ -1,0 +1,289 @@
+import { useEffect, useState } from 'react'
+import { flushSync } from 'react-dom'
+import { formatEther, parseUnits, type LocalAccount } from 'viem'
+import { createAccount, deviceAccount, friendlyError, hasDeviceKey, savedPasskey, signIn, signOut } from './account'
+import { erc20Abi, marginAbi, pub, send } from './chain'
+import { brand, net } from './config'
+import { CardPage, MarketList } from './Market'
+import { BuyFlow, Receipt, TradeFlow } from './Trade'
+import { Collection } from './Collection'
+import { League } from './League'
+import { Redeem, VaultPage, drip } from './Vault'
+import { usePortfolio } from './portfolio'
+import { Header, Slab, Steps, getTheme, setTheme, short, useFlow, usd, type Theme } from './ui'
+
+function useHash() {
+  const [h, setH] = useState(location.hash)
+  useEffect(() => {
+    // NOTE: the browser morphs any element sharing a view-transition-name (the card image) between pages.
+    // Limit: Chromium/Safari only; elsewhere, and with reduced motion, the page just changes.
+    const on = () => {
+      const go = () => (flushSync(() => setH(location.hash)), window.scrollTo(0, 0))
+      const still = matchMedia('(prefers-reduced-motion: reduce)').matches
+      if (document.startViewTransition && !still) document.startViewTransition(go)
+      else go()
+    }
+    addEventListener('hashchange', on)
+    return () => removeEventListener('hashchange', on)
+  }, [])
+  return h.replace(/^#\/?/, '').split('/')
+}
+
+export type Acct = LocalAccount | undefined
+
+export default function App() {
+  const [account, setAccount] = useState<LocalAccount>()
+  const [guest, setGuest] = useState(false)
+  const [route, ...args] = useHash()
+  if (!account && !guest) return <SignIn onReady={setAccount} onGuest={() => setGuest(true)} />
+  const tab = route === 'collection' ? 'collection' : route === 'vault' ? 'vault' : route === 'you' ? 'you' : route === 'league' ? 'league' : 'markets'
+  // Browsing is open; anything that moves money or cards asks for a passkey first.
+  const need = (el: (a: LocalAccount) => React.ReactNode) => (account ? el(account) : <SignIn inline onReady={setAccount} />)
+  const page =
+    route === 'card' ? <CardPage sku={args[0]} account={account} />
+    : route === 'buy' ? need((a) => <BuyFlow sku={args[0]} account={a} />)
+    : route === 'done' ? need((a) => <Receipt sku={args[0]} price={Number(args[1])} tx={args[2]} account={a} />)
+    : route === 'sell' || route === 'offer' ? need((a) => <TradeFlow key={route} side={route} sku={args[0]} account={a} />)
+    : route === 'redeem' ? need((a) => <Redeem sku={args[0]} account={a} />)
+    : route === 'collection' ? need((a) => <Collection account={a} />)
+    : route === 'vault' ? need((a) => <VaultPage account={a} />)
+    : route === 'league' ? <League account={account} />
+    : route === 'you' ? need((a) => <You account={a} onSignOut={() => (signOut(), setAccount(undefined), setGuest(false), (location.hash = '#/'))} />)
+    : <MarketList account={account} />
+  const tabs = [
+    ['markets', '#/', 'Markets'],
+    ['collection', '#/collection', 'Collection'],
+    ['vault', '#/vault', 'Vault'],
+    ['league', '#/league', 'League'],
+    ['you', '#/you', 'You'],
+  ]
+  return (
+    <>
+      <div className="desk-nav">
+        <a className="brand" href="#/">
+          {brand}
+        </a>
+        <nav aria-label="Primary">
+          {tabs.slice(0, 4).map(([k, href, label]) => (
+            <a key={k} href={href} className={tab === k ? 'on' : ''} aria-current={tab === k ? 'page' : undefined}>
+              {label}
+            </a>
+          ))}
+        </nav>
+        <div className="right">
+          <CashPill account={account} />
+          <a className="ghost line" href="#/you">
+            {account ? 'You' : 'Sign in'}
+          </a>
+        </div>
+      </div>
+      <div className="app">
+        <main>{page}</main>
+      </div>
+      <nav className="tabbar" aria-label="Primary">
+        {tabs.map(([k, href, label]) => (
+          <a key={k} href={href} className={tab === k ? 'on' : ''} aria-current={tab === k ? 'page' : undefined}>
+            {label}
+          </a>
+        ))}
+      </nav>
+    </>
+  )
+}
+
+/** Cash at a glance, always one tap from adding more. */
+export function CashPill({ account }: { account: Acct }) {
+  const { totalCash } = usePortfolio(account?.address)
+  if (!account) return null
+  return (
+    <a className="cash-pill" href="#/you" aria-label={`Cash ${usd(totalCash)}. Add cash`}>
+      {usd(totalCash)}
+      <span>Add</span>
+    </a>
+  )
+}
+
+function SignIn({ onReady, onGuest, inline }: { onReady: (a: LocalAccount) => void; onGuest?: () => void; inline?: boolean }) {
+  const [err, setErr] = useState<string>()
+  const [busy, setBusy] = useState(false)
+  const returning = !!savedPasskey()
+  const go = async (fn: () => Promise<LocalAccount>) => {
+    setBusy(true)
+    setErr(undefined)
+    try {
+      onReady(await fn())
+    } catch (e) {
+      console.error(e)
+      setErr(friendlyError(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+  const actions = (
+    <div className="signin-actions">
+      {returning ? (
+        <button className="btn wide" disabled={busy} onClick={() => go(signIn)}>
+          {busy ? <span className="spin" aria-hidden /> : null}
+          Continue with your passkey
+        </button>
+      ) : (
+        <button className="btn wide" disabled={busy} onClick={() => go(() => createAccount(`Collector ${new Date().toLocaleDateString()}`))}>
+          {busy ? <span className="spin" aria-hidden /> : null}
+          Create an account with a passkey
+        </button>
+      )}
+      <button className="ghost" disabled={busy} onClick={() => go(returning ? () => createAccount('Collector') : signIn)}>
+        {returning ? 'Use a different passkey' : 'I already have an account'}
+      </button>
+      {net.name === 'testnet' && (err || hasDeviceKey()) && (
+        <button className="ghost" disabled={busy} onClick={() => go(async () => deviceAccount())}>
+          {hasDeviceKey() ? 'Continue with this device’s test account' : 'Continue without a passkey (test mode)'}
+        </button>
+      )}
+      {err && (
+        <p className="error" role="alert">
+          {err}
+        </p>
+      )}
+      <p className="fine" style={{ textAlign: 'center' }}>
+        Face ID or your fingerprint. No app to install, no seed phrase.
+      </p>
+    </div>
+  )
+  if (inline)
+    return (
+      <div className="flow" style={{ paddingTop: 40 }}>
+        <h1 className="big" style={{ fontSize: 32 }}>
+          Sign in to continue
+        </h1>
+        <p className="muted">Your passkey is your account. It takes a few seconds.</p>
+        {actions}
+      </div>
+    )
+  return (
+    <div className="signin">
+      <div className="signin-top">
+        <span className="brand">{brand}</span>
+        <button className="ghost" style={{ marginRight: -14, color: 'var(--tx2)' }} onClick={onGuest}>
+          Look around first
+        </button>
+      </div>
+      <div className="signin-hero">
+        <Slab name="PSA 10 Base Set Charizard Holo" size="md" tilt />
+      </div>
+      <div className="rise">
+        <h1>
+          Own the card.
+          <br />
+          Trade it in a second.
+        </h1>
+        <p className="lead">Real graded cards, kept in a vault. Buy and sell them at a live price, and ask for the slab whenever you want it.</p>
+      </div>
+      {actions}
+    </div>
+  )
+}
+
+function You({ account, onSignOut }: { account: LocalAccount; onSignOut: () => void }) {
+  const me = account.address
+  const { data, totalCash, bidCash, refresh } = usePortfolio(me, true)
+  const flow = useFlow()
+  const [copied, setCopied] = useState(false)
+  const [theme, setT] = useState<Theme>(getTheme)
+  const addFunds = async () => {
+    const steps: [string, () => Promise<string | void>][] = []
+    if ((data?.gas ?? 0n) < 5n * 10n ** 16n)
+      // under 0.05 MON: a few orders' worth of network fees
+      steps.push([
+        'Network fees covered',
+        async () => {
+          const { txHash } = await drip(me)
+          if (!txHash) return
+          const r = await pub.waitForTransactionReceipt({ hash: txHash as `0x${string}` })
+          // Monad checks a sender's balance against state a few blocks behind the tip, so let the drip settle.
+          while ((await pub.getBlockNumber()) < r.blockNumber + 4n) await new Promise((ok) => setTimeout(ok, 400))
+          return txHash
+        },
+      ])
+    steps.push([
+      '$10,000 in test dollars added',
+      async () => (await send(account, { address: net.quote, abi: erc20Abi, functionName: 'mint', args: [me, parseUnits('10000', net.quoteDecimals)] })).transactionHash,
+    ])
+    if (await flow.run(steps)) refresh()
+  }
+  const toWallet = async () => {
+    if (!data?.exCashRaw) return
+    if (await flow.run([['Exchange cash moved to your balance', async () => (await send(account, { address: data.ma, abi: marginAbi, functionName: 'withdraw', args: [data.exCashRaw, net.quote] })).transactionHash]])) refresh()
+  }
+  return (
+    <>
+      <Header title="You" />
+      <section className="panel rise">
+        <span className="cap">Cash</span>
+        <div className="big" style={{ fontSize: 44, marginTop: 4 }}>
+          {usd(totalCash, 2)}
+        </div>
+        <p className="fine">
+          Held as USDC, $1 each.
+          {data && data.exCash > 0 ? ` ${usd(data.exCash, 2)} is free on the exchange.` : ''}
+          {bidCash > 0 ? ` ${usd(bidCash)} is held for your offers.` : ''}
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 14 }}>
+          {net.mintableQuote ? (
+            <button className="btn" disabled={flow.busy || !data} onClick={addFunds}>
+              Add test cash
+            </button>
+          ) : (
+            <button className="btn" onClick={() => (navigator.clipboard?.writeText(me), setCopied(true), setTimeout(() => setCopied(false), 1500))}>
+              {copied ? 'Address copied' : 'Add USDC'}
+            </button>
+          )}
+          <button className="ghost line" disabled={flow.busy || !data?.exCash} onClick={toWallet}>
+            Move to wallet
+          </button>
+        </div>
+        {!net.mintableQuote && <p className="fine" style={{ marginTop: 10 }}>Send USDC on Monad to your address. Only USDC on Monad.</p>}
+        <div style={{ marginTop: 12 }}>
+          <Steps steps={flow.steps} error={flow.error} />
+        </div>
+      </section>
+
+      <section className="section">
+        <span className="cap">Sign-in and settings</span>
+        <div className="rows">
+          <div className="kv">
+            <span>Account</span>
+            <button className="u" onClick={() => (navigator.clipboard?.writeText(me), setCopied(true), setTimeout(() => setCopied(false), 1500))}>
+              {copied ? 'Copied' : short(me)}
+            </button>
+          </div>
+          <div className="kv">
+            <span>Signed in with</span>
+            <span>{account.source === 'mera' ? 'Passkey' : 'This device (test mode)'}</span>
+          </div>
+          <div className="kv" style={{ alignItems: 'center' }}>
+            <span>Appearance</span>
+            <span className="seg" role="radiogroup" aria-label="Appearance">
+              {(['auto', 'light', 'dark'] as const).map((t) => (
+                <button key={t} role="radio" aria-checked={theme === t} className={theme === t ? 'on' : ''} onClick={() => (setTheme(t), setT(t))}>
+                  {t[0].toUpperCase() + t.slice(1)}
+                </button>
+              ))}
+            </span>
+          </div>
+          <div className="kv">
+            <span>Network fee balance</span>
+            <span>{data ? `${Number(formatEther(data.gas)).toFixed(3)} MON` : '—'}</span>
+          </div>
+          <div className="kv">
+            <span>Network</span>
+            <span>{net.chain.name}</span>
+          </div>
+        </div>
+      </section>
+      <button className="ghost" style={{ marginTop: 18 }} onClick={onSignOut}>
+        Sign out
+      </button>
+    </>
+  )
+}
