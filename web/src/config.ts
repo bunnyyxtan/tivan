@@ -66,9 +66,9 @@ const which = (import.meta.env.VITE_NETWORK ?? 'testnet') as Network['name']
 if (!(which in networks)) throw new Error(`VITE_NETWORK must be testnet or mainnet, got ${which}`)
 // A dedicated RPC (e.g. a Quicknode endpoint restricted to this site's domain) goes first and carries the writes.
 const ownRpc = import.meta.env.VITE_RPC_URL
-export const net: Network = ownRpc ? { ...networks[which], rpcs: [{ url: ownRpc, limit: Number(import.meta.env.VITE_RPC_LIMIT ?? 40), logs: import.meta.env.VITE_RPC_LOGS === 'true' }, ...networks[which].rpcs] } : networks[which]
+export const net: Network = ownRpc ? { ...networks[which], rpcs: [{ url: ownRpc, limit: Number(import.meta.env.VITE_RPC_LIMIT) || 40, logs: import.meta.env.VITE_RPC_LOGS === 'true' }, ...networks[which].rpcs] } : networks[which]
 
-export const attestorUrl: string = import.meta.env.VITE_ATTESTOR_URL ?? 'http://localhost:8787'
+export const attestorUrl: string = import.meta.env.VITE_ATTESTOR_URL || 'http://localhost:8787'
 /** Envio HyperIndex GraphQL (indexer/). Optional: without it the app reads SKUs and trades straight from the RPC. */
 export const indexerUrl: string | undefined = import.meta.env.VITE_INDEXER_URL || undefined
 

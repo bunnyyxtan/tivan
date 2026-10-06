@@ -15,7 +15,7 @@ const vaultAbi = parseAbi([
 ])
 
 const account = privateKeyToAccount(deployerKey)
-const transport = http(network.chain.rpcUrls.default.http[0])
+const transport = http(process.env.RPC_URL || network.chain.rpcUrls.default.http[0])
 const pub = createPublicClient({ chain: network.chain, transport })
 const wallet = createWalletClient({ account, chain: network.chain, transport })
 

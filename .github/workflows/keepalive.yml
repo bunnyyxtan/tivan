@@ -1,0 +1,13 @@
+# Free hosts sleep after idle time and a cold start takes about a minute, which would stall a first-time tester's
+# gas drip. This pings the attestor every ten minutes so it stays awake. Needs the repo variable VITE_ATTESTOR_URL.
+name: Keep attestor awake
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    if: ${{ vars.VITE_ATTESTOR_URL != '' }}
+    steps:
+      - run: curl -fsS --max-time 90 "${{ vars.VITE_ATTESTOR_URL }}/health"

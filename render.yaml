@@ -1,0 +1,18 @@
+# One-click host for the attestor: Render dashboard > New > Blueprint > pick this repo.
+# Then set DEPLOYER_KEY (a funded testnet key) when it asks, and copy the service URL into the repo variable VITE_ATTESTOR_URL.
+services:
+  - type: web
+    name: tivan-attestor
+    runtime: node
+    plan: free
+    rootDir: attestor
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NETWORK
+        value: testnet
+      - key: DEPLOYER_KEY
+        sync: false
