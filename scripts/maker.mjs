@@ -1,5 +1,6 @@
 // Market maker for Tivan testnet: keeps a resting ask and bid on every card so first-time testers find a price.
-// Usage: MAKER_KEY=0x... node scripts/maker.mjs [--once]
+// Usage: cd scripts && MAKER_KEY=0x... node maker.mjs [--once]
+// Without --once it re-checks every 20 s and refills whatever traders have taken, so first-time testers always find a price.
 // It quotes only with what the maker account already holds (cards and test dollars) and says so in its log.
 // NOTE: fixed reference prices and a flat spread, no inventory risk model. Limit: a demo liquidity seed, not a strategy.
 import { createPublicClient, createWalletClient, http, parseAbi, encodeAbiParameters, keccak256, formatUnits, parseUnits } from 'viem'
@@ -37,36 +38,49 @@ const live = (x) => x > 0n && x < 2n ** 255n
 
 const ma = await pub.readContract({ address: ROUTER, abi: router, functionName: 'marginAccountAddress' })
 console.log('maker', account.address)
-for (const [spec, grade, ref] of CARDS) {
-  const sku = keccak256(encodeAbiParameters([{ type: 'uint256' }, { type: 'uint8' }], [spec, grade]))
-  const [token, market] = await pub.readContract({ address: VAULT, abi: vaultAbi, functionName: 'skuInfo', args: [sku] })
-  if (token === '0x0000000000000000000000000000000000000000' || market === '0x0000000000000000000000000000000000000000') { console.log(`#${spec} PSA ${grade}: no market`); continue }
-  const [bid, ask] = await pub.readContract({ address: market, abi: book, functionName: 'bestBidAsk' })
-  const label = `#${spec} PSA ${grade}`
-  if (!live(ask)) {
-    const have = (await pub.readContract({ address: token, abi: erc20, functionName: 'balanceOf', args: [account.address] })) + (await pub.readContract({ address: ma, abi: margin, functionName: 'getBalance', args: [account.address, token] }))
-    if (have < 1n) console.log(`${label}: no ask, maker holds no card to sell`)
-    else {
-      const onBook = await pub.readContract({ address: ma, abi: margin, functionName: 'getBalance', args: [account.address, token] })
-      if (onBook < 1n) { await send({ address: token, abi: erc20, functionName: 'approve', args: [ma, 1n] }); await send({ address: ma, abi: margin, functionName: 'deposit', args: [account.address, token, 1n] }) }
-      const px = Math.round(ref * (1 + SPREAD / 2) * 100)
-      await send({ address: market, abi: book, functionName: 'addSellOrder', args: [px, 1n, true] })
-      console.log(`${label}: ask $${px / 100}`)
-    }
-  } else console.log(`${label}: ask exists`)
-  if (!live(bid)) {
-    const px = Math.round(ref * (1 - SPREAD / 2) * 100)
-    const need = parseUnits(String(px / 100), 6)
-    const [wallet, onBook] = await Promise.all([
-      pub.readContract({ address: QUOTE, abi: erc20, functionName: 'balanceOf', args: [account.address] }),
-      pub.readContract({ address: ma, abi: margin, functionName: 'getBalance', args: [account.address, QUOTE] }),
-    ])
-    // Cash already on the exchange backs the bid directly; only top up from the wallet when it falls short.
-    if (wallet + onBook < need) console.log(`${label}: no bid, maker cash $${formatUnits(wallet + onBook, 6)} is short of $${px / 100}`)
-    else {
-      if (onBook < need) { await send({ address: QUOTE, abi: erc20, functionName: 'approve', args: [ma, need - onBook] }); await send({ address: ma, abi: margin, functionName: 'deposit', args: [account.address, QUOTE, need - onBook] }) }
-      await send({ address: market, abi: book, functionName: 'addBuyOrder', args: [px, 1n, true] })
-      console.log(`${label}: bid $${px / 100}`)
-    }
-  } else console.log(`${label}: bid exists`)
+let quiet = false
+const seen = new Set()
+const say = (m) => (/exists$|: no /.test(m) && quiet && seen.has(m) ? undefined : (seen.add(m), console.log(m)))
+async function pass() {
+  for (const [spec, grade, ref] of CARDS) {
+    const sku = keccak256(encodeAbiParameters([{ type: 'uint256' }, { type: 'uint8' }], [spec, grade]))
+    const [token, market] = await pub.readContract({ address: VAULT, abi: vaultAbi, functionName: 'skuInfo', args: [sku] })
+    if (token === '0x0000000000000000000000000000000000000000' || market === '0x0000000000000000000000000000000000000000') { say(`#${spec} PSA ${grade}: no market`); continue }
+    const [bid, ask] = await pub.readContract({ address: market, abi: book, functionName: 'bestBidAsk' })
+    const label = `#${spec} PSA ${grade}`
+    if (!live(ask)) {
+      const have = (await pub.readContract({ address: token, abi: erc20, functionName: 'balanceOf', args: [account.address] })) + (await pub.readContract({ address: ma, abi: margin, functionName: 'getBalance', args: [account.address, token] }))
+      if (have < 1n) say(`${label}: no ask, maker holds no card to sell`)
+      else {
+        const onBook = await pub.readContract({ address: ma, abi: margin, functionName: 'getBalance', args: [account.address, token] })
+        if (onBook < 1n) { await send({ address: token, abi: erc20, functionName: 'approve', args: [ma, 1n] }); await send({ address: ma, abi: margin, functionName: 'deposit', args: [account.address, token, 1n] }) }
+        const px = Math.round(ref * (1 + SPREAD / 2) * 100)
+        await send({ address: market, abi: book, functionName: 'addSellOrder', args: [px, 1n, true] })
+        say(`${label}: ask $${px / 100}`)
+      }
+    } else say(`${label}: ask exists`)
+    if (!live(bid)) {
+      const px = Math.round(ref * (1 - SPREAD / 2) * 100)
+      const need = parseUnits(String(px / 100), 6)
+      const [wallet, onBook] = await Promise.all([
+        pub.readContract({ address: QUOTE, abi: erc20, functionName: 'balanceOf', args: [account.address] }),
+        pub.readContract({ address: ma, abi: margin, functionName: 'getBalance', args: [account.address, QUOTE] }),
+      ])
+      // Cash already on the exchange backs the bid directly; only top up from the wallet when it falls short.
+      if (wallet + onBook < need) say(`${label}: no bid, maker cash $${formatUnits(wallet + onBook, 6)} is short of $${px / 100}`)
+      else {
+        if (onBook < need) { await send({ address: QUOTE, abi: erc20, functionName: 'approve', args: [ma, need - onBook] }); await send({ address: ma, abi: margin, functionName: 'deposit', args: [account.address, QUOTE, need - onBook] }) }
+        await send({ address: market, abi: book, functionName: 'addBuyOrder', args: [px, 1n, true] })
+        say(`${label}: bid $${px / 100}`)
+      }
+    } else say(`${label}: bid exists`)
+  }
+}
+
+const once = process.argv.includes('--once')
+await pass()
+quiet = true
+while (!once) {
+  await new Promise((r) => setTimeout(r, 20000))
+  await pass().catch((e) => console.warn('pass failed, retrying:', String(e.shortMessage ?? e.message ?? e).slice(0, 140)))
 }

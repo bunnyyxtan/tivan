@@ -127,7 +127,8 @@ cd indexer && npm install && npm run dev
 
 ```sh
 cd scripts && npm install
-MAKER_KEY=0x... node maker.mjs
+MAKER_KEY=0x... node maker.mjs          # keeps quoting, refills every 20 s
+MAKER_KEY=0x... node maker.mjs --once   # one pass
 ```
 
 ## Deployments
