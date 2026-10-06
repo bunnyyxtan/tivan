@@ -56,12 +56,15 @@ for (const [spec, grade, ref] of CARDS) {
   } else console.log(`${label}: ask exists`)
   if (!live(bid)) {
     const px = Math.round(ref * (1 - SPREAD / 2) * 100)
-    const cash = await pub.readContract({ address: QUOTE, abi: erc20, functionName: 'balanceOf', args: [account.address] })
     const need = parseUnits(String(px / 100), 6)
-    if (cash < need) console.log(`${label}: no bid, maker cash $${formatUnits(cash, 6)} is short of $${px / 100}`)
+    const [wallet, onBook] = await Promise.all([
+      pub.readContract({ address: QUOTE, abi: erc20, functionName: 'balanceOf', args: [account.address] }),
+      pub.readContract({ address: ma, abi: margin, functionName: 'getBalance', args: [account.address, QUOTE] }),
+    ])
+    // Cash already on the exchange backs the bid directly; only top up from the wallet when it falls short.
+    if (wallet + onBook < need) console.log(`${label}: no bid, maker cash $${formatUnits(wallet + onBook, 6)} is short of $${px / 100}`)
     else {
-      await send({ address: QUOTE, abi: erc20, functionName: 'approve', args: [ma, need] })
-      await send({ address: ma, abi: margin, functionName: 'deposit', args: [account.address, QUOTE, need] })
+      if (onBook < need) { await send({ address: QUOTE, abi: erc20, functionName: 'approve', args: [ma, need - onBook] }); await send({ address: ma, abi: margin, functionName: 'deposit', args: [account.address, QUOTE, need - onBook] }) }
       await send({ address: market, abi: book, functionName: 'addBuyOrder', args: [px, 1n, true] })
       console.log(`${label}: bid $${px / 100}`)
     }

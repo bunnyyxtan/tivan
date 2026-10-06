@@ -125,7 +125,8 @@ cd indexer && npm install && npm run dev
 **Market maker** (quotes a bid and ask on cards that have none, using the maker account's own funds)
 
 ```sh
-MAKER_KEY=0x... node scripts/maker.mjs
+cd scripts && npm install
+MAKER_KEY=0x... node maker.mjs
 ```
 
 ## Deployments
