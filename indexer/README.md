@@ -140,3 +140,9 @@ query MyOrders($m: String!, $o: String!) {   # $o lowercased
   bids and listings happened on testnet; new fills appeared in the chart within seconds.
 - Not verified here: HyperSync (no `ENVIO_API_TOKEN` in this environment - endpoint answers 401
   without one) and `envio dev` (its Docker compose path).
+
+## Hosted on Envio Cloud
+
+The project `tivan` on [Envio Cloud](https://envio.dev/app) deploys from the `envio` branch (root directory `indexer`, config
+`config.yaml`, Monad testnet). To redeploy after a change: `git push origin main:envio`. The GraphQL endpoint it gives is
+set in the repo variable `VITE_INDEXER_URL`, which the web build reads.
