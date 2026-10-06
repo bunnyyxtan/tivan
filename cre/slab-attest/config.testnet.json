@@ -1,0 +1,8 @@
+{
+  "chainSelectorName": "monad-testnet",
+  "vault": "0x998a3116dc9AaDb98AF27B31BeC93441E1991a12",
+  "receiver": "",
+  "usePsaApi": false,
+  "psaUrl": "https://api.psacard.com/publicapi/cert/GetByCertNumber/",
+  "gasLimit": "3000000"
+}

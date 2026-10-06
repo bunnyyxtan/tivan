@@ -1,0 +1,8 @@
+{
+  "chainSelectorName": "monad-mainnet",
+  "vault": "0x5ad7d5e06df36415c6f3fA48299Bf92ed921859a",
+  "receiver": "",
+  "usePsaApi": true,
+  "psaUrl": "https://api.psacard.com/publicapi/cert/GetByCertNumber/",
+  "gasLimit": "3000000"
+}

@@ -1,0 +1,24 @@
+# testnet: fixtures registry (no PSA token needed). testnet-psa: live PSA API, needs PSA_TOKEN_VALUE in env.
+testnet-settings:
+  user-workflow:
+    workflow-name: "slab-attest-testnet"
+  workflow-artifacts:
+    workflow-path: "./main.ts"
+    config-path: "./config.testnet.json"
+    secrets-path: ""
+
+testnet-psa-settings:
+  user-workflow:
+    workflow-name: "slab-attest-testnet-psa"
+  workflow-artifacts:
+    workflow-path: "./main.ts"
+    config-path: "./config.testnet-psa.json"
+    secrets-path: "../secrets.yaml"
+
+mainnet-settings:
+  user-workflow:
+    workflow-name: "slab-attest-mainnet"
+  workflow-artifacts:
+    workflow-path: "./main.ts"
+    config-path: "./config.mainnet.json"
+    secrets-path: "../secrets.yaml"
