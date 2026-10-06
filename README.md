@@ -112,6 +112,8 @@ cd web && npm install && npm run dev        # http://localhost:5173
 | `VITE_NETWORK` | `testnet` | `testnet` or `mainnet` |
 | `VITE_ATTESTOR_URL` | `http://localhost:8787` | Attestor relay |
 | `VITE_INDEXER_URL` | unset | Envio GraphQL endpoint; without it the app reads the chain directly |
+| `VITE_RPC_URL` | unset | Dedicated RPC endpoint tried first (restrict it to your domain); the public RPCs stay as extra capacity |
+| `VITE_RPC_LIMIT` | `40` | Requests per second that endpoint tolerates |
 | `VITE_BASE` | `/` | Public base path, set by the Pages workflow |
 
 **Indexer** (needs a free Envio token, see [indexer/README.md](indexer/README.md))

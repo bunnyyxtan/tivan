@@ -1,24 +1,32 @@
 import { createPublicClient, createWalletClient, encodeAbiParameters, getAddress, http, keccak256, parseAbi, parseAbiItem, type Account, type Address, type Hex } from 'viem'
 import { indexerUrl, net } from './config'
 
-// NOTE: the public Monad RPC allows ~15 requests/sec per IP (batched calls count individually), so every call goes
-// through one client-side limiter that also retries rate-limit replies. Limit: one tab's worth of polling; a
-// dedicated RPC endpoint removes the need.
-const LIMIT = 10
-let sent: { t: number; n: number }[] = []
+// NOTE: public Monad RPCs allow roughly 15-25 requests/sec per IP each (batched calls count individually). Every call
+// goes through one client-side limiter with a budget per endpoint: reads take whichever endpoint has room, writes and
+// receipts stay on the first so nonces and receipts agree. Rate-limit replies are retried. Limit: a dedicated RPC
+// endpoint removes the need.
+const sent = new Map<string, { t: number; n: number }[]>()
 const sleep = (ms: number) => new Promise((ok) => setTimeout(ok, ms))
-async function limitedFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+const room = (e: { url: string; limit: number }, n: number) => {
+  const now = Date.now()
+  const live = (sent.get(e.url) ?? []).filter((x) => now - x.t < 1000)
+  sent.set(e.url, live)
+  return e.limit - live.reduce((a, x) => a + x.n, 0) - n
+}
+async function limitedFetch(_input: string | URL | Request, init?: RequestInit): Promise<Response> {
   const body = typeof init?.body === 'string' ? JSON.parse(init.body) : undefined
-  const n = Array.isArray(body) ? body.length : 1
+  const calls: { method?: string }[] = Array.isArray(body) ? body : body ? [body] : []
+  const n = calls.length || 1
+  const write = calls.some((c) => /^eth_(send|getTransaction|estimateGas)/.test(c.method ?? ''))
   for (let attempt = 0; ; attempt++) {
+    let e = net.rpcs[0]
     for (;;) {
-      const now = Date.now()
-      sent = sent.filter((x) => now - x.t < 1000)
-      if (sent.reduce((a, x) => a + x.n, 0) + n <= LIMIT) break
+      if (!write) e = net.rpcs.reduce((best, x) => (room(x, n) > room(best, n) ? x : best))
+      if (room(e, n) >= 0) break
       await sleep(120)
     }
-    sent.push({ t: Date.now(), n })
-    const res = await fetch(input, init)
+    sent.get(e.url)!.push({ t: Date.now(), n })
+    const res = await fetch(e.url, init)
     if (attempt < 6 && (res.status === 429 || (await res.clone().text()).includes('-32011'))) {
       await sleep(400 * (attempt + 1))
       continue

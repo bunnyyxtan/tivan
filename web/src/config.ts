@@ -14,6 +14,8 @@ export type Network = {
   mintableQuote: boolean
   /** Known SKUs, read via skuInfo so the list never depends on scanning old logs. */
   seedSkus: { specId: bigint; grade: number }[]
+  /** JSON-RPC endpoints with the requests/second each tolerates; reads spread across them, writes use the first. */
+  rpcs: { url: string; limit: number }[]
 }
 
 const networks: Record<Network['name'], Network> = {
@@ -27,6 +29,10 @@ const networks: Record<Network['name'], Network> = {
     quoteDecimals: 6,
     kuruRouter: '0x7EFbE105Ca7415dE98F96622173458ac1c054630',
     mintableQuote: true,
+    rpcs: [
+      { url: 'https://testnet-rpc.monad.xyz', limit: 14 },
+      { url: 'https://rpc.ankr.com/monad_testnet', limit: 24 },
+    ],
     seedSkus: [
       { specId: 4n, grade: 10 },
       { specId: 4n, grade: 9 },
@@ -45,6 +51,7 @@ const networks: Record<Network['name'], Network> = {
     quoteDecimals: 6,
     kuruRouter: '0xd651346d7c789536ebf06dc72aE3C8502cd695CC',
     mintableQuote: false,
+    rpcs: [{ url: 'https://rpc.monad.xyz', limit: 10 }],
     // DEMO SKUs: tokens named "DEMO …", no physical cards. Kuru mainnet markets are owner-gated, so pending listing.
     seedSkus: [
       { specId: 58n, grade: 10 },
@@ -57,7 +64,9 @@ const networks: Record<Network['name'], Network> = {
 
 const which = (import.meta.env.VITE_NETWORK ?? 'testnet') as Network['name']
 if (!(which in networks)) throw new Error(`VITE_NETWORK must be testnet or mainnet, got ${which}`)
-export const net = networks[which]
+// A dedicated RPC (e.g. a Quicknode endpoint restricted to this site's domain) goes first and carries the writes.
+const ownRpc = import.meta.env.VITE_RPC_URL
+export const net: Network = ownRpc ? { ...networks[which], rpcs: [{ url: ownRpc, limit: Number(import.meta.env.VITE_RPC_LIMIT ?? 40) }, ...networks[which].rpcs] } : networks[which]
 
 export const attestorUrl: string = import.meta.env.VITE_ATTESTOR_URL ?? 'http://localhost:8787'
 /** Envio HyperIndex GraphQL (indexer/). Optional: without it the app reads SKUs and trades straight from the RPC. */
