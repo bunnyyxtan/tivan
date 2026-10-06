@@ -240,7 +240,7 @@ function You({ account, onSignOut }: { account: LocalAccount; onSignOut: () => v
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 14 }}>
           {net.mintableQuote ? (
             <button className="btn" disabled={flow.busy || !data} onClick={addFunds}>
-              Add test cash
+              {data ? 'Add test cash' : 'Loading balance…'}
             </button>
           ) : (
             <button className="btn" onClick={() => (navigator.clipboard?.writeText(me), setCopied(true), setTimeout(() => setCopied(false), 1500))}>
