@@ -12,5 +12,7 @@
   "81234576": {"PSACert": {"CertNumber": "81234576", "SpecID": 1993232, "Year": "1993", "Brand": "MAGIC THE GATHERING", "CardNumber": "232", "Subject": "BLACK LOTUS", "Variety": "ALPHA", "CardGrade": "MINT 9", "GradeDescription": "MINT 9"}},
   "81234577": {"PSACert": {"CertNumber": "81234577", "SpecID": 1993232, "Year": "1993", "Brand": "MAGIC THE GATHERING", "CardNumber": "232", "Subject": "BLACK LOTUS", "Variety": "ALPHA", "CardGrade": "MINT 9", "GradeDescription": "MINT 9"}},
   "81234578": {"PSACert": {"CertNumber": "81234578", "SpecID": 2003111, "Year": "2003", "Brand": "TOPPS CHROME", "CardNumber": "111", "Subject": "LEBRON JAMES", "Variety": "", "CardGrade": "GEM MT 10", "GradeDescription": "GEM MT 10"}},
-  "81234579": {"PSACert": {"CertNumber": "81234579", "SpecID": 1993232, "Year": "1993", "Brand": "MAGIC THE GATHERING", "CardNumber": "232", "Subject": "BLACK LOTUS", "Variety": "ALPHA", "CardGrade": "MINT 9", "GradeDescription": "MINT 9"}}
+  "81234579": {"PSACert": {"CertNumber": "81234579", "SpecID": 1993232, "Year": "1993", "Brand": "MAGIC THE GATHERING", "CardNumber": "232", "Subject": "BLACK LOTUS", "Variety": "ALPHA", "CardGrade": "MINT 9", "GradeDescription": "MINT 9"}},
+  "81234580": {"PSACert": {"CertNumber": "81234580", "SpecID": 58, "Year": "1999", "Brand": "POKEMON GAME", "CardNumber": "58", "Subject": "PIKACHU", "Variety": "BASE SET-RED CHEEKS", "CardGrade": "GEM MT 10", "GradeDescription": "GEM MT 10"}},
+  "81234581": {"PSACert": {"CertNumber": "81234581", "SpecID": 4, "Year": "1999", "Brand": "POKEMON GAME", "CardNumber": "4", "Subject": "CHARIZARD-HOLO", "Variety": "BASE SET", "CardGrade": "MINT 9", "GradeDescription": "MINT 9"}}
 }
