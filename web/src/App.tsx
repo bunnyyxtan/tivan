@@ -8,6 +8,7 @@ import { CardPage, MarketList } from './Market'
 import { BuyFlow, Receipt, TradeFlow } from './Trade'
 import { Collection } from './Collection'
 import { League } from './League'
+import { askPermission, notifyState, useAlertWatcher } from './alerts'
 import { Redeem, VaultPage, drip } from './Vault'
 import { usePortfolio } from './portfolio'
 import { Header, Slab, Steps, getTheme, setTheme, short, useFlow, useTint, usd, type Theme } from './ui'
@@ -35,6 +36,7 @@ export default function App() {
   const [account, setAccount] = useState<LocalAccount>()
   const [guest, setGuest] = useState(false)
   const [route, ...args] = useHash()
+  useAlertWatcher()
   if (!account && !guest) return <SignIn onReady={setAccount} onGuest={() => setGuest(true)} />
   const tab = route === 'collection' ? 'collection' : route === 'vault' ? 'vault' : route === 'you' ? 'you' : route === 'league' ? 'league' : 'markets'
   // Browsing is open; anything that moves money or cards asks for a passkey first.
@@ -191,6 +193,7 @@ function You({ account, onSignOut }: { account: LocalAccount; onSignOut: () => v
   const flow = useFlow()
   const [copied, setCopied] = useState(false)
   const [theme, setT] = useState<Theme>(getTheme)
+  const [notif, setNotif] = useState(notifyState)
   const addFunds = async () => {
     const steps: [string, () => Promise<string | void>][] = []
     if ((data?.gas ?? 0n) < 5n * 10n ** 16n)
@@ -261,6 +264,18 @@ function You({ account, onSignOut }: { account: LocalAccount; onSignOut: () => v
           <div className="kv">
             <span>Signed in with</span>
             <span>{account.source === 'mera' ? 'Passkey' : 'This device (test mode)'}</span>
+          </div>
+          {account.source === 'mera' && (
+            <div className="kv">
+              <span>Passkey</span>
+              <span style={{ textAlign: 'right' }}>Syncs to your other devices with iCloud Keychain or Google Password Manager</span>
+            </div>
+          )}
+          <div className="kv" style={{ alignItems: 'center' }}>
+            <span>Notifications</span>
+            <button className={`pill ${notif === 'granted' ? 'on' : ''}`} disabled={notif !== 'default'} onClick={async () => (await askPermission(), setNotif(notifyState()))}>
+              {notif === 'granted' ? 'On' : notif === 'denied' ? 'Blocked in browser' : 'Turn on'}
+            </button>
           </div>
           <div className="kv" style={{ alignItems: 'center' }}>
             <span>Appearance</span>

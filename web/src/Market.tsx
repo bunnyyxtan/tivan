@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { LocalAccount } from 'viem'
+import { alertPrice, useAlerts } from './alerts'
 import { brand, catalogOf, categories, categoryOf, net } from './config'
 import { bookAbi, decodeL2, hasMarket, lastPaid, loadSkus, openOrders, pub, send, tradeHistory, type Fill, type Level, type Order, type Sku } from './chain'
 import { usePortfolio } from './portfolio'
@@ -219,6 +220,7 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
                   ? 'Nobody is selling right now. Make an offer and a seller can accept it instantly.'
                   : 'No offers yet. Yours would be the first.'}
             </p>
+            {s.ask && <AlertRow s={s} flash={flash} />}
             {own > 0 && (
               <div className="kv" style={{ marginTop: 10, borderTop: '1px solid var(--line)' }}>
                 <span>You own {own}</span>
@@ -289,6 +291,30 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
       {toast && <Toast text={toast} />}
     </div>
     </>
+  )
+}
+
+function AlertRow({ s, flash }: { s: Sku; flash: (t: string) => void }) {
+  const al = useAlerts()
+  const cur = al.has(s.sku, 'below')
+  const target = cur?.price ?? (s.ask ? alertPrice(s.ask) : undefined)
+  if (!target) return null
+  const toggle = async () => {
+    if (cur) return al.off(s.sku, 'below')
+    if (!(await al.on({ sku: s.sku, kind: 'below', price: target }))) flash('Allow notifications in your browser to use alerts.')
+  }
+  return (
+    <div className="kv" style={{ marginTop: 10, alignItems: 'center' }}>
+      <span>
+        Tell me if it drops below {usd(target)}
+        <span className="fine" style={{ display: 'block' }}>
+          One notification, then it turns off. Works while {brand} is open.
+        </span>
+      </span>
+      <button className={`pill ${cur ? 'on' : ''}`} role="switch" aria-checked={!!cur} onClick={toggle}>
+        {cur ? 'On' : 'Off'}
+      </button>
+    </div>
   )
 }
 

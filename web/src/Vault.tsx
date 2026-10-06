@@ -15,6 +15,22 @@ async function post(path: string, body: object) {
   if (!res.ok) throw new Error(/cert known/.test(j.error) ? 'This cert is already in the vault.' : (j.error ?? `HTTP ${res.status}`))
   return j as { txHash?: string; verifiedBy?: string }
 }
+// Deposits you have started, kept in this browser so the vault can show where each one is.
+type Deposit = { cert: string; name: string; t: number }
+const DEP = 'tivan.deposits'
+const readDeposits = (): Deposit[] => {
+  try {
+    return JSON.parse(localStorage.getItem(DEP) ?? '[]')
+  } catch {
+    return []
+  }
+}
+const saveDeposit = (d: Deposit) => {
+  try {
+    localStorage.setItem(DEP, JSON.stringify([d, ...readDeposits().filter((x) => x.cert !== d.cert)].slice(0, 10)))
+  } catch {}
+}
+
 export const drip = (address: string) => post('/drip', { address })
 
 export function VaultPage({ account }: { account: LocalAccount }) {
@@ -23,6 +39,7 @@ export function VaultPage({ account }: { account: LocalAccount }) {
   const [grade, setGrade] = useState(10)
   const [found, setFound] = useState<{ ok: boolean; text: string }>()
   const [source, setSource] = useState<string>()
+  const [deps, setDeps] = useState(readDeposits)
   const flow = useFlow()
   const { data: port, refresh } = usePortfolio(account.address)
   const card = catalog[pick]
@@ -58,6 +75,8 @@ export function VaultPage({ account }: { account: LocalAccount }) {
           async () => {
             const r = await post('/attest', { certId: cert, specId: card.specId.toString(), grade, holder: account.address, name, symbol: `PSA${grade}-${card.short}` })
             setSource(r.verifiedBy)
+            saveDeposit({ cert, name, t: Date.now() })
+            setDeps(readDeposits())
             return r.txHash
           },
         ],
@@ -161,6 +180,44 @@ export function VaultPage({ account }: { account: LocalAccount }) {
           Demo: custody is simulated. In production, a vault partner checks the slab in before it can trade.
         </p>
       </section>
+
+      {deps.length > 0 && (
+        <section className="section">
+          <span className="cap">Your deposits</span>
+          {deps.map((d) => {
+            const ready = mine.some((h) => h.s.name === d.name)
+            return (
+              <div key={d.cert} className="panel" style={{ marginTop: 8 }}>
+                <div className="item">
+                  <Slab name={d.name} size="xs" />
+                  <div>
+                    <div className="item-title">{cardTitle(d.name)}</div>
+                    <div className="fine" style={{ fontSize: 14 }}>
+                      {cardSub(d.name)} · cert {d.cert}
+                    </div>
+                  </div>
+                </div>
+                <ol className="timeline" style={{ marginTop: 10 }}>
+                  <li className="done">
+                    <i />
+                    Grade checked with PSA
+                    <span className="muted" style={{ marginLeft: 'auto' }}>{new Date(d.t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                  </li>
+                  <li className={ready ? 'done' : 'now'}>
+                    <i />
+                    {ready ? 'Checked in to the vault' : 'Waiting for the slab to arrive'}
+                  </li>
+                  <li className={ready ? 'done' : 'todo'}>
+                    <i />
+                    Ready to trade
+                  </li>
+                </ol>
+                {!ready && <p className="fine">Carrier tracking appears here once a vault partner is live.</p>}
+              </div>
+            )
+          })}
+        </section>
+      )}
 
       <section className="section">
         <span className="cap">In the vault for you</span>

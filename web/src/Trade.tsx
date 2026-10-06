@@ -3,6 +3,7 @@ import { parseEventLogs, type LocalAccount } from 'viem'
 import { net } from './config'
 import { bookAbi, decodeL2, erc20Abi, explorerTx, hasMarket, lastPaid, loadSkus, marginAbi, marginAccount, pub, send, tradeHistory } from './chain'
 import { usePortfolio } from './portfolio'
+import { useAlerts } from './alerts'
 import { Header, Slab, Steps, Toast, cardSub, cardTitle, delta, useFlow, usePoll, useTint, usd } from './ui'
 
 const toUnits = (dollars: number) => BigInt(Math.round(dollars * 100)) * 10n ** BigInt(net.quoteDecimals - 2)
@@ -36,6 +37,34 @@ const Item = ({ name, note }: { name: string; note: string }) => (
     </div>
   </div>
 )
+
+function ListedAlert({ sku }: { sku: string }) {
+  const al = useAlerts()
+  const on = al.has(sku, 'listed')
+  return (
+    <button className="kv" style={{ width: '100%' }} onClick={async () => (on ? al.off(sku, 'listed') : await al.on({ sku, kind: 'listed' }))}>
+      <span style={{ color: 'var(--tx)' }}>{on ? 'We’ll tell you when one is listed' : 'Tell me when one is listed'}</span>
+      <span className="muted">{on ? 'On' : '›'}</span>
+    </button>
+  )
+}
+
+/** Where to send cash from any wallet: the account address itself (a plain ERC-20 transfer). */
+function Deposit({ address }: { address: string }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <section className="panel">
+      <span className="cap">{net.mintableQuote ? `Or send TestUSD on ${net.chain.name}` : `Add USDC from any wallet on ${net.chain.name}`}</span>
+      <button className="kv" style={{ width: '100%', wordBreak: 'break-all', textAlign: 'left' }} onClick={() => (navigator.clipboard?.writeText(address), setCopied(true), setTimeout(() => setCopied(false), 1500))}>
+        <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 13 }}>{address}</span>
+        <span className="muted">{copied ? 'Copied' : 'Copy'}</span>
+      </button>
+      <p className="fine" style={{ marginTop: 8 }}>
+        Arrives in about a second. Only send {net.mintableQuote ? 'TestUSD' : 'USDC'} on {net.chain.name} to this address.
+      </p>
+    </section>
+  )
+}
 
 export function BuyFlow({ sku, account }: { sku: string; account: LocalAccount }) {
   const { data } = useCard(sku)
@@ -76,7 +105,9 @@ export function BuyFlow({ sku, account }: { sku: string; account: LocalAccount }
               <span style={{ color: 'var(--tx)' }}>Review the next one at {usd(data.ask)}</span>
               <span className="muted">›</span>
             </button>
-          ) : null}
+          ) : (
+            <ListedAlert sku={sku} />
+          )}
         </div>
         <a className="ghost line" href="#/">
           Back to Markets
@@ -121,6 +152,10 @@ export function BuyFlow({ sku, account }: { sku: string; account: LocalAccount }
         <a className="btn wide" href="#/you">
           {net.mintableQuote ? 'Add test dollars' : 'Add USDC'}
         </a>
+        <Deposit address={account.address} />
+        <button className="ghost line" onClick={refresh}>
+          I’ve sent it. Check my cash
+        </button>
         <a className="u" href={`#/offer/${sku}`} style={{ alignSelf: 'center', fontSize: 14, color: 'var(--tx2)' }}>
           Or make an offer within your cash
         </a>
@@ -198,6 +233,20 @@ export function BuyFlow({ sku, account }: { sku: string; account: LocalAccount }
   )
 }
 
+function BidAlert({ sku, paid }: { sku: string; paid: number }) {
+  const al = useAlerts()
+  const on = al.has(sku, 'bid')
+  const [blocked, setBlocked] = useState(false)
+  return (
+    <div className="notice" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+      <span>{blocked ? 'Allow notifications in your browser first.' : 'Want a heads-up if someone offers more than you paid?'}</span>
+      <button className={`pill ${on ? 'on' : ''}`} onClick={async () => (on ? al.off(sku, 'bid') : setBlocked(!(await al.on({ sku, kind: 'bid', price: paid }))))}>
+        {on ? 'On' : 'Turn on'}
+      </button>
+    </div>
+  )
+}
+
 export function Receipt({ sku, price, tx, account }: { sku: string; price: number; tx: string; account: LocalAccount }) {
   const { data } = usePoll(async () => (await loadSkus()).find((x) => x.sku === sku), 30000, [sku])
   const { data: port, totalCash } = usePortfolio(account.address)
@@ -237,6 +286,7 @@ export function Receipt({ sku, price, tx, account }: { sku: string; price: numbe
           <span>Stays in the vault until you ask</span>
         </div>
       </div>
+      <BidAlert sku={sku} paid={price} />
       <div style={{ display: 'flex', gap: 10 }}>
         <a className="ghost line" href="#/" style={{ flex: '0 0 128px' }}>
           Markets
