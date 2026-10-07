@@ -148,7 +148,7 @@ export function Steps({ steps, error }: { steps: Step[]; error?: string }) {
     <ol className="steps" aria-live="polite">
       {steps.map((s, i) => (
         <li key={i} className={`step step-${s.state}`}>
-          <span className="step-dot" aria-hidden />
+          <span className="step-state">{{ todo: '', doing: 'Now', done: 'Done', error: 'Failed' }[s.state]}</span>
           <span className="step-label">{s.label}</span>
           {s.hash && (
             <a className="u step-link" href={explorerTx(s.hash)} target="_blank" rel="noreferrer">

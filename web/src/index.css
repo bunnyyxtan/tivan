@@ -224,19 +224,18 @@ label.lab { display: flex; flex-direction: column; gap: 8px; font-size: 13px; fo
 /* steps */
 .steps { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
 .step { display: flex; align-items: center; gap: 12px; font-size: 15px; }
-.step-dot { width: 11px; height: 11px; border-radius: 6px; border: 1px solid var(--line2); flex-shrink: 0; }
-.step-doing .step-dot { border-color: var(--tx); animation: pulse 1.2s ease-in-out infinite; }
-.step-done .step-dot { background: var(--tx); border-color: var(--tx); }
-.step-error .step-dot { background: var(--down); border-color: var(--down); }
+.step-state { width: 42px; flex-shrink: 0; font-size: 12px; color: var(--tx3); }
+.step-doing .step-state { color: var(--tx); } .step-done .step-state { color: var(--up); } .step-error .step-state { color: var(--down); }
 .step-todo { color: var(--tx3); }
 .step-link { margin-left: auto; font-size: 13px; color: var(--tx2); }
 
 /* timeline */
 .timeline { list-style: none; margin: 0; padding: 0; }
 .timeline li { display: flex; gap: 14px; padding: 7px 0; font-size: 15px; }
-.timeline i { width: 11px; height: 11px; margin-top: 5px; border-radius: 6px; flex-shrink: 0; border: 1px solid var(--line2); }
-.timeline .done i { background: var(--tx); border-color: var(--tx); }
-.timeline .now i { background: var(--tx); border-color: var(--tx); box-shadow: 0 0 0 4px var(--surface), 0 0 0 5px var(--tx); }
+.timeline li::before { width: 40px; flex-shrink: 0; font-size: 12px; line-height: 22px; color: var(--tx3); }
+.timeline .done::before { content: 'Done'; color: var(--up); }
+.timeline .now::before { content: 'Now'; color: var(--tx); }
+.timeline .todo::before { content: ''; }
 .timeline .todo { color: var(--tx3); }
 
 /* activity feed */

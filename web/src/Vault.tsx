@@ -155,13 +155,13 @@ export function VaultPage({ account }: { account: LocalAccount }) {
           ) : (
             <ol className="timeline">
               <li className="todo">
-                <i />1. Grade checked with PSA
+                1. Grade checked with PSA
               </li>
               <li className="todo">
-                <i />2. Slab checked in to the vault
+                2. Slab checked in to the vault
               </li>
               <li className="todo">
-                <i />3. Ready to trade
+                3. Ready to trade
               </li>
             </ol>
           )}
@@ -200,16 +200,13 @@ export function VaultPage({ account }: { account: LocalAccount }) {
                 </div>
                 <ol className="timeline" style={{ marginTop: 10 }}>
                   <li className="done">
-                    <i />
                     Grade checked with PSA
                     <span className="muted" style={{ marginLeft: 'auto' }}>{new Date(d.t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                   </li>
                   <li className={ready ? 'done' : 'now'}>
-                    <i />
                     {ready ? 'Checked in to the vault' : 'Waiting for the slab to arrive'}
                   </li>
                   <li className={ready ? 'done' : 'todo'}>
-                    <i />
                     Ready to trade
                   </li>
                 </ol>
