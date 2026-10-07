@@ -14,6 +14,20 @@ const ROUTER = '0x7EFbE105Ca7415dE98F96622173458ac1c054630'
 const CARDS = [
   [4n, 10, 5000, 'Base Set Charizard Holo', 'CHZ'], [4n, 9, 450, 'Base Set Charizard Holo', 'CHZ'], [58n, 10, 1500, 'Base Set Pikachu Red Cheeks', 'PIKA'],
   [2003111n, 10, 17500, 'Topps Chrome LeBron James Rookie #111', 'LBJ03'], [1993232n, 9, 500000, 'Alpha Black Lotus', 'LOTUS'],
+  [2n, 9, 1850, 'Base Set Blastoise Holo', 'BLST'],
+  [15n, 9, 1300, 'Base Set Venusaur Holo', 'VENU'],
+  [10n, 9, 450, 'Base Set Mewtwo Holo', 'MEW2'],
+  [1986057n, 8, 9000, 'Fleer Michael Jordan #57', 'MJ86'],
+  [1996138n, 10, 14000, 'Topps Chrome Kobe Bryant Rookie #138', 'KOBE96'],
+  [1952311n, 5, 95000, 'Topps Mickey Mantle #311', 'MANTLE'],
+  [2000144n, 9, 22000, 'Contenders Tom Brady Autograph #144', 'BRADY'],
+  [1979018n, 8, 18000, 'O-Pee-Chee Wayne Gretzky Rookie #18', 'GRETZ'],
+  [2018700n, 10, 2500, 'Topps Update Shohei Ohtani Rookie #US1', 'OHTANI'],
+  [1993140n, 8, 38000, 'Alpha Mox Sapphire', 'MOXS'],
+  [1993180n, 9, 4500, 'Alpha Underground Sea', 'USEA'],
+  [2002001n, 9, 4200, 'Legend of Blue Eyes Blue-Eyes White Dragon', 'BEWD'],
+  [2002005n, 9, 1100, 'Legend of Blue Eyes Dark Magician', 'DKMG'],
+  [2002124n, 9, 600, 'Legend of Blue Eyes Exodia the Forbidden One', 'EXOD'],
 ]
 // When a card sells out the maker has nothing to list, so it vaults a fresh demo copy through the attestor (testnet demo
 // certs 9xxxxxxx, see attestor/src/psa.ts). Capped per hour so a buying spree cannot burn the faucet account's gas.
@@ -72,7 +86,11 @@ async function restock(idx, spec, grade, title, short, label) {
 async function pass() {
   for (const [idx, [spec, grade, ref, title, short]] of CARDS.entries()) {
     const sku = keccak256(encodeAbiParameters([{ type: 'uint256' }, { type: 'uint8' }], [spec, grade]))
-    const [token, market] = await pub.readContract({ address: VAULT, abi: vaultAbi, functionName: 'skuInfo', args: [sku] })
+    let [token, market] = await pub.readContract({ address: VAULT, abi: vaultAbi, functionName: 'skuInfo', args: [sku] })
+    // A card nobody has vaulted yet has no token or market: vaulting its first copy creates both.
+    if (token === '0x0000000000000000000000000000000000000000') {
+      if (await restock(idx, spec, grade, title, short, `#${spec} PSA ${grade}`)) [token, market] = await pub.readContract({ address: VAULT, abi: vaultAbi, functionName: 'skuInfo', args: [sku] })
+    }
     if (token === '0x0000000000000000000000000000000000000000' || market === '0x0000000000000000000000000000000000000000') { say(`#${spec} PSA ${grade}: no market`); continue }
     const [bid, ask] = await pub.readContract({ address: market, abi: book, functionName: 'bestBidAsk' })
     const label = `#${spec} PSA ${grade}`
