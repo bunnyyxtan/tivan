@@ -8,6 +8,7 @@ import { setQuery, useQuery, useRestoreScroll, useWide } from './route'
 import { Empty, ErrorNote, ItemCardSkeleton, Skeleton } from './States'
 import { ItemCard, askText, gradeOf, lastText, offerText } from './Market'
 import { IconClose, IconGrid, IconList } from './icons'
+import { Opt, RangeDual, Seg, Select } from './controls'
 import { pct } from './format'
 import { Slab, cardSub, cardTitle, parseName, usePoll, useWatch, usd } from './ui'
 
@@ -89,11 +90,7 @@ function Rail({ all, f, sp, watch }: { all: Sku[]; f: F; sp: URLSearchParams; wa
   const cats: [string, string, number | undefined][] = [['', 'All categories', all.length], ['Watching', 'Watchlist', all.filter((s) => watch.includes(s.sku)).length], ...categories.map((c) => [c, c, all.filter((s) => categoryOf(s.name) === c).length] as [string, string, number])]
   const grades = Array.from({ length: 10 }, (_, i) => String(10 - i))
   const radio = (name: 'cat' | 'set', value: string, label: string, n?: number) => (
-    <label key={value} className="opt-row">
-      <input type="radio" name={name} checked={(name === 'cat' ? f.cat : f.set) === value} onChange={() => setQuery({ [name]: value })} />
-      <span>{label}</span>
-      {n !== undefined && <small>{n}</small>}
-    </label>
+    <Opt key={value} type="radio" name={name} checked={(name === 'cat' ? f.cat : f.set) === value} onChange={() => setQuery({ [name]: value })} label={label} count={n} />
   )
   return (
     <div className="rail-body">
@@ -105,61 +102,33 @@ function Rail({ all, f, sp, watch }: { all: Sku[]; f: F; sp: URLSearchParams; wa
         <legend>Grade, PSA</legend>
         <div className="pair">
           {(['gmin', 'gmax'] as const).map((k) => (
-            <label key={k} className="lab">
+            <div key={k} className="lab">
               {k === 'gmin' ? 'Lowest' : 'Highest'}
-              <select
-                className="field"
+              <Select
+                label={k === 'gmin' ? 'Lowest grade' : 'Highest grade'}
                 value={sp.get(k) ?? ''}
-                onChange={(e) => {
-                  const v = e.target.value
+                options={[{ value: '', label: 'Any' }, ...(k === 'gmin' ? [...grades].reverse() : grades).map((g) => ({ value: g, label: g }))]}
+                onChange={(v) => {
                   const other = k === 'gmin' ? f.gmax : f.gmin
                   const clash = v && other !== undefined && (k === 'gmin' ? +v > other : +v < other)
                   setQuery({ [k]: v, ...(clash ? { [k === 'gmin' ? 'gmax' : 'gmin']: v } : {}) })
                 }}
-              >
-                <option value="">Any</option>
-                {(k === 'gmin' ? [...grades].reverse() : grades).map((g) => (
-                  <option key={g} value={g}>
-                    {g}
-                  </option>
-                ))}
-              </select>
-            </label>
+              />
+            </div>
           ))}
         </div>
       </fieldset>
       <fieldset>
         <legend>Price</legend>
         <p className="fine">The ask, or the best offer where no one is selling.</p>
-        <div className="pair">
-          {(['pmin', 'pmax'] as const).map((k) => (
-            <label key={k} className="lab">
-              {k === 'pmin' ? 'Lowest' : 'Highest'}
-              <span className="field">
-                $<input type="number" inputMode="numeric" min={0} placeholder={k === 'pmin' ? String(lo) : String(hi)} value={sp.get(k) ?? ''} onChange={(e) => setQuery({ [k]: e.target.value })} />
-              </span>
-            </label>
-          ))}
-        </div>
-        {hi > lo && (
-          <div className="sliders">
-            <input type="range" aria-label="Lowest price" min={lo} max={hi} step={step} value={f.pmin ?? lo} onChange={(e) => setQuery({ pmin: +e.target.value <= lo ? '' : String(Math.min(+e.target.value, f.pmax ?? hi)) })} />
-            <input type="range" aria-label="Highest price" min={lo} max={hi} step={step} value={f.pmax ?? hi} onChange={(e) => setQuery({ pmax: +e.target.value >= hi ? '' : String(Math.max(+e.target.value, f.pmin ?? lo)) })} />
-            <span className="fine">
-              {money(lo)} to {money(hi)}
-            </span>
-          </div>
-        )}
+        {hi > lo && <RangeDual name="price" min={lo} max={hi} step={step} lo={f.pmin} hi={f.pmax} format={money} onChange={(l, h) => setQuery({ pmin: l === undefined ? '' : String(l), pmax: h === undefined ? '' : String(h) })} />}
       </fieldset>
       <fieldset>
         <legend>Set and year</legend>
         {radio('set', '', 'Any set')}
         {sets.map((s) => radio('set', s, s, all.filter((x) => catalogOf(x.name)?.set === s).length))}
       </fieldset>
-      <label className="opt-row">
-        <input type="checkbox" checked={f.sale} onChange={(e) => setQuery({ sale: e.target.checked ? '1' : '' })} />
-        <span>For sale only</span>
-      </label>
+      <Opt type="checkbox" checked={f.sale} onChange={(c) => setQuery({ sale: c ? '1' : '' })} label="For sale only" />
       <p className="fine">Every card here is graded by PSA and held in the vault, so grading company and condition are not filters.</p>
       <button className="ghost line" onClick={() => setQuery(RESET)}>
         Reset filters
@@ -246,25 +215,22 @@ export function Browse({ account }: { account: Acct }) {
           Filters{active.length ? ` (${active.length})` : ''}
         </button>
       )}
-      <label className="sort">
-        <span className="sr">Sort</span>
-        <select className="field" value={f.sort} onChange={(e) => setQuery({ sort: e.target.value })}>
-          {SORTS.map(([v, l]) => (
-            <option key={v} value={v}>
-              Sort: {l}
-            </option>
-          ))}
-          {f.sort && !SORTS.some((x) => x[0] === f.sort) && <option value={f.sort}>Sort: {f.sort.replace('-', '')} column</option>}
-        </select>
-      </label>
-      <span className="seg" role="radiogroup" aria-label="View">
-        {(['grid', 'table'] as const).map((v) => (
-          <button key={v} role="radio" aria-checked={f.view === v} className={f.view === v ? 'on' : ''} onClick={() => setQuery({ view: v === 'grid' ? '' : v })}>
-            {v === 'grid' ? <IconGrid size={16} /> : <IconList size={16} />}
-            {v === 'grid' ? 'Grid' : 'Table'}
-          </button>
-        ))}
-      </span>
+      <Select
+        label="Sort"
+        className="sort"
+        value={f.sort}
+        onChange={(v) => setQuery({ sort: v })}
+        options={[...SORTS.map(([v, l]) => ({ value: v, label: `Sort: ${l}` })), ...(f.sort && !SORTS.some((x) => x[0] === f.sort) ? [{ value: f.sort, label: `Sort: ${f.sort.replace('-', '')} column` }] : [])]}
+      />
+      <Seg
+        label="View"
+        value={f.view}
+        onChange={(v) => setQuery({ view: v === 'grid' ? '' : v })}
+        options={[
+          { value: 'grid', text: 'Grid view', label: (<><IconGrid size={16} />Grid</>) },
+          { value: 'table', text: 'Table view', label: (<><IconList size={16} />Table</>) },
+        ]}
+      />
     </div>
   )
   const results: ReactNode = !net.vault ? (
@@ -380,7 +346,6 @@ export function Discover({ account }: { account: Acct }) {
   return (
     <>
       <header className="mast">
-        <p className="cap">Market</p>
         {data ? (
           <h1>
             {all.length} graded {all.length === 1 ? 'card' : 'cards'}, {forSale.length} for sale
@@ -430,7 +395,6 @@ export function Discover({ account }: { account: Acct }) {
             <Slab name={feat.name} size="xl" />
           </a>
           <div className="feature-body">
-            <p className="cap">Highest ask on the market</p>
             <h2>{cardTitle(feat.name)}</h2>
             <p className="muted">{cardSub(feat.name)}</p>
             <PriceBlock
@@ -440,7 +404,7 @@ export function Discover({ account }: { account: Acct }) {
               last={{ value: feat.last, note: feat.last ? 'Most recent sale' : 'No sale on record' }}
             />
             <p className="fine">
-              {feat.vaulted} in the vault{feat.ask && feat.bid ? `. The ask is ${pct((feat.ask - feat.bid) / feat.ask)} above the best offer` : ''}.
+              Highest ask on the market. {feat.vaulted} in the vault{feat.ask && feat.bid ? `. The ask is ${pct((feat.ask - feat.bid) / feat.ask)} above the best offer` : ''}.
             </p>
             <div className="actions">
               <a className="btn" href={`#/card/${feat.sku}`}>
@@ -488,13 +452,29 @@ export function Discover({ account }: { account: Acct }) {
               ))}
             </Shelf>
           )}
-          {rows.map(([c, l]) => (
+          {rows.filter(([, l]) => l.length >= 6).map(([c, l]) => (
             <Shelf key={c} title={c} href={`#/browse?cat=${encodeURIComponent(c)}`}>
               {l.slice(0, 12).map((s) => (
                 <ItemCard key={s.sku} s={s} tag={tag(s)} vt={false} />
               ))}
             </Shelf>
           ))}
+          {/* a short set is shown as tiles, side by side, never as a sparse row */}
+          <div className="tiles">
+            {rows.filter(([, l]) => l.length < 6).map(([c, l]) => (
+              <section key={c} className="tiles-set" aria-label={c}>
+                <div className="shelf-head">
+                  <h2>{c}</h2>
+                  <a href={`#/browse?cat=${encodeURIComponent(c)}`}>View all</a>
+                </div>
+                <div className="tiles-grid">
+                  {l.map((s) => (
+                    <ItemCard key={s.sku} s={s} tag={tag(s)} vt={false} />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
         </>
       )}
     </>
@@ -547,10 +527,7 @@ export function Compare() {
             <span role="status" className="count-line">
               {cards.length} cards{diff ? `, ${shown.length} of ${rows.length} rows differ` : ''}
             </span>
-            <label className="opt-row">
-              <input type="checkbox" checked={diff} onChange={(e) => setDiff(e.target.checked)} />
-              <span>Show differences only</span>
-            </label>
+            <Opt type="checkbox" checked={diff} onChange={setDiff} label="Show differences only" />
           </div>
           <div className="cmp-scroll" tabIndex={0} role="region" aria-label="Comparison. This area scrolls on its own">
             <table className="cmp-table">

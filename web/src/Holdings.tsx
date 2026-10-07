@@ -5,6 +5,7 @@ import { categoryOf, indexerUrl } from './config'
 import { usePortfolio } from './portfolio'
 import { Breadcrumbs, Chart, DataTable, StatPill, Tabs, TableSkeleton, ago, type Col } from './desk'
 import { setQuery, useQuery } from './route'
+import { Seg } from './controls'
 import { Empty, ErrorNote, Skeleton } from './States'
 import { askText, lastText, offerText } from './Market'
 import { pct, stamp } from './format'
@@ -102,13 +103,9 @@ export function Portfolio({ account }: { account: LocalAccount }) {
               <p className="fine pf-parts">
                 Cards {usd(cards)} (estimated at {basis}) + cash {usd(cash)} (confirmed balance)
               </p>
-              <span className="seg" role="radiogroup" aria-label="Value cards at" style={{ marginTop: 12 }}>
-                {([['bid', 'Best offers'], ['ask', 'Asking prices']] as const).map(([k, l]) => (
-                  <button key={k} role="radio" aria-checked={at === k} className={at === k ? 'on' : ''} onClick={() => setAt(k)}>
-                    {l}
-                  </button>
-                ))}
-              </span>
+              <div style={{ marginTop: 12 }}>
+                <Seg label="Value cards at" value={at} onChange={setAt} options={[{ value: 'bid', label: 'Best offers' }, { value: 'ask', label: 'Asking prices' }]} />
+              </div>
             </div>
             <div className="pf-stats">
               <StatPill label="Cards owned" value={mine.reduce((n, h) => n + h.count, 0)} note={`${mine.length} different`} />
@@ -128,13 +125,7 @@ export function Portfolio({ account }: { account: LocalAccount }) {
                   'Change over this period needs more recorded sales'
                 )}
               </span>
-              <span className="seg" role="group" aria-label="Period">
-                {PERIODS.map(([k]) => (
-                  <button key={k} aria-pressed={period === k} className={period === k ? 'on' : ''} onClick={() => setQuery({ p: k === 'All' ? '' : k })}>
-                    {k}
-                  </button>
-                ))}
-              </span>
+              <Seg label="Period" value={period} onChange={(k) => setQuery({ p: k === 'All' ? '' : k })} options={PERIODS.map(([k]) => ({ value: k, label: k }))} />
             </div>
             {!fills ? (
               <Skeleton h={220} r={12} />

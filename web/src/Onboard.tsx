@@ -6,6 +6,7 @@ import { brand, net } from './config'
 import { openSettings } from './fx'
 import { IconClose } from './icons'
 import { Viewer } from './Market'
+import { DemoStrip } from './desk'
 import { Slab, cardSub, cardTitle } from './ui'
 
 const DESK = '(min-width: 900px)'
@@ -109,6 +110,7 @@ export function Onboard({ onReady, onGuest }: { onReady: (a: LocalAccount) => vo
   const close = () => dlg.current?.close()
   return (
     <div className="onb">
+      <DemoStrip />
       <header className="onb-bar">
         <div className="onb-in">
           <span className="brand">{brand}</span>

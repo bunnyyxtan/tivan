@@ -58,13 +58,18 @@ export function Slab({ name, size = 'md', vt, alt }: { name: string; size?: 'xs'
   const { grader, grade, title } = parseName(name)
   const c = catalogOf(name)
   const [setName, year] = c?.set.split(' · ') ?? []
+  // The label never truncates: the long form carries the set, the short form drops it. CSS picks one by the slab's width.
+  const full = `${grader} · ${setName ? `${year} ${setName}` : title}`.toUpperCase()
+  const short = `${grader} · ${year ?? title}`.toUpperCase()
+  const labelBucket = full.length <= 14 ? 1 : full.length <= 20 ? 2 : full.length <= 27 ? 3 : 4
   return (
     <div className="slab-wrap" style={vt ? ({ viewTransitionName: vt } as React.CSSProperties) : undefined}>
       <div className={`slab slab-${size}`}>
         {size !== 'xs' && size !== 'sm' && (
-          <div className="slab-label">
+          <div className="slab-label" data-b={labelBucket}>
             <span>
-              {grader} · {(setName ? `${year} ${setName}` : title).toUpperCase()}
+              <span className="full">{full}</span>
+              <span className="short">{short}</span>
             </span>
             <b>{grade}</b>
           </div>

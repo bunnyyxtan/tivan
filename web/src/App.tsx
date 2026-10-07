@@ -18,7 +18,7 @@ import { usePortfolio } from './portfolio'
 import { Header, Slab, Steps, delta, short, useFlow, usd } from './ui'
 import { scrollFor, useWide } from './route'
 import { Browse, Compare, Discover } from './Browse'
-import { SearchBox, Shortcuts, openShortcuts } from './desk'
+import { AccountMenu, DemoStrip, SearchBox, Shortcuts } from './desk'
 import { Activity, Portfolio } from './Holdings'
 import { Onboard, useOnboardWide } from './Onboard'
 
@@ -60,6 +60,8 @@ export default function App() {
     )
   const tab = route === 'browse' || route === 'compare' ? 'browse' : route === 'activity' ? 'activity' : route === 'collection' ? 'collection' : route === 'vault' ? 'vault' : route === 'you' ? 'you' : route === 'league' ? 'league' : 'markets'
   // Browsing is open; anything that moves money or cards asks for a passkey first.
+  const out = () => (signOut(), setAccount(undefined), setGuest(false), (location.hash = '#/'))
+  const acctRoute = route === 'you' || route === 'vault' || route === 'league'
   const need = (el: (a: LocalAccount) => React.ReactNode) => (account ? el(account) : <SignIn inline onReady={setAccount} />)
   const page =
     route === 'card' ? <CardPage sku={args[0]} account={account} />
@@ -73,7 +75,7 @@ export default function App() {
     : route === 'compare' ? <Compare />
     : route === 'vault' ? need((a) => <VaultPage account={a} />)
     : route === 'league' ? <League account={account} />
-    : route === 'you' ? need((a) => <You account={a} onSignOut={() => (signOut(), setAccount(undefined), setGuest(false), (location.hash = '#/'))} />)
+    : route === 'you' ? need((a) => <You account={a} onSignOut={out} />)
     : wide ? <Discover account={account} /> : <MarketList account={account} />
   const tabs = [
     ['markets', '#/', 'Markets', <IconMarkets />],
@@ -93,6 +95,7 @@ export default function App() {
     <>
       <SettingsSheet />
       <Shortcuts />
+      <DemoStrip />
       <div className="desk-bar">
         <div className="desk-nav">
           <a className="brand" href="#/">
@@ -107,21 +110,36 @@ export default function App() {
           </nav>
           <SearchBox />
           <div className="right">
-            <button className="icon-btn" aria-label="Keyboard shortcuts" onClick={openShortcuts}>
-              ?
-            </button>
-            <SettingsButton />
-            <CashPill account={account} />
-            <a className="ghost line" href="#/you">
-              {account ? 'You' : 'Sign in'}
-            </a>
+            {account ? (
+              <>
+                <CashPill account={account} />
+                <AccountMenu address={account.address} onSignOut={out} />
+              </>
+            ) : (
+              <a className="btn sm" href="#/you">
+                Sign in
+              </a>
+            )}
           </div>
         </div>
       </div>
       <div className="app">
         <main>
           <div className="page" key={`${route}/${args[0] ?? ''}`}>
-            {page}
+            {acctRoute ? (
+              <div className="acct-page">
+                <nav className="subnav" aria-label="Account">
+                  {([['you', '#/you', 'Account'], ['collection', '#/collection', 'Portfolio'], ['activity', '#/activity', 'Activity'], ['vault', '#/vault', 'Vault'], ['league', '#/league', 'Price League']] as const).map(([k, href, label]) => (
+                    <a key={k} href={href} aria-current={route === k ? 'page' : undefined}>
+                      {label}
+                    </a>
+                  ))}
+                </nav>
+                <div className="acct-col">{page}</div>
+              </div>
+            ) : (
+              page
+            )}
           </div>
         </main>
       </div>

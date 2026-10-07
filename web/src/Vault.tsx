@@ -1,3 +1,4 @@
+import { Select } from './controls'
 import { useEffect, useState } from 'react'
 import { keccak256, parseEventLogs, toBytes, type LocalAccount } from 'viem'
 import { confirmStep } from './account'
@@ -142,25 +143,11 @@ export function VaultPage({ account }: { account: LocalAccount }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 96px', gap: 8 }}>
             <label className="lab">
               Card
-              <span className="field">
-                <select value={pick} onChange={(e) => setPick(Number(e.target.value))}>
-                  {catalog.map((c, i) => (
-                    <option key={i} value={i}>
-                      {c.title}
-                    </option>
-                  ))}
-                </select>
-              </span>
+              <Select label="Card" className="block" value={String(pick)} onChange={(v) => setPick(Number(v))} options={catalog.map((c, i) => ({ value: String(i), label: c.title }))} />
             </label>
             <label className="lab">
               Grade
-              <span className="field">
-                <select value={grade} onChange={(e) => setGrade(Number(e.target.value))}>
-                  {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((g) => (
-                    <option key={g}>{g}</option>
-                  ))}
-                </select>
-              </span>
+              <Select label="Grade" className="block" value={String(grade)} onChange={(v) => setGrade(Number(v))} options={[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((g) => ({ value: String(g), label: String(g) }))} />
             </label>
           </div>
         </div>

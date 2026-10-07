@@ -9,6 +9,7 @@ import { priceCard, shareCard } from './share'
 import { CashPill, type Acct } from './App'
 import { CardImage, usePrefs } from './fx'
 import { useWide, WIDE } from './route'
+import { Seg, Select } from './controls'
 import { Breadcrumbs, Chart, PriceBlock, Shelf, Tabs, ago } from './desk'
 import { IconClose, IconGrid, IconList } from './icons'
 import { Empty, ErrorNote, ItemCardSkeleton, RowSkeleton, Skeleton } from './States'
@@ -75,22 +76,19 @@ export function MarketList({ account }: { account: Acct }) {
         </button>
       </div>
       <div className="browse-bar">
-        <label className="field">
-          <select aria-label="Sort" value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
-            <option value="featured">Sort: Default</option>
-            <option value="high">Price, high to low</option>
-            <option value="low">Price, low to high</option>
-            <option value="spread">Biggest spread</option>
-            <option value="name">Name, A to Z</option>
-          </select>
-        </label>
-        <span className="seg" role="radiogroup" aria-label="View">
-          {(['grid', 'list'] as const).map((v) => (
-            <button key={v} role="radio" aria-checked={prefs.view === v} aria-label={v === 'grid' ? 'Grid view' : 'List view'} className={prefs.view === v ? 'on' : ''} onClick={() => setPrefs({ view: v })}>
-              {v === 'grid' ? <IconGrid size={16} /> : <IconList size={16} />}
-            </button>
-          ))}
-        </span>
+        <Select
+          label="Sort"
+          className="grow"
+          value={sort}
+          onChange={(v) => setSort(v as Sort)}
+          options={[{ value: 'featured', label: 'Sort: Default' }, { value: 'high', label: 'Price, high to low' }, { value: 'low', label: 'Price, low to high' }, { value: 'spread', label: 'Biggest spread' }, { value: 'name', label: 'Name, A to Z' }]}
+        />
+        <Seg
+          label="View"
+          value={prefs.view}
+          onChange={(v) => setPrefs({ view: v })}
+          options={[{ value: 'grid', text: 'Grid view', label: <IconGrid size={16} /> }, { value: 'list', text: 'List view', label: <IconList size={16} /> }]}
+        />
       </div>
       {active.length > 0 && (
         <div className="chips" role="group" aria-label="Active filters" style={{ marginTop: 10 }}>
@@ -164,6 +162,10 @@ export function ItemCard({ s, tag, vt = true }: { s: Sku; tag: string; vt?: bool
           <div className="fig"><dt>Offer</dt><dd className="dim">{offerText(s, live)}</dd></div>
           <div className="fig"><dt>Last sale</dt><dd className="dim">{lastText(s)}</dd></div>
         </dl>
+        <div className="price-q">
+          <b>{askText(s, live)}</b>
+          <small>{s.bid ? `Best offer ${usd(s.bid)}` : 'No offers'}</small>
+        </div>
       </div>
     </a>
   )
@@ -555,13 +557,7 @@ function SalesHistory({ fills, source, loading, rows = true, h = 150 }: { fills:
     <>
       <div className="hist-head">
         <span className="fine">{pts.length} {pts.length === 1 ? 'sale' : 'sales'} in range</span>
-        <span className="seg" role="group" aria-label="Range">
-          {RANGES.map(([k]) => (
-            <button key={k} aria-pressed={range === k} className={range === k ? 'on' : ''} onClick={() => setRange(k)}>
-              {k}
-            </button>
-          ))}
-        </span>
+        <Seg label="Range" value={range} onChange={setRange} options={RANGES.map(([k]) => ({ value: k, label: k }))} />
       </div>
       {pts.length > 1 ? <Chart pts={pts} h={h} label={`Sale prices from ${usd(pts[0].price)} to ${usd(pts.at(-1)!.price)}, last sale ${usd(pts.at(-1)!.price)}`} /> : <Empty title={fills.length ? 'Not enough sales in this range' : 'No sales yet'} detail="A chart needs at least two sales. We don’t draw lines from guesses." />}
       <p className="source">{where}. Range: {range === 'All' ? 'all time' : `last ${range}`}.</p>
@@ -691,6 +687,7 @@ export function Viewer({ s }: { s: { name: string; sku: string } }) {
             </div>
           </div>
         )}
+        {c?.imageKind === 'reference' && <p className="source viewer-note">Reference image of this card, not a photograph of this slab.</p>}
       </div>
     </div>
   )

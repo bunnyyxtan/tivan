@@ -2,7 +2,7 @@
 // Usage: cd scripts && MAKER_KEY=0x... node maker.mjs [--once]
 // Without --once it re-checks every 20 s and refills whatever traders have taken, so first-time testers always find a price.
 // It quotes only with what the maker account already holds (cards and test dollars) and says so in its log.
-// NOTE: fixed reference prices and a flat spread, no inventory risk model. Limit: a demo liquidity seed, not a strategy.
+// NOTE: reference prices with a per-card spread and drift, no inventory risk model. Limit: a demo liquidity seed, not a strategy.
 import { createPublicClient, createWalletClient, http, parseAbi, encodeAbiParameters, keccak256, formatUnits, parseUnits } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { monadTestnet } from 'viem/chains'
@@ -43,7 +43,22 @@ const RETIRED = new Set([2003111n, 1986057n, 1996138n, 1952311n, 2000144n, 19790
 const ATTESTOR = process.env.ATTESTOR_URL ?? `http://localhost:${process.env.PORT ?? 8787}`
 const RESTOCKS_PER_HOUR = 20
 const restocked = []
-const SPREAD = 0.06 // quote 3% either side of the reference
+// Each card is quoted around its reference price times a drift, with its own spread (best offer under ask, as a share of the ask).
+// A few markets are tight, most sit between 4% and 12%, a few are wide, and some carry no offers at all (spread null).
+// Fixed per card so a refill after a trade lands on the same shape, and so no two markets share one ratio.
+const QUOTES = {
+  CHZ10: [1.0, 0.016], CHZ9: [1.02, 0.068], PIKA10: [0.985, 0.094], LOTUS9: [1.04, 0.043], BLST9: [0.97, 0.118],
+  VENU9: [1.015, 0.052], MEW29: [1.03, 0.231], MOXS8: [0.99, 0.079], USEA9: [1.0, null], BEWD9: [1.025, 0.107],
+  DKMG9: [0.975, 0.018], EXOD9: [1.05, 0.066], WAGNER3: [0.995, 0.009], COBB4: [1.01, 0.284], MATHEW5: [0.98, 0.058],
+  CYYOUNG5: [1.035, null], WJOHN4: [0.96, 0.088], SPEAKER5: [1.02, null], RUTH336: [1.0, 0.213],
+}
+const quote = (ref, short, grade) => {
+  const [drift, s] = QUOTES[short + grade] ?? [1, 0.06]
+  const mid = ref * drift
+  if (s === null) return { ask: Math.round((mid / 0.97) * 100), bid: undefined } // an ask only: nobody is bidding
+  const ask = mid / (1 - s / 2)
+  return { ask: Math.round(ask * 100), bid: Math.round(ask * (1 - s) * 100) }
+}
 
 const key = process.env.MAKER_KEY
 if (!key) throw new Error('Set MAKER_KEY to a funded testnet key')
@@ -113,13 +128,15 @@ async function pass() {
       else {
         const onBook = await pub.readContract({ address: ma, abi: margin, functionName: 'getBalance', args: [account.address, token] })
         if (onBook < 1n) { await send({ address: token, abi: erc20, functionName: 'approve', args: [ma, 1n] }); await send({ address: ma, abi: margin, functionName: 'deposit', args: [account.address, token, 1n] }) }
-        const px = Math.round(ref * (1 + SPREAD / 2) * 100)
+        const px = quote(ref, short, grade).ask
         await send({ address: market, abi: book, functionName: 'addSellOrder', args: [px, 1n, true] })
         say(`${label}: ask $${px / 100}`)
       }
     } else say(`${label}: ask exists`)
-    if (!live(bid)) {
-      const px = Math.round(ref * (1 - SPREAD / 2) * 100)
+    const bidPx = quote(ref, short, grade).bid
+    if (bidPx === undefined) say(`${label}: no offers by design`)
+    else if (!live(bid)) {
+      const px = bidPx
       const need = parseUnits(String(px / 100), 6)
       let [wallet, onBook] = await Promise.all([
         pub.readContract({ address: QUOTE, abi: erc20, functionName: 'balanceOf', args: [account.address] }),
@@ -142,10 +159,53 @@ async function pass() {
   }
 }
 
+// Optional, off unless TAKER_KEY is set (a second funded testnet key): each pass it trades a few different cards against the
+// maker's quotes, buying a copy it does not hold and selling one it does, so the sales feed shows many cards, not just one.
+// NOTE: untested on chain at the time of writing. Limit: one copy at a time, crossing orders at the top of book.
+const taker = process.env.TAKER_KEY ? privateKeyToAccount(process.env.TAKER_KEY) : undefined
+const takerWal = taker && createWalletClient({ account: taker, chain: monadTestnet, transport: http() })
+let tick = 0
+async function takerPass() {
+  if (!taker) return
+  const sendT = async (req) => {
+    const { request } = await pub.simulateContract({ account: taker, ...req })
+    const r = await pub.waitForTransactionReceipt({ hash: await takerWal.writeContract(request) })
+    if (r.status !== 'success') throw new Error('taker reverted')
+  }
+  const cards = CARDS.filter((c) => !RETIRED.has(c[0]))
+  for (let k = 0; k < 2; k++) {
+    const [spec, grade] = cards[(tick * 5 + k * 7 + 3) % cards.length]
+    const sku = keccak256(encodeAbiParameters([{ type: 'uint256' }, { type: 'uint8' }], [spec, grade]))
+    const [token, market] = await pub.readContract({ address: VAULT, abi: vaultAbi, functionName: 'skuInfo', args: [sku] })
+    if (token === '0x0000000000000000000000000000000000000000' || market === '0x0000000000000000000000000000000000000000') continue
+    const [bid, ask] = await pub.readContract({ address: market, abi: book, functionName: 'bestBidAsk' })
+    const held = await pub.readContract({ address: ma, abi: margin, functionName: 'getBalance', args: [taker.address, token] })
+    const label = `#${spec} PSA ${grade}`
+    if (held >= 1n && live(bid)) {
+      await sendT({ address: market, abi: book, functionName: 'addSellOrder', args: [Number(bid / 10n ** 16n), 1n, false] })
+      say(`${label}: taker sold one at $${Number(bid / 10n ** 16n) / 100}`)
+    } else if (live(ask)) {
+      const px = Number(ask / 10n ** 16n)
+      const need = parseUnits(String(px / 100), 6)
+      const cash = await pub.readContract({ address: ma, abi: margin, functionName: 'getBalance', args: [taker.address, QUOTE] })
+      if (cash < need) {
+        await sendT({ address: QUOTE, abi: mintAbi, functionName: 'mint', args: [taker.address, need * 2n] })
+        await sendT({ address: QUOTE, abi: erc20, functionName: 'approve', args: [ma, need * 2n] })
+        await sendT({ address: ma, abi: margin, functionName: 'deposit', args: [taker.address, QUOTE, need * 2n] })
+      }
+      await sendT({ address: market, abi: book, functionName: 'addBuyOrder', args: [px, 1n, false] })
+      say(`${label}: taker bought one at $${px / 100}`)
+    }
+  }
+  tick++
+}
+
 const once = process.argv.includes('--once')
 await pass().catch((e) => (once ? Promise.reject(e) : console.warn('first pass failed, retrying:', String(e.shortMessage ?? e.message ?? e).slice(0, 140))))
+await takerPass().catch((e) => console.warn('taker pass failed:', String(e.shortMessage ?? e.message ?? e).slice(0, 140)))
 quiet = true
 while (!once) {
   await new Promise((r) => setTimeout(r, 20000))
   await pass().catch((e) => console.warn('pass failed, retrying:', String(e.shortMessage ?? e.message ?? e).slice(0, 140)))
+  await takerPass().catch((e) => console.warn('taker pass failed:', String(e.shortMessage ?? e.message ?? e).slice(0, 140)))
 }

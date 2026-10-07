@@ -102,27 +102,29 @@ export const attestorUrl: string = import.meta.env.VITE_ATTESTOR_URL || 'http://
 /** Envio HyperIndex GraphQL (indexer/). Optional: without it the app reads SKUs and trades straight from the RPC. */
 export const indexerUrl: string | undefined = import.meta.env.VITE_INDEXER_URL || undefined
 
-/** Cards the demo grader registry knows (cre/fixtures/psa-certs.json). Shown as presets in "Vault a card". */
+export type ImageKind = 'reference' | 'photograph'
+/** Cards the demo grader registry knows (cre/fixtures/psa-certs.json). Shown as presets in "Vault a card".
+ * imageKind says what the picture is: 'reference' is a picture of the card, not of the exact slab; 'photograph' is the slab itself. None is a photograph of its slab. */
 const BASE = import.meta.env.BASE_URL // '/' in dev, '/<repo>/' on GitHub Pages
 export const catalog = [
-  { specId: 4n, title: 'Base Set Charizard Holo', set: 'Base Set · 1999', short: 'CHZ', category: 'Pokémon', imageUrl: BASE + 'cards/charizard.webp' },
-  { specId: 58n, title: 'Base Set Pikachu Red Cheeks', set: 'Promo · 1999', short: 'PIKA', category: 'Pokémon', imageUrl: BASE + 'cards/pikachu.webp' },
-  { specId: 1993232n, title: 'Alpha Black Lotus', set: 'Alpha · 1993', short: 'LOTUS', category: 'Magic', imageUrl: BASE + 'cards/lotus.webp' },
-  { specId: 2n, title: 'Base Set Blastoise Holo', set: 'Base Set · 1999', short: 'BLST', category: 'Pokémon', imageUrl: BASE + 'cards/blastoise.webp' },
-  { specId: 15n, title: 'Base Set Venusaur Holo', set: 'Base Set · 1999', short: 'VENU', category: 'Pokémon', imageUrl: BASE + 'cards/venusaur.webp' },
-  { specId: 10n, title: 'Base Set Mewtwo Holo', set: 'Base Set · 1999', short: 'MEW2', category: 'Pokémon', imageUrl: BASE + 'cards/mewtwo.webp' },
-  { specId: 1993140n, title: 'Alpha Mox Sapphire', set: 'Alpha · 1993', short: 'MOXS', category: 'Magic', imageUrl: BASE + 'cards/moxsapphire.webp' },
-  { specId: 1993180n, title: 'Alpha Underground Sea', set: 'Alpha · 1993', short: 'USEA', category: 'Magic', imageUrl: BASE + 'cards/undergroundsea.webp' },
-  { specId: 2002001n, title: 'Legend of Blue Eyes Blue-Eyes White Dragon', set: 'Legend of Blue Eyes · 2002', short: 'BEWD', category: 'Yu-Gi-Oh!', imageUrl: BASE + 'cards/blueeyes.webp' },
-  { specId: 2002005n, title: 'Legend of Blue Eyes Dark Magician', set: 'Legend of Blue Eyes · 2002', short: 'DKMG', category: 'Yu-Gi-Oh!', imageUrl: BASE + 'cards/darkmagician.webp' },
-  { specId: 2002124n, title: 'Legend of Blue Eyes Exodia the Forbidden One', set: 'Legend of Blue Eyes · 2002', short: 'EXOD', category: 'Yu-Gi-Oh!', imageUrl: BASE + 'cards/exodia.webp' },
-  { specId: 1909001n, title: 'T206 Honus Wagner', set: 'T206 · 1909', short: 'WAGNER', category: 'Sports', imageUrl: BASE + 'cards/wagner.webp' },
-  { specId: 1909002n, title: 'T206 Ty Cobb', set: 'T206 · 1909', short: 'COBB', category: 'Sports', imageUrl: BASE + 'cards/cobb.webp' },
-  { specId: 1909003n, title: 'T206 Christy Mathewson', set: 'T206 · 1909', short: 'MATHEW', category: 'Sports', imageUrl: BASE + 'cards/mathewson.webp' },
-  { specId: 1911001n, title: 'T205 Cy Young', set: 'T205 · 1911', short: 'CYYOUNG', category: 'Sports', imageUrl: BASE + 'cards/young.webp' },
-  { specId: 1909004n, title: 'T206 Walter Johnson', set: 'T206 · 1909', short: 'WJOHN', category: 'Sports', imageUrl: BASE + 'cards/johnson.webp' },
-  { specId: 1909005n, title: 'T206 Tris Speaker', set: 'T206 · 1909', short: 'SPEAKER', category: 'Sports', imageUrl: BASE + 'cards/speaker.webp' },
-  { specId: 1933002n, title: 'Goudey Sport Kings Babe Ruth #2', set: 'Goudey Sport Kings · 1933', short: 'RUTH33', category: 'Sports', imageUrl: BASE + 'cards/ruth.webp' },
+  { specId: 4n, title: 'Base Set Charizard Holo', set: 'Base Set · 1999', short: 'CHZ', category: 'Pokémon', imageKind: 'reference' as ImageKind, imageUrl: BASE + 'cards/charizard.webp' },
+  { specId: 58n, title: 'Base Set Pikachu Red Cheeks', set: 'Promo · 1999', short: 'PIKA', category: 'Pokémon', imageKind: 'reference' as ImageKind, imageUrl: BASE + 'cards/pikachu.webp' },
+  { specId: 1993232n, title: 'Alpha Black Lotus', set: 'Alpha · 1993', short: 'LOTUS', category: 'Magic', imageKind: 'reference' as ImageKind, imageUrl: BASE + 'cards/lotus.webp' },
+  { specId: 2n, title: 'Base Set Blastoise Holo', set: 'Base Set · 1999', short: 'BLST', category: 'Pokémon', imageKind: 'reference' as ImageKind, imageUrl: BASE + 'cards/blastoise.webp' },
+  { specId: 15n, title: 'Base Set Venusaur Holo', set: 'Base Set · 1999', short: 'VENU', category: 'Pokémon', imageKind: 'reference' as ImageKind, imageUrl: BASE + 'cards/venusaur.webp' },
+  { specId: 10n, title: 'Base Set Mewtwo Holo', set: 'Base Set · 1999', short: 'MEW2', category: 'Pokémon', imageKind: 'reference' as ImageKind, imageUrl: BASE + 'cards/mewtwo.webp' },
+  { specId: 1993140n, title: 'Alpha Mox Sapphire', set: 'Alpha · 1993', short: 'MOXS', category: 'Magic', imageKind: 'reference' as ImageKind, imageUrl: BASE + 'cards/moxsapphire.webp' },
+  { specId: 1993180n, title: 'Alpha Underground Sea', set: 'Alpha · 1993', short: 'USEA', category: 'Magic', imageKind: 'reference' as ImageKind, imageUrl: BASE + 'cards/undergroundsea.webp' },
+  { specId: 2002001n, title: 'Legend of Blue Eyes Blue-Eyes White Dragon', set: 'Legend of Blue Eyes · 2002', short: 'BEWD', category: 'Yu-Gi-Oh!', imageKind: 'reference' as ImageKind, imageUrl: BASE + 'cards/blueeyes.webp' },
+  { specId: 2002005n, title: 'Legend of Blue Eyes Dark Magician', set: 'Legend of Blue Eyes · 2002', short: 'DKMG', category: 'Yu-Gi-Oh!', imageKind: 'reference' as ImageKind, imageUrl: BASE + 'cards/darkmagician.webp' },
+  { specId: 2002124n, title: 'Legend of Blue Eyes Exodia the Forbidden One', set: 'Legend of Blue Eyes · 2002', short: 'EXOD', category: 'Yu-Gi-Oh!', imageKind: 'reference' as ImageKind, imageUrl: BASE + 'cards/exodia.webp' },
+  { specId: 1909001n, title: 'T206 Honus Wagner', set: 'T206 · 1909', short: 'WAGNER', category: 'Sports', imageKind: 'reference' as ImageKind, imageUrl: BASE + 'cards/wagner.webp' },
+  { specId: 1909002n, title: 'T206 Ty Cobb', set: 'T206 · 1909', short: 'COBB', category: 'Sports', imageKind: 'reference' as ImageKind, imageUrl: BASE + 'cards/cobb.webp' },
+  { specId: 1909003n, title: 'T206 Christy Mathewson', set: 'T206 · 1909', short: 'MATHEW', category: 'Sports', imageKind: 'reference' as ImageKind, imageUrl: BASE + 'cards/mathewson.webp' },
+  { specId: 1911001n, title: 'T205 Cy Young', set: 'T205 · 1911', short: 'CYYOUNG', category: 'Sports', imageKind: 'reference' as ImageKind, imageUrl: BASE + 'cards/young.webp' },
+  { specId: 1909004n, title: 'T206 Walter Johnson', set: 'T206 · 1909', short: 'WJOHN', category: 'Sports', imageKind: 'reference' as ImageKind, imageUrl: BASE + 'cards/johnson.webp' },
+  { specId: 1909005n, title: 'T206 Tris Speaker', set: 'T206 · 1909', short: 'SPEAKER', category: 'Sports', imageKind: 'reference' as ImageKind, imageUrl: BASE + 'cards/speaker.webp' },
+  { specId: 1933002n, title: 'Goudey Sport Kings Babe Ruth #2', set: 'Goudey Sport Kings · 1933', short: 'RUTH33', category: 'Sports', imageKind: 'reference' as ImageKind, imageUrl: BASE + 'cards/ruth.webp' },
 ]
 export const categories = ['Pokémon', 'Sports', 'Magic', 'Yu-Gi-Oh!'] as const
 /** Category of an on-chain SKU name ("PSA 10 Base Set Charizard Holo"), by catalog title. */

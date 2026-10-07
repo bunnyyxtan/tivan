@@ -1,9 +1,11 @@
 import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
-import { catalog, categories } from './config'
+import { catalog, categories, net } from './config'
+import { useEdgeCue } from './controls'
+import { openSettings } from './fx'
 import { recentFills, type FeedItem } from './chain'
 import { IconClose, IconSearch } from './icons'
 import { Skeleton } from './States'
-import { usd, usePoll } from './ui'
+import { short, usd, usePoll } from './ui'
 import { signedPct } from './format'
 
 // ===================================================================== keyboard
@@ -424,11 +426,12 @@ export function useCompare() {
 
 export function CompareTray({ names }: { names: (sku: string) => string | undefined }) {
   const c = useCompare()
+  const cue = useEdgeCue<HTMLUListElement>()
   if (!c.ids.length) return null
   return (
     <aside className="tray" aria-label="Compare tray">
       <span className="cap">Compare</span>
-      <ul>
+      <ul ref={cue}>
         {c.ids.map((id) => (
           <li key={id}>
             {names(id) ?? 'Card'}
@@ -456,7 +459,7 @@ export function CompareTray({ names }: { names: (sku: string) => string | undefi
 // ===================================================================== shelf
 /** A heading with View all, and a row of items that peeks the next one and scrolls with the arrow keys. */
 export function Shelf({ title, href, children }: { title: string; href: string; children: ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null)
+  const ref = useEdgeCue<HTMLDivElement>()
   return (
     <section className="shelf-sec" aria-label={title}>
       <div className="shelf-head">
@@ -478,5 +481,87 @@ export function Shelf({ title, href, children }: { title: string; href: string; 
         {children}
       </div>
     </section>
+  )
+}
+
+// ===================================================================== account menu and the sample-market notice
+/** The signed-in account button: the user's initial, opening Account, Settings, Help and shortcuts, Sign out. */
+export function AccountMenu({ address, onSignOut, initial = 'C' }: { address: string; onSignOut: () => void; initial?: string }) {
+  const [open, setOpen] = useState(false)
+  const btn = useRef<HTMLButtonElement>(null)
+  const list = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (open) list.current?.querySelector<HTMLElement>('[role=menuitem]')?.focus()
+  }, [open])
+  const close = (refocus = true) => (setOpen(false), refocus && btn.current?.focus())
+  const key = (e: React.KeyboardEvent) => {
+    const items = [...(list.current?.querySelectorAll<HTMLElement>('[role=menuitem]') ?? [])]
+    const i = items.indexOf(document.activeElement as HTMLElement)
+    if (e.key === 'Escape') return (e.preventDefault(), close())
+    if (e.key === 'Tab') return close(false)
+    const to = e.key === 'ArrowDown' ? (i + 1) % items.length : e.key === 'ArrowUp' ? (i - 1 + items.length) % items.length : e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : -1
+    if (to >= 0) (e.preventDefault(), items[to].focus())
+  }
+  return (
+    <div className="acct-menu" onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && setOpen(false)}>
+      <button ref={btn} className="acct-btn" aria-label="Account menu" title={short(address)} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
+        {initial}
+      </button>
+      {open && (
+        <div className="menu" role="menu" aria-label="Account" ref={list} onKeyDown={key}>
+          <a role="menuitem" href="#/you" onClick={() => close(false)}>
+            Account
+          </a>
+          <button role="menuitem" onClick={() => (close(false), openSettings())}>
+            Settings
+          </button>
+          <button role="menuitem" onClick={() => (close(false), openShortcuts())}>
+            Help and shortcuts
+          </button>
+          <hr />
+          <button role="menuitem" onClick={() => (close(false), onSignOut())}>
+            Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** The one place the app says it is a sample: a slim strip, and a dialog listing what is simulated and what is real. */
+export function DemoStrip() {
+  const ref = useRef<HTMLDialogElement>(null)
+  if (net.name !== 'testnet') return null
+  return (
+    <>
+      <div className="strip">
+        <span>Sample market on a test network. Prices are quoted by an automated market maker. Custody and cash are simulated.</span>
+        <button className="linkbtn" onClick={() => ref.current?.showModal()}>
+          Details
+        </button>
+      </div>
+      <dialog ref={ref} className="strip-dialog" aria-labelledby="demo-title" onClick={(e) => e.target === ref.current && ref.current?.close()}>
+        <div className="settings-head">
+          <h2 id="demo-title">About this sample market</h2>
+          <button className="ghost line" autoFocus onClick={() => ref.current?.close()}>
+            Done
+          </button>
+        </div>
+        <h3>Simulated</h3>
+        <ul>
+          <li>Prices. A market-making bot quotes most cards at reference prices with a spread of its own. Collectors can post prices too.</li>
+          <li>Cash. Dollars are free test dollars and have no value.</li>
+          <li>Custody. The vault check-in is simulated: a demo custodian confirms receipt at once.</li>
+          <li>Grading checks. On the test network, certificates are checked against a demo registry.</li>
+          <li>Card pictures. They show the card, not a photograph of the slab.</li>
+        </ul>
+        <h3>Real</h3>
+        <ul>
+          <li>Orders and trades. Offers, asks and sales run as transactions on a public test network, on on-chain order books.</li>
+          <li>Sign-in. Your account key comes from a passkey on your device. In test mode it is a key stored in this browser.</li>
+          <li>Money. Nothing here costs or pays real money.</li>
+        </ul>
+      </dialog>
+    </>
   )
 }
