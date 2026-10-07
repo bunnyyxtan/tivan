@@ -15,6 +15,20 @@ const DEMO_CARDS: [spec: number, grade: number, subject: string][] = [
   [58, 10, 'PIKACHU'],
   [2003111, 10, 'LEBRON JAMES'],
   [1993232, 9, 'BLACK LOTUS'],
+  [2, 9, 'BLASTOISE-HOLO'],
+  [15, 9, 'VENUSAUR-HOLO'],
+  [10, 9, 'MEWTWO-HOLO'],
+  [1986057, 8, 'MICHAEL JORDAN'],
+  [1996138, 10, 'KOBE BRYANT'],
+  [1952311, 5, 'MICKEY MANTLE'],
+  [2000144, 9, 'TOM BRADY'],
+  [1979018, 8, 'WAYNE GRETZKY'],
+  [2018700, 10, 'SHOHEI OHTANI'],
+  [1993140, 8, 'MOX SAPPHIRE'],
+  [1993180, 9, 'UNDERGROUND SEA'],
+  [2002001, 9, 'BLUE-EYES WHITE DRAGON'],
+  [2002005, 9, 'DARK MAGICIAN'],
+  [2002124, 9, 'EXODIA THE FORBIDDEN ONE'],
 ]
 function demoCert(certId: bigint): PsaCert | undefined {
   if (network.name !== 'testnet' || certId < 90_000_000n || certId >= 90_000_000n + BigInt(DEMO_CARDS.length) * 10_000n) return undefined
