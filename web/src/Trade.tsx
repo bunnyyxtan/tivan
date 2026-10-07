@@ -7,7 +7,7 @@ import { confirmStep } from './account'
 import { logActivity } from './activity'
 import { useAlerts } from './alerts'
 import { Skeleton } from './States'
-import { Header, Slab, Steps, Toast, cardSub, cardTitle, delta, useFlow, usePoll, useTint, usd } from './ui'
+import { Header, Slab, Steps, Toast, cardSub, cardTitle, delta, useFlow, usePoll, usd } from './ui'
 
 const toUnits = (dollars: number) => BigInt(Math.round(dollars * 100)) * 10n ** BigInt(net.quoteDecimals - 2)
 
@@ -46,7 +46,7 @@ function ListedAlert({ sku }: { sku: string }) {
   const on = al.has(sku, 'listed')
   return (
     <button className="kv" style={{ width: '100%' }} onClick={async () => (on ? al.off(sku, 'listed') : await al.on({ sku, kind: 'listed' }))}>
-      <span style={{ color: 'var(--tx)' }}>{on ? 'We’ll tell you when one is listed' : 'Tell me when one is listed'}</span>
+      <span style={{ color: 'var(--ink)' }}>{on ? 'We’ll tell you when one is listed' : 'Tell me when one is listed'}</span>
       <i className="switch" role="switch" aria-checked={!!on} />
     </button>
   )
@@ -75,7 +75,6 @@ export function BuyFlow({ sku, account }: { sku: string; account: LocalAccount }
   const flow = useFlow()
   const [locked, setLocked] = useState<number>() // the price the buyer agreed to
   const [missed, setMissed] = useState(false)
-  useTint(data?.s.name)
   if (!data)
     return (
       <>
@@ -100,12 +99,12 @@ export function BuyFlow({ sku, account }: { sku: string; account: LocalAccount }
         </p>
         <div className="rows panel" style={{ padding: '0 16px' }}>
           <a className="kv" href={`#/offer/${sku}`}>
-            <span style={{ color: 'var(--tx)' }}>Make an offer at {usd(price)}</span>
+            <span style={{ color: 'var(--ink)' }}>Make an offer at {usd(price)}</span>
             <span className="muted">›</span>
           </a>
           {data.ask ? (
             <button className="kv" style={{ width: '100%' }} onClick={() => (setMissed(false), setLocked(undefined), flow.reset())}>
-              <span style={{ color: 'var(--tx)' }}>Review the next one at {usd(data.ask)}</span>
+              <span style={{ color: 'var(--ink)' }}>Review the next one at {usd(data.ask)}</span>
               <span className="muted">›</span>
             </button>
           ) : (
@@ -159,7 +158,7 @@ export function BuyFlow({ sku, account }: { sku: string; account: LocalAccount }
         <button className="ghost line" onClick={refresh}>
           I’ve sent it. Check my cash
         </button>
-        <a className="u" href={`#/offer/${sku}`} style={{ alignSelf: 'center', fontSize: 14, color: 'var(--tx2)' }}>
+        <a className="u" href={`#/offer/${sku}`} style={{ alignSelf: 'center', fontSize: 14, color: 'var(--ink-2)' }}>
           Or make an offer within your cash
         </a>
       </div>
@@ -236,7 +235,7 @@ export function BuyFlow({ sku, account }: { sku: string; account: LocalAccount }
       </button>
       <Steps steps={flow.steps} error={flow.error} />
       {!flow.busy && (
-        <a className="u" href={`#/card/${sku}`} style={{ alignSelf: 'center', fontSize: 14, color: 'var(--tx2)' }}>
+        <a className="u" href={`#/card/${sku}`} style={{ alignSelf: 'center', fontSize: 14, color: 'var(--ink-2)' }}>
           Not now
         </a>
       )}
@@ -262,7 +261,6 @@ function BidAlert({ sku, paid }: { sku: string; paid: number }) {
 export function Receipt({ sku, price, tx, account }: { sku: string; price: number; tx: string; account: LocalAccount }) {
   const { data } = usePoll(async () => (await loadSkus()).find((x) => x.sku === sku), 30000, [sku])
   const { data: port, totalCash } = usePortfolio(account.address)
-  useTint(data?.name)
   if (!data) return <div style={{ marginTop: 40 }}><Skeleton h={320} r={12} /></div>
   return (
     <div className="flow" style={{ paddingTop: 32 }}>
@@ -320,7 +318,6 @@ export function TradeFlow({ side, sku, account }: { side: 'sell' | 'offer'; sku:
   const [mode, setMode] = useState<'now' | 'list'>()
   const [price, setPrice] = useState<string>()
   const [placed, setPlaced] = useState<{ id: number; text: string }>()
-  useTint(data?.s.name)
   if (!data || !port)
     return (
       <>

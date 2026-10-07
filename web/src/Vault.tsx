@@ -4,7 +4,7 @@ import { confirmStep } from './account'
 import { attestorUrl, catalog, net } from './config'
 import { erc20Abi, loadSkus, marginAbi, marginAccount, pub, send, vaultAbi } from './chain'
 import { usePortfolio } from './portfolio'
-import { Header, Slab, Steps, cardSub, cardTitle, useFlow, usePoll, useTint } from './ui'
+import { Header, Slab, Steps, cardSub, cardTitle, useFlow, usePoll } from './ui'
 
 async function post(path: string, body: object) {
   const res = await fetch(attestorUrl + path, {
@@ -269,7 +269,6 @@ export function Redeem({ sku, account }: { sku: string; account: LocalAccount })
     6000,
     [sku],
   )
-  useTint(data?.s.name)
   const [ship, setShip] = useState('')
   const [ok, setOk] = useState(false)
   const [certId, setCertId] = useState<bigint>()

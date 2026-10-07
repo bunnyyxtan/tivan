@@ -1,4 +1,4 @@
-import { CardImage, SettingsButton, readPrefs, usePrefs } from './fx'
+import { CardImage, SettingsButton } from './fx'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { explorerTx } from './chain'
 import { friendlyError } from './account'
@@ -30,34 +30,6 @@ export const cardSub = (name: string) => {
   const { grader, grade } = parseName(name)
   const c = catalogOf(name)
   return [grader + (grade ? ` ${grade}` : ''), c?.set.replace(' · ', ' ')].filter(Boolean).join(' · ')
-}
-
-/** The page takes its colour from the card on it (solid tones, see index.css [data-tint]). */
-export function useTint(name: string | undefined) {
-  const [p] = usePrefs()
-  useEffect(() => {
-    if (p.skin !== 'card') return // a fixed colour theme was chosen in Settings
-    const t = name ? catalogOf(name)?.tint : undefined
-    if (t) document.documentElement.dataset.tint = t
-    // Only clear it while pages own the tint; a fixed colour theme keeps its own.
-    return () => void (readPrefs().skin === 'card' && delete document.documentElement.dataset.tint)
-  }, [name, p.skin])
-}
-
-export type Theme = 'auto' | 'light' | 'dark'
-export const getTheme = (): Theme => {
-  try {
-    return (localStorage.getItem('slab.theme') as Theme) || 'auto'
-  } catch {
-    return 'auto'
-  }
-}
-export function setTheme(t: Theme) {
-  try {
-    localStorage.setItem('slab.theme', t)
-  } catch {}
-  if (t === 'auto') delete document.documentElement.dataset.theme
-  else document.documentElement.dataset.theme = t
 }
 
 /** Cards you watch live in this browser only. */

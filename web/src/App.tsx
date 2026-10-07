@@ -15,7 +15,7 @@ import { logActivity, useActivity, when } from './activity'
 import { askPermission, notifyState, useAlertWatcher } from './alerts'
 import { Redeem, VaultPage, drip } from './Vault'
 import { usePortfolio } from './portfolio'
-import { Header, Slab, Steps, delta, short, useFlow, useTint, usd } from './ui'
+import { Header, Slab, Steps, delta, short, useFlow, usd } from './ui'
 
 function useHash() {
   const [h, setH] = useState(location.hash)
@@ -129,7 +129,6 @@ function SignIn({ onReady, onGuest, inline }: { onReady: (a: LocalAccount) => vo
   const [err, setErr] = useState<string>()
   const [busy, setBusy] = useState(false)
   const returning = !!savedPasskey()
-  useTint(inline ? undefined : 'PSA 10 Base Set Charizard Holo') // landing takes the hero card's colour
   const go = async (fn: () => Promise<LocalAccount>) => {
     setBusy(true)
     setErr(undefined)
@@ -189,7 +188,7 @@ function SignIn({ onReady, onGuest, inline }: { onReady: (a: LocalAccount) => vo
         <span className="brand">{brand}</span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <SettingsButton />
-          <button className="ghost" style={{ marginRight: -14, color: 'var(--tx2)' }} onClick={onGuest}>
+          <button className="ghost" style={{ marginRight: -14, color: 'var(--ink-2)' }} onClick={onGuest}>
             Look around first
           </button>
         </span>
@@ -292,7 +291,7 @@ function You({ account, onSignOut }: { account: LocalAccount; onSignOut: () => v
         </button>
         <button className="settings-row" style={{ width: '100%', textAlign: 'left' }} onClick={openSettings}>
           <span className="row-ico"><IconSettings /></span>
-          <span className="row-text">Settings<small>Theme, motion, lists, alerts</small></span>
+          <span className="row-text">Settings<small>Motion, lists, alerts</small></span>
           <IconChevron />
         </button>
       </div>

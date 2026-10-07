@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { askPermission, canNotify, notifyState } from './alerts'
-import { defaultPrefs, skins, usePrefs, type Skin } from './fx'
-import { IconBell, IconColour, IconGrid, IconList, IconMotion, IconSun } from './icons'
-import { getTheme, setTheme, type Theme } from './ui'
+import { defaultPrefs, usePrefs } from './fx'
+import { IconBell, IconGrid, IconList, IconMotion } from './icons'
 
 const EVT = 'tivan-settings'
 
@@ -12,7 +11,6 @@ export function SettingsSheet() {
   const [prefs, setPrefs] = usePrefs()
   const [notif, setNotif] = useState(notifyState)
   const ref = useRef<HTMLDivElement>(null)
-  const theme = getTheme()
   const close = () => setOpen(false)
 
   useEffect(() => {
@@ -40,8 +38,7 @@ export function SettingsSheet() {
   }, [open])
 
   if (!open) return null
-  const setT = (t: Theme) => (setTheme(t), setPrefs({}))
-  const reset = () => (setTheme('auto'), setPrefs(defaultPrefs()))
+  const reset = () => setPrefs(defaultPrefs())
   return (
     <>
       <div className="settings-backdrop" onClick={close} />
@@ -53,35 +50,6 @@ export function SettingsSheet() {
           </button>
         </div>
         <p className="fine" style={{ marginTop: 4 }}>Saved in this browser. No account needed.</p>
-
-        <h3 className="settings-h">Appearance</h3>
-        <div className="settings-group">
-          <div className="settings-row">
-            <span className="row-ico"><IconSun /></span>
-            <span className="row-text">Light or dark<small>Auto follows your device</small></span>
-            <span className="seg" role="radiogroup" aria-label="Appearance">
-              {(['auto', 'light', 'dark'] as const).map((t) => (
-                <button key={t} role="radio" aria-checked={theme === t} className={theme === t ? 'on' : ''} onClick={() => setT(t)}>
-                  {t[0].toUpperCase() + t.slice(1)}
-                </button>
-              ))}
-            </span>
-          </div>
-          <div className="settings-row" style={{ display: 'block' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span className="row-ico"><IconColour /></span>
-              <span className="row-text">Colour theme<small>{prefs.skin === 'card' ? 'Each page takes its colour from the card on it' : 'One colour theme everywhere'}</small></span>
-            </div>
-            <div className="swatches" role="group" aria-label="Colour theme">
-              {skins.map((s) => (
-                <button key={s.id} className={`swatch ${s.id === 'card' ? 'swatch-card' : ''}`} aria-pressed={prefs.skin === s.id} onClick={() => setPrefs({ skin: s.id as Skin })}>
-                  <i style={s.bg ? ({ '--c1': s.bg, '--c2': s.accent } as React.CSSProperties) : undefined} />
-                  <span>{s.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
 
         <h3 className="settings-h">Motion</h3>
         <div className="settings-group">

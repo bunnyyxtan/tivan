@@ -2,24 +2,10 @@ import { createElement, useEffect, useRef, useState, type ReactNode } from 'reac
 import { IconSettings } from './icons'
 
 // ---- preferences: saved in this browser, applied as <html> attributes
-export type Skin = 'card' | 'neutral' | 'char' | 'pika' | 'lbj' | 'mj' | 'lotus' | 'blue' | 'green'
-export type Prefs = { motion: 'full' | 'off'; dense: boolean; view: 'list' | 'grid'; skin: Skin }
+export type Prefs = { motion: 'full' | 'off'; dense: boolean; view: 'list' | 'grid' }
 const KEY = 'tivan.prefs'
-const defaults = (): Prefs => ({ motion: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'off' : 'full', dense: false, view: 'grid', skin: 'card' })
+const defaults = (): Prefs => ({ motion: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'off' : 'full', dense: false, view: 'grid' })
 export const defaultPrefs = defaults
-
-// ---- colour themes (the same palettes the card pages use)
-export const skins: { id: Skin; label: string; bg?: string; accent?: string }[] = [
-  { id: 'card', label: 'Follow the card' },
-  { id: 'neutral', label: 'Neutral', bg: '#12100e', accent: '#f6f1ec' },
-  { id: 'char', label: 'Ember', bg: '#1d110b', accent: '#ff7a45' },
-  { id: 'pika', label: 'Gold', bg: '#1a170a', accent: '#f5c842' },
-  { id: 'lbj', label: 'Rose', bg: '#1a0e11', accent: '#f08aa3' },
-  { id: 'mj', label: 'Crimson', bg: '#1b0d0c', accent: '#ff8a7a' },
-  { id: 'lotus', label: 'Sage', bg: '#0e110f', accent: '#bfe0c8' },
-  { id: 'blue', label: 'Ocean', bg: '#0b111d', accent: '#6aa4ff' },
-  { id: 'green', label: 'Forest', bg: '#0c130e', accent: '#6fdc96' },
-]
 
 export const readPrefs = (): Prefs => {
   try {
@@ -29,7 +15,6 @@ export const readPrefs = (): Prefs => {
       motion: s.motion === 'off' ? 'off' : s.motion ? 'full' : d.motion,
       dense: typeof s.dense === 'boolean' ? s.dense : d.dense,
       view: s.view === 'list' ? 'list' : s.view === 'grid' ? 'grid' : d.view,
-      skin: skins.some((k) => k.id === s.skin) ? s.skin : d.skin,
     }
   } catch {
     return defaults()
@@ -39,10 +24,6 @@ const apply = (p: Prefs) => {
   const d = document.documentElement.dataset
   d.motion = p.motion
   d.dense = String(p.dense)
-  d.skin = p.skin
-  // A fixed colour theme sets the page tint itself; "follow the card" lets each page choose (useTint).
-  if (p.skin === 'card' || p.skin === 'neutral') delete d.tint
-  else d.tint = p.skin
 }
 apply(readPrefs())
 const PREFS_EVT = 'tivan-prefs'

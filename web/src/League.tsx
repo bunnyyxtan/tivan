@@ -57,7 +57,7 @@ export function League({ account }: { account?: LocalAccount }) {
         <div className="rows">
           {data?.slice(0, 20).map((t, i) => (
             <div key={t.addr} className={`kv board-row ${t.addr === me ? 'me' : ''}`} style={{ alignItems: 'center' }}>
-              <span style={{ display: 'flex', gap: 12, alignItems: 'center', color: 'var(--tx)' }}>
+              <span style={{ display: 'flex', gap: 12, alignItems: 'center', color: 'var(--ink)' }}>
                 <span className="board-rank">{i + 1}</span>
                 {t.addr === me ? 'You' : short(t.addr)}
               </span>

@@ -119,7 +119,7 @@ function OpenList({ open, account, done }: { open: { o: Order; h?: { s: { sku: s
         {open.map(({ o, h }) =>
           h ? (
             <div key={`${h.s.sku}-${o.id}`} className="kv" style={{ alignItems: 'center' }}>
-              <span style={{ color: 'var(--tx)' }}>
+              <span style={{ color: 'var(--ink)' }}>
                 {o.isBuy ? 'Offer on' : 'Selling'} {cardTitle(h.s.name)} at {usd(o.price)}
               </span>
               <span style={{ display: 'flex', gap: 6 }}>

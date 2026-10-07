@@ -48,17 +48,6 @@ export const IconSettings = ({ size }: { size?: number }) => (
     <circle cx="9" cy="17" r="2" />
   </Icon>
 )
-export const IconSun = ({ size }: { size?: number }) => (
-  <Icon size={size}>
-    <circle cx="12" cy="12" r="3.8" />
-    <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4" />
-  </Icon>
-)
-export const IconColour = ({ size }: { size?: number }) => (
-  <Icon size={size}>
-    <path d="M12 3.5c3.5 4 6 6.8 6 10a6 6 0 0 1-12 0c0-3.2 2.5-6 6-10Z" />
-  </Icon>
-)
 export const IconMotion = ({ size }: { size?: number }) => (
   <Icon size={size}>
     <path d="M3 12c2.5-6 4.5-6 6 0s3.5 6 6 0 3.5-6 6 0" />

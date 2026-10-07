@@ -11,7 +11,7 @@ import { usePrefs } from './fx'
 import { IconClose, IconGrid, IconList } from './icons'
 import { Empty, ErrorNote, ItemCardSkeleton, RowSkeleton, Skeleton } from './States'
 import { pct, stamp } from './format'
-import { Header, Roll, Slab, Steps, Toast, cardSub, cardTitle, delta, parseName, useFlow, usePoll, useTint, useWatch, usd } from './ui'
+import { Header, Roll, Slab, Steps, Toast, cardSub, cardTitle, delta, parseName, useFlow, usePoll, useWatch, usd } from './ui'
 
 // ===================================================================== browse
 type Sort = 'featured' | 'high' | 'low' | 'spread' | 'name'
@@ -242,7 +242,6 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
   const watch = useWatch()
   const [toast, setToast] = useState<string>()
   const [tab, setTab] = useState<Tab>('details')
-  useTint(data?.sku.name)
 
   if (!data)
     return (
@@ -288,7 +287,6 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
       price: s.ask ? usd(s.ask) : s.bid ? usd(s.bid) : '—',
       line: s.ask ? 'to buy now' + (s.bid ? ` · top offer ${usd(s.bid)}` : '') : s.bid ? 'top offer' : 'no price yet',
       img: c?.imageUrl,
-      dark: matchMedia('(prefers-color-scheme: dark)').matches,
     })
     const r = await shareCard(blob, `${cardTitle(s.name)} is ${s.ask ? usd(s.ask) : 'listed'} on ${brand}.`, location.href)
     if (r === 'saved') flash('Price card saved.')
@@ -336,7 +334,7 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
           <Slab name={s.name} size="lg" vt={`card-${s.sku}`} />
         </div>
         <div>
-          <h1 style={{ fontSize: 28, fontWeight: 500, letterSpacing: '-0.03em', overflowWrap: 'anywhere' }}>{cardTitle(s.name)}</h1>
+          <h1 style={{ fontSize: 32, overflowWrap: 'anywhere' }}>{cardTitle(s.name)}</h1>
           <p className="muted" style={{ marginTop: 4, fontSize: 15 }}>
             {demo ? 'DEMO · ' : ''}
             {cardSub(s.name)}
