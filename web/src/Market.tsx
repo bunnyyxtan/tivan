@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { LocalAccount } from 'viem'
 import { alertPrice, useAlerts } from './alerts'
 import { brand, catalogOf, categories, categoryOf, net } from './config'
@@ -7,22 +7,75 @@ import { usePortfolio } from './portfolio'
 import { ActivityFeed, FoundingCollectors } from './Feed'
 import { priceCard, shareCard } from './share'
 import { CashPill, type Acct } from './App'
+import { Card, CountUp, useFlip, usePrefs } from './fx'
 import { Header, Roll, Slab, Steps, Toast, cardSub, cardTitle, delta, parseName, useFlow, usePoll, useTint, useWatch, usd } from './ui'
+
+type Sort = 'featured' | 'high' | 'low' | 'spread' | 'name'
+type Range = 'any' | 'lt1k' | 'mid' | 'gt10k'
+const price = (s: Sku) => s.ask ?? s.bid ?? 0
+const spreadOf = (s: Sku) => (s.ask && s.bid ? (s.ask - s.bid) / s.ask : undefined)
+const ranges: [Range, string][] = [['any', 'Any price'], ['lt1k', 'Under $1k'], ['mid', '$1k to $10k'], ['gt10k', '$10k and up']]
 
 export function MarketList({ account }: { account: Acct }) {
   const { data, error } = usePoll(loadSkus, 8000, [])
   const { data: port } = usePortfolio(account?.address)
   const watch = useWatch()
+  const [prefs, setPrefs] = usePrefs()
   const [q, setQ] = useState('')
   const [cat, setCat] = useState<string>('All')
+  const [sort, setSort] = useState<Sort>('featured')
+  const [range, setRange] = useState<Range>('any')
+  const [forSale, setForSale] = useState(false)
+  const listRef = useRef<HTMLDivElement>(null)
   const owned = (sku: string) => port?.holdings.find((h) => h.s.sku === sku)
-  const list = (data ?? []).filter(
-    (s) => `${s.name} ${catalogOf(s.name)?.set ?? ''}`.toLowerCase().includes(q.toLowerCase()) && (cat === 'All' || (cat === 'Watching' ? watch.list.includes(s.sku) : categoryOf(s.name) === cat)),
-  )
+  const all = data ?? []
+  const inRange = (s: Sku) => range === 'any' || (range === 'lt1k' ? price(s) < 1000 : range === 'mid' ? price(s) >= 1000 && price(s) < 10000 : price(s) >= 10000)
+  const list = all
+    .filter((s) => `${s.name} ${catalogOf(s.name)?.set ?? ''}`.toLowerCase().includes(q.toLowerCase()) && (cat === 'All' || (cat === 'Watching' ? watch.list.includes(s.sku) : categoryOf(s.name) === cat)) && inRange(s) && (!forSale || !!s.ask))
+    .sort((x, y) => (sort === 'high' ? price(y) - price(x) : sort === 'low' ? price(x) - price(y) : sort === 'spread' ? (spreadOf(y) ?? -1) - (spreadOf(x) ?? -1) : sort === 'name' ? cardTitle(x.name).localeCompare(cardTitle(y.name)) : 0))
+  useFlip(listRef, [list.map((s) => s.sku).join(), prefs.view])
+  const live = all.filter(hasMarket)
+  const onSale = all.filter((s) => s.ask)
+  const tight = [...all].filter((s) => spreadOf(s) !== undefined).sort((x, y) => spreadOf(x)! - spreadOf(y)!)[0]
+  const shelves: [string, Sku[]][] = [
+    ['Biggest spreads', [...all].filter((s) => spreadOf(s) !== undefined).sort((x, y) => spreadOf(y)! - spreadOf(x)!).slice(0, 8)],
+    ['Under $1,000', all.filter((s) => s.ask && s.ask < 1000).slice(0, 8)],
+    ['Blue chips, $10,000 and up', all.filter((s) => s.ask && s.ask >= 10000).slice(0, 8)],
+  ]
+  const tag = (s: Sku) => {
+    const o = owned(s.sku)
+    return o && o.count > 0 ? `You own ${o.count}${o.listed ? ' · listed' : ''}` : watch.list.includes(s.sku) ? 'Watching' : ''
+  }
+  const browsing = !q && cat === 'All' && range === 'any' && !forSale
+  const count = (c: string) => all.filter((s) => categoryOf(s.name) === c).length
   return (
     <>
       <Header title="Markets" right={<span className="mobile-only"><CashPill account={account} /></span>} />
       {net.name === 'mainnet' && <DemoNotice />}
+      {data && (
+        <div className="cards-grid stats rise" style={{ marginBottom: 14 }}>
+          <Card variant="stat" i={0}>
+            <div className="k">Live markets</div>
+            <div className="n"><CountUp value={live.length} /></div>
+            <div className="s">Each card has its own book</div>
+          </Card>
+          <Card variant="stat" i={1}>
+            <div className="k">For sale now</div>
+            <div className="n"><CountUp value={onSale.length} /></div>
+            <div className="s">Cards with a seller</div>
+          </Card>
+          <Card variant="stat" i={2}>
+            <div className="k">Cheapest copies</div>
+            <div className="n"><CountUp value={onSale.reduce((t, s) => t + (s.ask ?? 0), 0)} format={(n) => usd(Math.round(n))} /></div>
+            <div className="s">Sum of every best ask</div>
+          </Card>
+          <Card variant="stat" i={3}>
+            <div className="k">Tightest spread</div>
+            <div className="n">{tight ? <CountUp value={spreadOf(tight)! * 100} format={(n) => n.toFixed(1) + '%'} /> : '—'}</div>
+            <div className="s">{tight ? cardTitle(tight.name) : 'No two-sided book yet'}</div>
+          </Card>
+        </div>
+      )}
       <label className="field" style={{ marginTop: 4 }}>
         <input aria-label="Search cards" placeholder="Search a card or set" value={q} onChange={(e) => setQ(e.target.value)} />
       </label>
@@ -30,16 +83,64 @@ export function MarketList({ account }: { account: Acct }) {
         {['All', 'Watching', ...categories].map((c) => (
           <button key={c} className={cat === c ? 'on' : ''} aria-pressed={cat === c} onClick={() => setCat(c)}>
             {c}
+            {data && c !== 'All' && c !== 'Watching' ? <span className="muted" style={{ marginLeft: 6 }}>{count(c)}</span> : null}
           </button>
         ))}
       </div>
+      <div className="chips" role="group" aria-label="Price range" style={{ marginTop: 8 }}>
+        {ranges.map(([k, label]) => (
+          <button key={k} className={range === k ? 'on' : ''} aria-pressed={range === k} onClick={() => setRange(k)}>
+            {label}
+          </button>
+        ))}
+        <button className={forSale ? 'on' : ''} aria-pressed={forSale} onClick={() => setForSale(!forSale)}>
+          For sale only
+        </button>
+      </div>
+      <div className="sortbar">
+        <label className="field">
+          <select aria-label="Sort" value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
+            <option value="featured">Sort: Featured</option>
+            <option value="high">Price, high to low</option>
+            <option value="low">Price, low to high</option>
+            <option value="spread">Biggest spread</option>
+            <option value="name">Name, A to Z</option>
+          </select>
+        </label>
+        <span className="seg view-toggle" role="radiogroup" aria-label="View">
+          {(['grid', 'list'] as const).map((v) => (
+            <button key={v} role="radio" aria-checked={prefs.view === v} className={prefs.view === v ? 'on' : ''} onClick={() => setPrefs({ view: v })}>
+              {v === 'grid' ? 'Grid' : 'List'}
+            </button>
+          ))}
+        </span>
+      </div>
+
+      {browsing && data && shelves.map(([title, items]) =>
+        items.length > 1 ? (
+          <section key={title}>
+            <div className="shelf-head"><span className="cap">{title}</span><span className="fine">{items.length} cards</span></div>
+            <div className="shelf">
+              {items.map((s, n) => (
+                <Card key={s.sku} variant="feature" href={`#/card/${s.sku}`} i={n} className="shelf-card" tilt={false}>
+                  <div className="gc-art"><Slab name={s.name} size="md" vt={`shelf-${title}-${s.sku}`} /></div>
+                  <div className="gc-title">{cardTitle(s.name)}</div>
+                  <div className="gc-sub">{cardSub(s.name)}</div>
+                  <div className="gc-px"><b>{s.ask ? usd(s.ask) : '—'}</b><span>{spreadOf(s) !== undefined ? `${(spreadOf(s)! * 100).toFixed(1)}% spread` : 'no offers'}</span></div>
+                </Card>
+              ))}
+            </div>
+          </section>
+        ) : null,
+      )}
+
       <div className="market-table" style={{ marginTop: 6 }}>
         <div className="list-head">
           <span className="cap">{data ? `${list.length} ${list.length === 1 ? 'card' : 'cards'}` : 'Cards'}</span>
-          <span className="desk-only cap">Buy now</span>
-          <span className="desk-only cap">Sell now</span>
-          <span className="desk-only cap">In the vault</span>
-          <span className="mobile-only fine">Price to buy</span>
+          {prefs.view === 'list' && <span className="desk-only cap">Buy now</span>}
+          {prefs.view === 'list' && <span className="desk-only cap">Sell now</span>}
+          {prefs.view === 'list' && <span className="desk-only cap">In the vault</span>}
+          {prefs.view === 'list' && <span className="mobile-only fine">Price to buy</span>}
         </div>
         {!net.vault && <div className="empty">Markets open on {net.chain.name} soon.</div>}
         {!data && !error && net.vault && [0, 1, 2].map((i) => <div key={i} className="skeleton" />)}
@@ -49,16 +150,38 @@ export function MarketList({ account }: { account: Acct }) {
           </p>
         )}
         {data && !list.length && (
-          <div className="empty">{cat === 'Watching' ? 'Nothing here yet. Tap Watch on any card and it shows up here.' : 'No cards match.'}</div>
+          <Card variant="empty" tilt={false}>
+            {cat === 'Watching' ? 'Nothing here yet. Tap Watch on any card and it shows up here.' : 'No cards match these filters.'}
+            <div style={{ marginTop: 10 }}>
+              <button className="ghost line" onClick={() => (setQ(''), setCat('All'), setRange('any'), setForSale(false))}>Clear filters</button>
+            </div>
+          </Card>
         )}
-        {list.map((s) => {
-          const o = owned(s.sku)
-          const tag = o && o.count > 0 ? `You own ${o.count}${o.listed ? ' · listed' : ''}` : watch.list.includes(s.sku) ? 'Watching' : ''
-          return <MarketRow key={s.sku} s={s} tag={tag} />
-        })}
+        <div ref={listRef} className={prefs.view === 'grid' ? 'cards-grid' : ''}>
+          {list.map((s, n) => (prefs.view === 'grid' ? <GridCard key={s.sku} s={s} tag={tag(s)} i={n % 8} /> : <MarketRow key={s.sku} s={s} tag={tag(s)} />))}
+        </div>
       </div>
       <ActivityFeed me={account?.address} />
     </>
+  )
+}
+
+function GridCard({ s, tag, i }: { s: Sku; tag: string; i: number }) {
+  const { demo } = parseName(s.name)
+  const live = hasMarket(s)
+  const sp = spreadOf(s)
+  return (
+    <Card variant="feature" href={`#/card/${s.sku}`} i={i} className="grid-card" flip={s.sku} tilt>
+      {tag && <span className="gc-tag">{tag}</span>}
+      <div className="gc-art"><Slab name={s.name} size="md" vt={`card-${s.sku}`} /></div>
+      <div className="gc-title">{cardTitle(s.name)}</div>
+      <div className="gc-sub">{demo ? 'DEMO · ' : ''}{cardSub(s.name)}</div>
+      <div className="gc-px">
+        <b>{!live ? 'Soon' : s.ask ? <Roll value={s.ask} /> : 'No sellers'}</b>
+        <span>{!live ? 'Awaiting Kuru' : s.bid ? `Offer ${usd(s.bid)}` : 'No offers'}</span>
+      </div>
+      {sp !== undefined && <div className="gc-bar" title={`${(sp * 100).toFixed(1)}% spread`}><i style={{ '--w': `${Math.round((1 - sp) * 100)}%` } as React.CSSProperties} /></div>}
+    </Card>
   )
 }
 
@@ -75,7 +198,7 @@ function MarketRow({ s, tag }: { s: Sku; tag: string }) {
   const ask = !live ? 'Opening soon' : s.ask ? usd(s.ask) : 'No sellers'
   const second = !live ? 'Awaiting Kuru' : s.bid ? `Offer ${usd(s.bid)}` : 'No offers'
   return (
-    <a className="mrow rise" href={`#/card/${s.sku}`}>
+    <a className="mrow rise" data-flip={s.sku} href={`#/card/${s.sku}`}>
       <span className="mrow-name">
         <Slab name={s.name} size="xs" vt={`card-${s.sku}`} />
         <span className="mrow-info">
