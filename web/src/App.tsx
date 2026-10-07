@@ -3,7 +3,8 @@ import { flushSync } from 'react-dom'
 import { formatEther, parseUnits, type LocalAccount } from 'viem'
 import { createAccount, deviceAccount, friendlyError, hasDeviceKey, savedPasskey, signIn, signOut } from './account'
 import { erc20Abi, marginAbi, pub, send } from './chain'
-import { Aurora, Card, useRevealAll, usePrefs } from './fx'
+import { Aurora, Card, SettingsButton, useRevealAll, usePrefs } from './fx'
+import { SettingsSheet } from './Settings'
 import { attestorUrl, brand, net } from './config'
 import { CardPage, MarketList } from './Market'
 import { BuyFlow, Receipt, TradeFlow } from './Trade'
@@ -48,6 +49,7 @@ export default function App() {
       <>
         <Aurora />
         <SignIn onReady={setAccount} onGuest={() => setGuest(true)} />
+        <SettingsSheet />
       </>
     )
   const tab = route === 'collection' ? 'collection' : route === 'vault' ? 'vault' : route === 'you' ? 'you' : route === 'league' ? 'league' : 'markets'
@@ -74,6 +76,7 @@ export default function App() {
   return (
     <>
       <Aurora />
+      <SettingsSheet />
       <div className="desk-nav">
         <a className="brand" href="#/">
           {brand}
@@ -86,6 +89,7 @@ export default function App() {
           ))}
         </nav>
         <div className="right">
+          <SettingsButton />
           <CashPill account={account} />
           <a className="ghost line" href="#/you">
             {account ? 'You' : 'Sign in'}
@@ -184,9 +188,12 @@ function SignIn({ onReady, onGuest, inline }: { onReady: (a: LocalAccount) => vo
     <div className="signin">
       <div className="signin-top">
         <span className="brand">{brand}</span>
-        <button className="ghost" style={{ marginRight: -14, color: 'var(--tx2)' }} onClick={onGuest}>
-          Look around first
-        </button>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <SettingsButton />
+          <button className="ghost" style={{ marginRight: -14, color: 'var(--tx2)' }} onClick={onGuest}>
+            Look around first
+          </button>
+        </span>
       </div>
       <div className="signin-hero">
         <Slab name="PSA 10 Base Set Charizard Holo" size="lg" tilt />
