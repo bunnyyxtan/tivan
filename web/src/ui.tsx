@@ -3,12 +3,11 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { explorerTx } from './chain'
 import { friendlyError } from './account'
 import { catalogOf } from './config'
+import { money, signed } from './format'
 
-export const usd = (n: number | undefined, digits = 0) =>
-  n === undefined ? '—' : n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: digits, maximumFractionDigits: digits })
-
+export const usd = money
 /** Signed dollar difference: "+$200", "−$800". */
-export const delta = (n: number) => `${n < 0 ? '−' : n > 0 ? '+' : ''}${usd(Math.abs(n))}`
+export const delta = signed
 
 export const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`
 
@@ -83,22 +82,13 @@ export function useWatch() {
 }
 
 /** A graded slab: acrylic case, grader label, the card photo (or an honest placeholder). Tilts under the pointer. */
-export function Slab({ name, size = 'md', tilt = false, vt }: { name: string; size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'; tilt?: boolean; vt?: string }) {
+export function Slab({ name, size = 'md', vt }: { name: string; size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'; vt?: string }) {
   const { grader, grade, title } = parseName(name)
   const c = catalogOf(name)
-  const src = c?.imageUrl
   const [setName, year] = c?.set.split(' · ') ?? []
-  const [tf, setTf] = useState('')
-  const move = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!tilt || matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const r = e.currentTarget.getBoundingClientRect()
-    const x = (e.clientX - r.left) / r.width - 0.5
-    const y = (e.clientY - r.top) / r.height - 0.5
-    setTf(`perspective(900px) rotateX(${(-y * 10).toFixed(2)}deg) rotateY(${(x * 12).toFixed(2)}deg)`)
-  }
   return (
-    <div className={`slab-wrap ${tilt ? 'tilt' : ''}`} style={vt ? ({ viewTransitionName: vt } as React.CSSProperties) : undefined} onPointerMove={move} onPointerLeave={() => setTf('')}>
-      <div className={`slab slab-${size}`} style={tf ? { transform: tf } : undefined}>
+    <div className="slab-wrap" style={vt ? ({ viewTransitionName: vt } as React.CSSProperties) : undefined}>
+      <div className={`slab slab-${size}`}>
         {size !== 'xs' && size !== 'sm' && (
           <div className="slab-label">
             <span>
@@ -108,7 +98,7 @@ export function Slab({ name, size = 'md', tilt = false, vt }: { name: string; si
           </div>
         )}
         {size === 'xs' || size === 'sm' ? <i className="slab-strip" /> : null}
-        <CardImage src={src} alt={`${cardTitle(name)}, ${grader} ${grade}`.trim()} />
+        <CardImage src={c?.imageUrl} alt={`${cardTitle(name)}, ${grader} ${grade}`.trim()} label={cardTitle(name)} />
       </div>
     </div>
   )
@@ -208,7 +198,7 @@ export const Header = ({ title, back, backLabel, right }: { title?: ReactNode; b
     {back && title ? <span className="topbar-title">{title}</span> : null}
     <div className="topbar-right">
       {right}
-      {!back && <SettingsButton className="mobile-only" />}
+      {!back && <SettingsButton compact className="mobile-only" />}
     </div>
   </header>
 )

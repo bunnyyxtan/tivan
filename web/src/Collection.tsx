@@ -2,7 +2,8 @@ import { useState } from 'react'
 import type { LocalAccount } from 'viem'
 import { bookAbi, lastPaid, send, tradeHistory, type Order } from './chain'
 import { usePortfolio } from './portfolio'
-import { Card, CountUp, Ring } from './fx'
+import { Empty, RowSkeleton, Skeleton } from './States'
+import { pct } from './format'
 import { Header, Slab, Steps, cardSub, cardTitle, delta, useFlow, usePoll, usd } from './ui'
 
 export function Collection({ account }: { account: LocalAccount }) {
@@ -25,80 +26,67 @@ export function Collection({ account }: { account: LocalAccount }) {
   return (
     <>
       <Header title="Collection" />
-      <section className="rise">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span className="cap">{at === 'now' ? 'If you sold everything now' : 'At today’s asking prices'}</span>
+      <section>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+          <span className="cap">{at === 'now' ? 'Value if sold at the top offers' : 'Value at today’s asking prices'}</span>
           <span className="seg" role="radiogroup" aria-label="Value cards at">
             <button role="radio" aria-checked={at === 'now'} className={at === 'now' ? 'on' : ''} onClick={() => setAt('now')}>
-              Sell now
+              Offers
             </button>
             <button role="radio" aria-checked={at === 'ask'} className={at === 'ask' ? 'on' : ''} onClick={() => setAt('ask')}>
               Asking
             </button>
           </span>
         </div>
-        <div className="big" style={{ fontSize: 48, marginTop: 6 }}>
-          {data ? usd(cards + (totalCash ?? 0)) : '—'}
-        </div>
-        <p className="fine" style={{ fontSize: 14 }}>
+        <div className="pf-total">{data ? usd(cards + (totalCash ?? 0)) : <Skeleton h={46} w={200} r={8} />}</div>
+        <p className="fine pf-parts" style={{ fontSize: 14 }}>
           Cards {usd(cards)} + cash {usd(totalCash)}
-          {costKnown && <span className={cards - cost >= 0 ? 'up' : 'down'}> · {delta(cards - cost)} vs. what you paid</span>}
+          {costKnown && <span className={`gain ${cards - cost >= 0 ? 'up' : 'down'}`}>{delta(cards - cost)} against your last purchase prices</span>}
         </p>
       </section>
 
       {data && (
-        <div className="cards-grid" style={{ marginTop: 14 }}>
-          <Card variant="stat" i={0}>
-            <div className="k">Cards owned</div>
-            <div className="n"><CountUp value={mine.reduce((n, h) => n + h.count, 0)} /></div>
-            <div className="s">{mine.length} different {mine.length === 1 ? 'card' : 'cards'}</div>
-          </Card>
-          <Card variant="stat" i={1}>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-              <Ring value={alloc}><span>{Math.round(alloc * 100)}%</span></Ring>
-              <div>
-                <div className="k">In cards</div>
-                <div className="s">{Math.round((1 - alloc) * 100)}% is cash</div>
-              </div>
-            </div>
-          </Card>
-          <Card variant="feature" i={2} href={best ? `#/card/${best.h.s.sku}` : '#/'}>
-            <div className="k">Best performer</div>
-            <div className="n" style={{ fontSize: 24 }}>{best ? cardTitle(best.h.s.name) : '—'}</div>
-            <div className="s">{best ? <span className={best.d >= 0 ? 'up' : 'down'}>{delta(best.d)} vs. what you paid</span> : 'Shows once you have bought a card here'}</div>
-          </Card>
-          <Card variant="action" i={3} href="#/vault">
-            <span className="t">Vault a card</span>
-            <span className="s">Check a cert and list it</span>
-            <i className="go">→</i>
-          </Card>
+        <div className="stats">
+          <div className="stat">
+            <span className="lbl">Cards owned</span>
+            <b>{mine.reduce((n, h) => n + h.count, 0)}</b>
+            <small>{mine.length} different</small>
+          </div>
+          <div className="stat">
+            <span className="lbl">In cards</span>
+            <b>{pct(alloc, 0)}</b>
+            <small>{pct(1 - alloc, 0)} is cash</small>
+          </div>
+          <a className="stat" href={best ? `#/card/${best.h.s.sku}` : '#/'}>
+            <span className="lbl">Best performer</span>
+            <b className={best ? (best.d >= 0 ? 'up' : 'down') : undefined}>{best ? delta(best.d) : '—'}</b>
+            <small>{best ? cardTitle(best.h.s.name) : 'Needs a card bought here'}</small>
+          </a>
         </div>
       )}
 
       <section className="section">
-        {data && orders && !mine.length && (
-          <div className="empty">
-            No cards yet. <a className="u" href="#/">Buy one</a> or <a className="u" href="#/vault">vault your own</a>.
-          </div>
-        )}
-        {(!data || (!orders && !mine.length)) && [0, 1].map((i) => <div key={i} className="skeleton" />)}
+        {data && orders && !mine.length && <Empty title="No cards yet" detail="Buy one from Markets or vault a card you own." action={<a className="ghost line" href="#/">Browse markets</a>} />}
+        {(!data || (!orders && !mine.length)) && [0, 1].map((i) => <RowSkeleton key={i} />)}
         <div className="rows">
           {mine.map((h) => {
             const v = value(h)
             const p = paid?.[h.s.sku]
             return (
               <a key={h.s.sku} className="mrow" href={`#/card/${h.s.sku}`}>
-                <Slab name={h.s.name} size="xs" vt={`card-${h.s.sku}`} />
-                <span className="mrow-info">
-                  <span className="mrow-title">{cardTitle(h.s.name)}</span>
-                  <span className="mrow-sub">
-                    {cardSub(h.s.name)} · {h.count} owned{h.listed ? `, ${h.listed} listed` : ''}
-                    {p !== undefined ? ` · paid ${usd(p)}` : ''}
+                <span className="mrow-name">
+                  <Slab name={h.s.name} size="xs" vt={`card-${h.s.sku}`} />
+                  <span className="mrow-info">
+                    <span className="mrow-title">{cardTitle(h.s.name)}</span>
+                    <span className="mrow-sub">
+                      {cardSub(h.s.name)} · {h.count} owned{h.listed ? `, ${h.listed} listed` : ''}
+                      {p !== undefined ? ` · paid ${usd(p)}` : ''}
+                    </span>
                   </span>
                 </span>
-                <span className="mrow-px">
+                <span className="mrow-val">
                   <span>{v ? usd(v * h.count) : '—'}</span>
-                  <span className={p !== undefined && v ? (v - p >= 0 ? 'up' : 'down') : undefined}>{p !== undefined && v ? delta((v - p) * h.count) : v ? (at === 'now' ? 'top offer' : 'asking') : 'no price yet'}</span>
+                  <small className={p !== undefined && v ? (v - p >= 0 ? 'up' : 'down') : undefined}>{p !== undefined && v ? delta((v - p) * h.count) : v ? (at === 'now' ? 'at top offer' : 'at asking') : 'no price yet'}</small>
                 </span>
               </a>
             )

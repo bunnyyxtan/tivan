@@ -3,7 +3,8 @@ import { flushSync } from 'react-dom'
 import { formatEther, parseUnits, type LocalAccount } from 'viem'
 import { createAccount, deviceAccount, friendlyError, hasDeviceKey, savedPasskey, signIn, signOut } from './account'
 import { erc20Abi, marginAbi, pub, send } from './chain'
-import { Aurora, Card, SettingsButton, useRevealAll, usePrefs } from './fx'
+import { SettingsButton, openSettings } from './fx'
+import { IconChevron, IconCollection, IconLeague, IconMarkets, IconSettings, IconVault, IconYou } from './icons'
 import { SettingsSheet } from './Settings'
 import { attestorUrl, brand, net } from './config'
 import { CardPage, MarketList } from './Market'
@@ -14,7 +15,7 @@ import { logActivity, useActivity, when } from './activity'
 import { askPermission, notifyState, useAlertWatcher } from './alerts'
 import { Redeem, VaultPage, drip } from './Vault'
 import { usePortfolio } from './portfolio'
-import { Header, Slab, Steps, delta, getTheme, setTheme, short, useFlow, useTint, usd } from './ui'
+import { Header, Slab, Steps, delta, short, useFlow, useTint, usd } from './ui'
 
 function useHash() {
   const [h, setH] = useState(location.hash)
@@ -43,11 +44,9 @@ export default function App() {
   // Free hosting sleeps when idle and takes ~a minute to wake: ring the attestor as soon as anyone opens the app, so it is
   // awake by the time they ask for gas.
   useEffect(() => void fetch(`${attestorUrl}/health`).catch(() => {}), [])
-  useRevealAll(`${route}/${args[0] ?? ''}/${!!account || guest}`)
   if (!account && !guest)
     return (
       <>
-        <Aurora />
         <SignIn onReady={setAccount} onGuest={() => setGuest(true)} />
         <SettingsSheet />
       </>
@@ -67,15 +66,14 @@ export default function App() {
     : route === 'you' ? need((a) => <You account={a} onSignOut={() => (signOut(), setAccount(undefined), setGuest(false), (location.hash = '#/'))} />)
     : <MarketList account={account} />
   const tabs = [
-    ['markets', '#/', 'Markets'],
-    ['collection', '#/collection', 'Collection'],
-    ['vault', '#/vault', 'Vault'],
-    ['league', '#/league', 'League'],
-    ['you', '#/you', 'You'],
-  ]
+    ['markets', '#/', 'Markets', <IconMarkets />],
+    ['collection', '#/collection', 'Collection', <IconCollection />],
+    ['vault', '#/vault', 'Vault', <IconVault />],
+    ['league', '#/league', 'League', <IconLeague />],
+    ['you', '#/you', 'You', <IconYou />],
+  ] as const
   return (
     <>
-      <Aurora />
       <SettingsSheet />
       <div className="desk-nav">
         <a className="brand" href="#/">
@@ -104,9 +102,10 @@ export default function App() {
         </main>
       </div>
       <nav className="tabbar" aria-label="Primary">
-        {tabs.map(([k, href, label]) => (
-          <a key={k} href={href} className={tab === k ? 'on' : ''} aria-current={tab === k ? 'page' : undefined}>
-            {label}
+        {tabs.map(([k, href, label, icon]) => (
+          <a key={k} href={href} className={tab === k ? 'on' : ''} aria-current={tab === k ? 'page' : undefined} aria-label={label}>
+            {icon}
+            <span className="lbl">{label}</span>
           </a>
         ))}
       </nav>
@@ -196,7 +195,7 @@ function SignIn({ onReady, onGuest, inline }: { onReady: (a: LocalAccount) => vo
         </span>
       </div>
       <div className="signin-hero">
-        <Slab name="PSA 10 Base Set Charizard Holo" size="lg" tilt />
+        <Slab name="PSA 10 Base Set Charizard Holo" size="lg" />
       </div>
       <div className="rise">
         <h1>
@@ -216,10 +215,8 @@ function You({ account, onSignOut }: { account: LocalAccount; onSignOut: () => v
   const { data, totalCash, bidCash, refresh } = usePortfolio(me, true)
   const flow = useFlow()
   const [copied, setCopied] = useState(false)
-  const theme = getTheme()
   const [notif, setNotif] = useState(notifyState)
   const recent = useActivity(me)
-  const [prefs, setPrefs] = usePrefs()
   const addFunds = async () => {
     const steps: [string, () => Promise<string | void>][] = []
     if ((data?.gas ?? 0n) < 5n * 10n ** 16n)
@@ -251,7 +248,7 @@ function You({ account, onSignOut }: { account: LocalAccount; onSignOut: () => v
   return (
     <>
       <Header title="You" />
-      <section className="panel rise">
+      <section className="panel">
         <span className="cap">Cash</span>
         <div className="big" style={{ fontSize: 44, marginTop: 4 }}>
           {usd(totalCash, 2)}
@@ -281,62 +278,24 @@ function You({ account, onSignOut }: { account: LocalAccount; onSignOut: () => v
         </div>
       </section>
 
-      <div className="cards-grid" style={{ marginTop: 14 }}>
-        <Card variant="action" i={0} href="#/collection">
-          <span className="t">Collection</span>
-          <span className="s">What you own, paid vs worth</span>
-          <i className="go">→</i>
-        </Card>
-        <Card variant="action" i={1} href="#/vault">
-          <span className="t">Vault a card</span>
-          <span className="s">Check a cert, list it</span>
-          <i className="go">→</i>
-        </Card>
-        <Card variant="action" i={2} href="#/league">
-          <span className="t">Price League</span>
-          <span className="s">See the standings</span>
-          <i className="go">→</i>
-        </Card>
-        <Card variant="action" i={3} onClick={() => (navigator.clipboard?.writeText(location.href.split('#')[0]), setCopied(true), setTimeout(() => setCopied(false), 1500))}>
-          <span className="t">{copied ? 'Link copied' : 'Invite a friend'}</span>
-          <span className="s">Share {brand} with a collector</span>
-          <i className="go">→</i>
-        </Card>
+      <div className="settings-group" style={{ marginTop: 14 }}>
+        {([['#/collection', <IconCollection />, 'Collection', 'What you own, paid and worth'], ['#/vault', <IconVault />, 'Vault a card', 'Check a cert, list it'], ['#/league', <IconLeague />, 'Price League', 'See the standings']] as const).map(([href, ico, t, d]) => (
+          <a key={href} className="settings-row" href={href}>
+            <span className="row-ico">{ico}</span>
+            <span className="row-text">{t}<small>{d}</small></span>
+            <IconChevron />
+          </a>
+        ))}
+        <button className="settings-row" style={{ width: '100%', textAlign: 'left' }} onClick={() => (navigator.clipboard?.writeText(location.href.split('#')[0]), setCopied(true), setTimeout(() => setCopied(false), 1500))}>
+          <span className="row-ico"><IconYou /></span>
+          <span className="row-text">{copied ? 'Link copied' : 'Invite a friend'}<small>Share {brand} with a collector</small></span>
+        </button>
+        <button className="settings-row" style={{ width: '100%', textAlign: 'left' }} onClick={openSettings}>
+          <span className="row-ico"><IconSettings /></span>
+          <span className="row-text">Settings<small>Theme, motion, lists, alerts</small></span>
+          <IconChevron />
+        </button>
       </div>
-
-      <section className="section">
-        <span className="cap">Experience</span>
-        <div className="rows">
-          <div className="pref">
-            <span>Motion<small>Full moves everything. Calm keeps it simple. Off holds still.</small></span>
-            <span className="seg" role="radiogroup" aria-label="Motion">
-              {(['full', 'calm', 'off'] as const).map((m) => (
-                <button key={m} role="radio" aria-checked={prefs.motion === m} className={prefs.motion === m ? 'on' : ''} onClick={() => setPrefs({ motion: m })}>
-                  {m[0].toUpperCase() + m.slice(1)}
-                </button>
-              ))}
-            </span>
-          </div>
-          <div className="pref">
-            <span>Animated background<small>Slow glow behind the app</small></span>
-            <button className="switch" role="switch" aria-checked={prefs.aurora} aria-label="Animated background" onClick={() => setPrefs({ aurora: !prefs.aurora })} />
-          </div>
-          <div className="pref">
-            <span>Compact lists<small>Tighter rows in list view</small></span>
-            <button className="switch" role="switch" aria-checked={prefs.dense} aria-label="Compact lists" onClick={() => setPrefs({ dense: !prefs.dense })} />
-          </div>
-          <div className="pref">
-            <span>Markets view<small>How cards are laid out</small></span>
-            <span className="seg" role="radiogroup" aria-label="Markets view">
-              {(['grid', 'list'] as const).map((v) => (
-                <button key={v} role="radio" aria-checked={prefs.view === v} className={prefs.view === v ? 'on' : ''} onClick={() => setPrefs({ view: v })}>
-                  {v[0].toUpperCase() + v.slice(1)}
-                </button>
-              ))}
-            </span>
-          </div>
-        </div>
-      </section>
 
       {recent.length > 0 && (
         <section className="section">
@@ -382,16 +341,6 @@ function You({ account, onSignOut }: { account: LocalAccount; onSignOut: () => v
             <button className={`pill ${notif === 'granted' ? 'on' : ''}`} disabled={notif !== 'default'} onClick={async () => (await askPermission(), setNotif(notifyState()))}>
               {notif === 'granted' ? 'On' : notif === 'denied' ? 'Blocked in browser' : 'Turn on'}
             </button>
-          </div>
-          <div className="kv" style={{ alignItems: 'center' }}>
-            <span>Appearance</span>
-            <span className="seg" role="radiogroup" aria-label="Appearance">
-              {(['auto', 'light', 'dark'] as const).map((t) => (
-                <button key={t} role="radio" aria-checked={theme === t} className={theme === t ? 'on' : ''} onClick={() => (setTheme(t), setPrefs({}))}>
-                  {t[0].toUpperCase() + t.slice(1)}
-                </button>
-              ))}
-            </span>
           </div>
           <div className="kv">
             <span>Network fee balance</span>

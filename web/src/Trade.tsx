@@ -6,6 +6,7 @@ import { usePortfolio } from './portfolio'
 import { confirmStep } from './account'
 import { logActivity } from './activity'
 import { useAlerts } from './alerts'
+import { Skeleton } from './States'
 import { Header, Slab, Steps, Toast, cardSub, cardTitle, delta, useFlow, usePoll, useTint, usd } from './ui'
 
 const toUnits = (dollars: number) => BigInt(Math.round(dollars * 100)) * 10n ** BigInt(net.quoteDecimals - 2)
@@ -79,7 +80,7 @@ export function BuyFlow({ sku, account }: { sku: string; account: LocalAccount }
     return (
       <>
         <Header back={`#/card/${sku}`} backLabel="Card" />
-        <div className="skeleton" style={{ height: 320 }} />
+        <Skeleton h={320} r={12} />
       </>
     )
   const price = locked ?? data.ask
@@ -262,7 +263,7 @@ export function Receipt({ sku, price, tx, account }: { sku: string; price: numbe
   const { data } = usePoll(async () => (await loadSkus()).find((x) => x.sku === sku), 30000, [sku])
   const { data: port, totalCash } = usePortfolio(account.address)
   useTint(data?.name)
-  if (!data) return <div className="skeleton" style={{ height: 320, marginTop: 40 }} />
+  if (!data) return <div style={{ marginTop: 40 }}><Skeleton h={320} r={12} /></div>
   return (
     <div className="flow" style={{ paddingTop: 32 }}>
       <div className="rise" style={{ display: 'flex', justifyContent: 'center' }}>
@@ -324,7 +325,7 @@ export function TradeFlow({ side, sku, account }: { side: 'sell' | 'offer'; sku:
     return (
       <>
         <Header back={`#/card/${sku}`} backLabel="Card" />
-        <div className="skeleton" style={{ height: 320 }} />
+        <Skeleton h={320} r={12} />
       </>
     )
   const { s, ask, bid } = data

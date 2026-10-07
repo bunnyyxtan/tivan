@@ -1,8 +1,8 @@
-import { Card, CountUp } from './fx'
 import { useState } from 'react'
 import type { LocalAccount } from 'viem'
 import { leaderboard } from './chain'
 import { brand } from './config'
+import { Empty, ErrorNote, RowSkeleton } from './States'
 import { Header, short, usePoll } from './ui'
 
 /** The Tivan Price League: trade real card markets on testnet, found markets, climb the board. */
@@ -20,7 +20,7 @@ export function League({ account }: { account?: LocalAccount }) {
   return (
     <>
       <Header title="League" />
-      <section className="rise">
+      <section>
         <h2 className="big" style={{ fontSize: 30 }}>
           The {brand} Price League
         </h2>
@@ -40,42 +40,20 @@ export function League({ account }: { account?: LocalAccount }) {
         </div>
       </section>
 
-      <div className="cards-grid three" style={{ marginTop: 14 }}>
-        <Card variant="stat" i={0}>
-          <div className="k">Collectors</div>
-          <div className="n"><CountUp value={data?.length ?? 0} /></div>
-        </Card>
-        <Card variant="stat" i={1}>
-          <div className="k">Trades</div>
-          <div className="n"><CountUp value={(data ?? []).reduce((n, t) => n + t.trades, 0)} /></div>
-        </Card>
-        <Card variant="stat" i={2}>
-          <div className="k">Founded</div>
-          <div className="n"><CountUp value={(data ?? []).reduce((n, t) => n + t.founded, 0)} /></div>
-        </Card>
+      <div className="stats">
+        <div className="stat"><span className="lbl">Collectors</span><b>{data ? data.length : '—'}</b></div>
+        <div className="stat"><span className="lbl">Trades</span><b>{data ? data.reduce((n, t) => n + t.trades, 0) : '—'}</b></div>
+        <div className="stat"><span className="lbl">Markets founded</span><b>{data ? data.reduce((n, t) => n + t.founded, 0) : '—'}</b></div>
       </div>
-      {data && data.length > 0 && (
-        <div className="podium">
-          {[1, 0, 2].map((i) => {
-            const t = data[i]
-            return t ? (
-              <Card key={t.addr} variant={i === 0 ? 'feature' : 'stat'} className={i === 0 ? 'p1' : ''} i={i} tilt>
-                <div className="medal">{i + 1}</div>
-                <div className="k" style={{ marginTop: 6 }}>{t.addr === me ? 'You' : short(t.addr)}</div>
-                <div className="n" style={{ fontSize: 22 }}><CountUp value={t.score} /> <span className="s">pts</span></div>
-              </Card>
-            ) : <span key={i} />
-          })}
-        </div>
-      )}
 
       <section className="section">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
           <span className="cap">Standings</span>
           {mine >= 0 && <span className="fine">You are #{mine + 1}</span>}
         </div>
-        {!data && !error && [0, 1, 2].map((i) => <div key={i} className="skeleton" />)}
-        {data && !data.length && <div className="empty">No trades yet. Be the first on the board.</div>}
+        {!data && !error && [0, 1, 2].map((i) => <RowSkeleton key={i} />)}
+        {error && !data && <ErrorNote what="Couldn’t load the standings." why={error} next="Try again in a moment." />}
+        {data && !data.length && <Empty title="No trades yet" detail="Be the first on the board." />}
         <div className="rows">
           {data?.slice(0, 20).map((t, i) => (
             <div key={t.addr} className={`kv board-row ${t.addr === me ? 'me' : ''}`} style={{ alignItems: 'center' }}>

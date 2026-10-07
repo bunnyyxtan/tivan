@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { askPermission, canNotify, notifyState } from './alerts'
 import { defaultPrefs, skins, usePrefs, type Skin } from './fx'
+import { IconBell, IconColour, IconGrid, IconList, IconMotion, IconSun } from './icons'
 import { getTheme, setTheme, type Theme } from './ui'
 
 const EVT = 'tivan-settings'
@@ -53,10 +54,11 @@ export function SettingsSheet() {
         </div>
         <p className="fine" style={{ marginTop: 4 }}>Saved in this browser. No account needed.</p>
 
-        <section className="settings-sec">
-          <span className="cap">Appearance</span>
-          <div className="pref">
-            <span>Light or dark<small>Auto follows your device</small></span>
+        <h3 className="settings-h">Appearance</h3>
+        <div className="settings-group">
+          <div className="settings-row">
+            <span className="row-ico"><IconSun /></span>
+            <span className="row-text">Light or dark<small>Auto follows your device</small></span>
             <span className="seg" role="radiogroup" aria-label="Appearance">
               {(['auto', 'light', 'dark'] as const).map((t) => (
                 <button key={t} role="radio" aria-checked={theme === t} className={theme === t ? 'on' : ''} onClick={() => setT(t)}>
@@ -65,44 +67,37 @@ export function SettingsSheet() {
               ))}
             </span>
           </div>
-        </section>
-
-        <section className="settings-sec">
-          <span className="cap">Colour theme</span>
-          <div className="swatches" role="group" aria-label="Colour theme">
-            {skins.map((s) => (
-              <button key={s.id} className={`swatch ${s.id === 'card' ? 'swatch-card' : ''}`} aria-pressed={prefs.skin === s.id} onClick={() => setPrefs({ skin: s.id as Skin })}>
-                <i style={s.bg ? ({ '--c1': s.bg, '--c2': s.accent } as React.CSSProperties) : undefined} />
-                <span>{s.label}</span>
-              </button>
-            ))}
-          </div>
-          <p className="fine" style={{ marginTop: 8 }}>{prefs.skin === 'card' ? 'Each page takes its colour from the card on it.' : 'One colour theme everywhere, whatever card you look at.'}</p>
-        </section>
-
-        <section className="settings-sec">
-          <span className="cap">Motion and background</span>
-          <div className="pref">
-            <span>Motion<small>Full moves everything. Calm keeps it simple. Off holds still.</small></span>
-            <span className="seg" role="radiogroup" aria-label="Motion">
-              {(['full', 'calm', 'off'] as const).map((m) => (
-                <button key={m} role="radio" aria-checked={prefs.motion === m} className={prefs.motion === m ? 'on' : ''} onClick={() => setPrefs({ motion: m })}>
-                  {m[0].toUpperCase() + m.slice(1)}
+          <div className="settings-row" style={{ display: 'block' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span className="row-ico"><IconColour /></span>
+              <span className="row-text">Colour theme<small>{prefs.skin === 'card' ? 'Each page takes its colour from the card on it' : 'One colour theme everywhere'}</small></span>
+            </div>
+            <div className="swatches" role="group" aria-label="Colour theme">
+              {skins.map((s) => (
+                <button key={s.id} className={`swatch ${s.id === 'card' ? 'swatch-card' : ''}`} aria-pressed={prefs.skin === s.id} onClick={() => setPrefs({ skin: s.id as Skin })}>
+                  <i style={s.bg ? ({ '--c1': s.bg, '--c2': s.accent } as React.CSSProperties) : undefined} />
+                  <span>{s.label}</span>
                 </button>
               ))}
-            </span>
+            </div>
           </div>
-          <div className="pref">
-            <span>Animated background<small>Slow glow behind the app</small></span>
-            <button className="switch" role="switch" aria-checked={prefs.aurora} aria-label="Animated background" onClick={() => setPrefs({ aurora: !prefs.aurora })} />
-          </div>
-        </section>
+        </div>
 
-        <section className="settings-sec">
-          <span className="cap">Lists</span>
-          <div className="pref">
-            <span>Markets view<small>How cards are laid out</small></span>
-            <span className="seg" role="radiogroup" aria-label="Markets view">
+        <h3 className="settings-h">Motion</h3>
+        <div className="settings-group">
+          <div className="settings-row">
+            <span className="row-ico"><IconMotion /></span>
+            <span className="row-text">Reduce motion<small>Nothing slides or fades. Every state change is still shown</small></span>
+            <button className="switch" role="switch" aria-checked={prefs.motion === 'off'} aria-label="Reduce motion" onClick={() => setPrefs({ motion: prefs.motion === 'off' ? 'full' : 'off' })} />
+          </div>
+        </div>
+
+        <h3 className="settings-h">Lists</h3>
+        <div className="settings-group">
+          <div className="settings-row">
+            <span className="row-ico"><IconGrid /></span>
+            <span className="row-text">Markets layout</span>
+            <span className="seg" role="radiogroup" aria-label="Markets layout">
               {(['grid', 'list'] as const).map((v) => (
                 <button key={v} role="radio" aria-checked={prefs.view === v} className={prefs.view === v ? 'on' : ''} onClick={() => setPrefs({ view: v })}>
                   {v[0].toUpperCase() + v.slice(1)}
@@ -110,21 +105,23 @@ export function SettingsSheet() {
               ))}
             </span>
           </div>
-          <div className="pref">
-            <span>Compact lists<small>Tighter rows in list view</small></span>
-            <button className="switch" role="switch" aria-checked={prefs.dense} aria-label="Compact lists" onClick={() => setPrefs({ dense: !prefs.dense })} />
+          <div className="settings-row">
+            <span className="row-ico"><IconList /></span>
+            <span className="row-text">Compact rows<small>Tighter spacing in list layout</small></span>
+            <button className="switch" role="switch" aria-checked={prefs.dense} aria-label="Compact rows" onClick={() => setPrefs({ dense: !prefs.dense })} />
           </div>
-        </section>
+        </div>
 
-        <section className="settings-sec">
-          <span className="cap">Alerts</span>
-          <div className="pref">
-            <span>Price notifications<small>{canNotify() ? 'Tell me when a price you set is hit, while the app is open' : 'This browser does not support notifications'}</small></span>
+        <h3 className="settings-h">Alerts</h3>
+        <div className="settings-group">
+          <div className="settings-row">
+            <span className="row-ico"><IconBell /></span>
+            <span className="row-text">Price notifications<small>{canNotify() ? 'When a price you set is hit, while the app is open' : 'This browser does not support notifications'}</small></span>
             <button className={`pill ${notif === 'granted' ? 'on' : ''}`} disabled={notif !== 'default'} onClick={async () => (await askPermission(), setNotif(notifyState()))}>
               {notif === 'granted' ? 'On' : notif === 'denied' ? 'Blocked in browser' : 'Turn on'}
             </button>
           </div>
-        </section>
+        </div>
 
         <button className="ghost line" style={{ marginTop: 22, width: '100%' }} onClick={reset}>
           Reset to defaults
