@@ -1,3 +1,4 @@
+import { Card, CountUp } from './fx'
 import { useState } from 'react'
 import type { LocalAccount } from 'viem'
 import { leaderboard } from './chain'
@@ -38,6 +39,35 @@ export function League({ account }: { account?: LocalAccount }) {
           </button>
         </div>
       </section>
+
+      <div className="cards-grid three" style={{ marginTop: 14 }}>
+        <Card variant="stat" i={0}>
+          <div className="k">Collectors</div>
+          <div className="n"><CountUp value={data?.length ?? 0} /></div>
+        </Card>
+        <Card variant="stat" i={1}>
+          <div className="k">Trades</div>
+          <div className="n"><CountUp value={(data ?? []).reduce((n, t) => n + t.trades, 0)} /></div>
+        </Card>
+        <Card variant="stat" i={2}>
+          <div className="k">Founded</div>
+          <div className="n"><CountUp value={(data ?? []).reduce((n, t) => n + t.founded, 0)} /></div>
+        </Card>
+      </div>
+      {data && data.length > 0 && (
+        <div className="podium">
+          {[1, 0, 2].map((i) => {
+            const t = data[i]
+            return t ? (
+              <Card key={t.addr} variant={i === 0 ? 'feature' : 'stat'} className={i === 0 ? 'p1' : ''} i={i} tilt>
+                <div className="medal">{i + 1}</div>
+                <div className="k" style={{ marginTop: 6 }}>{t.addr === me ? 'You' : short(t.addr)}</div>
+                <div className="n" style={{ fontSize: 22 }}><CountUp value={t.score} /> <span className="s">pts</span></div>
+              </Card>
+            ) : <span key={i} />
+          })}
+        </div>
+      )}
 
       <section className="section">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
