@@ -22,7 +22,11 @@ export function parseName(name: string) {
 }
 
 /** Card title without the set prefix the list already shows underneath. */
-export const cardTitle = (name: string) => parseName(name).title.replace(/^(Base Set|Topps Chrome|Fleer|Alpha)\s+/, '')
+export const cardTitle = (name: string) => {
+  const t = parseName(name).title
+  const set = catalogOf(name)?.set.split(' · ')[0]
+  return set && t.startsWith(set + ' ') ? t.slice(set.length + 1) : t
+}
 export const cardSub = (name: string) => {
   const { grader, grade } = parseName(name)
   const c = catalogOf(name)

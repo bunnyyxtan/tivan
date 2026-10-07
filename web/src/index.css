@@ -432,6 +432,20 @@ a.fx-card, button.fx-card { cursor: pointer; }
 .spark path { fill: none; stroke: var(--btn); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 1.3s var(--ease) 0.2s forwards; }
 @keyframes draw { to { stroke-dashoffset: 0; } }
 
+/* ---- two more card tints */
+:root[data-tint='blue'] {
+  --bg: light-dark(#edf1fa, #0b111d); --surface: light-dark(#f8faff, #131b2b); --quiet: light-dark(#dfe6f5, #131b2b); --quiet2: light-dark(#d2dbef, #1b2640);
+  --case: light-dark(#f8faff, #1d283f); --line: light-dark(rgba(20, 50, 110, 0.11), rgba(200, 220, 255, 0.1)); --line2: light-dark(rgba(20, 50, 110, 0.2), rgba(200, 220, 255, 0.18));
+  --tx2: light-dark(#53607a, #a3b0c8); --tx3: light-dark(#687591, #7c88a1);
+  --btn: light-dark(#1d4ed8, #6aa4ff); --btn-tx: light-dark(#ffffff, #071226); --btn-hover: light-dark(#1a43b8, #8bb8ff);
+}
+:root[data-tint='green'] {
+  --bg: light-dark(#edf4ee, #0c130e); --surface: light-dark(#f8fbf8, #142018); --quiet: light-dark(#dfeadf, #142018); --quiet2: light-dark(#d3e1d4, #1d2e22);
+  --case: light-dark(#f8fbf8, #233628); --line: light-dark(rgba(20, 70, 35, 0.11), rgba(205, 255, 220, 0.1)); --line2: light-dark(rgba(20, 70, 35, 0.2), rgba(205, 255, 220, 0.18));
+  --tx2: light-dark(#566a5a, #a4b8a8); --tx3: light-dark(#6b7f6f, #7e9282);
+  --btn: light-dark(#15803d, #6fdc96); --btn-tx: light-dark(#ffffff, #06180d); --btn-hover: light-dark(#126a33, #8ae8ab);
+}
+
 /* ---- motion levels. calm: no parallax, tilt or dust. off: nothing moves (also the default under prefers-reduced-motion) */
 html[data-motion='off'] *, html[data-motion='off'] *::before, html[data-motion='off'] *::after { animation: none !important; transition-duration: 0.01ms !important; transition-delay: 0ms !important; scroll-behavior: auto !important; }
 html[data-motion='off'] .spark path { stroke-dashoffset: 0; }

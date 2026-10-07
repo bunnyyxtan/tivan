@@ -39,6 +39,20 @@ const networks: Record<Network['name'], Network> = {
       { specId: 58n, grade: 10 },
       { specId: 2003111n, grade: 10 },
       { specId: 1993232n, grade: 9 },
+      { specId: 2n, grade: 9 },
+      { specId: 15n, grade: 9 },
+      { specId: 10n, grade: 9 },
+      { specId: 1986057n, grade: 8 },
+      { specId: 1996138n, grade: 10 },
+      { specId: 1952311n, grade: 5 },
+      { specId: 2000144n, grade: 9 },
+      { specId: 1979018n, grade: 8 },
+      { specId: 2018700n, grade: 10 },
+      { specId: 1993140n, grade: 8 },
+      { specId: 1993180n, grade: 9 },
+      { specId: 2002001n, grade: 9 },
+      { specId: 2002005n, grade: 9 },
+      { specId: 2002124n, grade: 9 },
     ],
   },
   mainnet: {
@@ -97,8 +111,21 @@ export const catalog = [
   { specId: 2003111n, title: 'Topps Chrome LeBron James Rookie #111', set: 'Topps Chrome · 2003', short: 'LBJ03', category: 'Sports', imageUrl: '', tint: 'lbj' }, // MOCK IMAGE: add web/public/cards/<name>.webp and set imageUrl: BASE + 'cards/<name>.webp'
   { specId: 1986057n, title: 'Fleer Michael Jordan #57', set: 'Fleer · 1986', short: 'MJ86', category: 'Sports', imageUrl: '', tint: 'mj' }, // MOCK IMAGE: add web/public/cards/<name>.webp and set imageUrl: BASE + 'cards/<name>.webp'
   { specId: 1993232n, title: 'Alpha Black Lotus', set: 'Alpha · 1993', short: 'LOTUS', category: 'Magic', imageUrl: BASE + 'cards/lotus.webp', tint: 'lotus' },
+  { specId: 2n, title: 'Base Set Blastoise Holo', set: 'Base Set · 1999', short: 'BLST', category: 'Pokémon', imageUrl: BASE + 'cards/blastoise.webp', tint: 'blue' },
+  { specId: 15n, title: 'Base Set Venusaur Holo', set: 'Base Set · 1999', short: 'VENU', category: 'Pokémon', imageUrl: BASE + 'cards/venusaur.webp', tint: 'green' },
+  { specId: 10n, title: 'Base Set Mewtwo Holo', set: 'Base Set · 1999', short: 'MEW2', category: 'Pokémon', imageUrl: BASE + 'cards/mewtwo.webp', tint: 'blue' },
+  { specId: 1996138n, title: 'Topps Chrome Kobe Bryant Rookie #138', set: 'Topps Chrome · 1996', short: 'KOBE96', category: 'Sports', imageUrl: '', tint: 'pika' }, // MOCK IMAGE: add web/public/cards/<name>.webp and set imageUrl: BASE + 'cards/<name>.webp'
+  { specId: 1952311n, title: 'Topps Mickey Mantle #311', set: 'Topps · 1952', short: 'MANTLE', category: 'Sports', imageUrl: '', tint: 'mj' }, // MOCK IMAGE: add web/public/cards/<name>.webp and set imageUrl: BASE + 'cards/<name>.webp'
+  { specId: 2000144n, title: 'Contenders Tom Brady Autograph #144', set: 'Contenders · 2000', short: 'BRADY', category: 'Sports', imageUrl: '', tint: 'blue' }, // MOCK IMAGE: add web/public/cards/<name>.webp and set imageUrl: BASE + 'cards/<name>.webp'
+  { specId: 1979018n, title: 'O-Pee-Chee Wayne Gretzky Rookie #18', set: 'O-Pee-Chee · 1979', short: 'GRETZ', category: 'Sports', imageUrl: '', tint: 'blue' }, // MOCK IMAGE: add web/public/cards/<name>.webp and set imageUrl: BASE + 'cards/<name>.webp'
+  { specId: 2018700n, title: 'Topps Update Shohei Ohtani Rookie #US1', set: 'Topps Update · 2018', short: 'OHTANI', category: 'Sports', imageUrl: '', tint: 'mj' }, // MOCK IMAGE: add web/public/cards/<name>.webp and set imageUrl: BASE + 'cards/<name>.webp'
+  { specId: 1993140n, title: 'Alpha Mox Sapphire', set: 'Alpha · 1993', short: 'MOXS', category: 'Magic', imageUrl: BASE + 'cards/moxsapphire.webp', tint: 'blue' },
+  { specId: 1993180n, title: 'Alpha Underground Sea', set: 'Alpha · 1993', short: 'USEA', category: 'Magic', imageUrl: BASE + 'cards/undergroundsea.webp', tint: 'green' },
+  { specId: 2002001n, title: 'Legend of Blue Eyes Blue-Eyes White Dragon', set: 'Legend of Blue Eyes · 2002', short: 'BEWD', category: 'Yu-Gi-Oh!', imageUrl: BASE + 'cards/blueeyes.webp', tint: 'blue' },
+  { specId: 2002005n, title: 'Legend of Blue Eyes Dark Magician', set: 'Legend of Blue Eyes · 2002', short: 'DKMG', category: 'Yu-Gi-Oh!', imageUrl: BASE + 'cards/darkmagician.webp', tint: 'lbj' },
+  { specId: 2002124n, title: 'Legend of Blue Eyes Exodia the Forbidden One', set: 'Legend of Blue Eyes · 2002', short: 'EXOD', category: 'Yu-Gi-Oh!', imageUrl: BASE + 'cards/exodia.webp', tint: 'pika' },
 ]
-export const categories = ['Pokémon', 'Sports', 'Magic'] as const
+export const categories = ['Pokémon', 'Sports', 'Magic', 'Yu-Gi-Oh!'] as const
 /** Category of an on-chain SKU name ("PSA 10 Base Set Charizard Holo"), by catalog title. */
 export const catalogOf = (name: string) => catalog.find((c) => name.endsWith(c.title))
 export const categoryOf = (name: string) => catalogOf(name)?.category ?? 'Other'
