@@ -630,3 +630,13 @@ kbd { font: inherit; font-size: 12px; min-width: 22px; padding: 1px 6px; text-al
 .item-wrap .mini { background: var(--surface-3); }
 @media (hover: none) { .cmp-slot { opacity: 1; } }
 
+/* ---- portfolio and activity (desktop) */
+.h2 { margin: 0 0 12px; font-size: 20px; font-weight: 500; }
+.pf-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; align-items: start; }
+.pf-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.alloc { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.alloc li { display: grid; grid-template-columns: 140px minmax(0, 1fr) 120px 56px 80px; align-items: center; gap: 16px; min-height: 40px; border-bottom: 1px solid var(--line); font-size: 14px; }
+.alloc .bar { height: 8px; border-radius: var(--r1); background: var(--surface-2); overflow: hidden; }
+.alloc .bar i { display: block; height: 100%; background: var(--ink-2); }
+.alloc .num { text-align: right; }
+@media (max-width: 1023px) { .pf-head { grid-template-columns: 1fr; gap: 20px; } .alloc li { grid-template-columns: 100px minmax(0, 1fr) 90px 48px; } .alloc li small { display: none; } }
