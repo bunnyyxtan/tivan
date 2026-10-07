@@ -29,6 +29,13 @@ const DEMO_CARDS: [spec: number, grade: number, subject: string][] = [
   [2002001, 9, 'BLUE-EYES WHITE DRAGON'],
   [2002005, 9, 'DARK MAGICIAN'],
   [2002124, 9, 'EXODIA THE FORBIDDEN ONE'],
+  [1909001, 3, 'HONUS WAGNER'],
+  [1909002, 4, 'TY COBB'],
+  [1909003, 5, 'CHRISTY MATHEWSON'],
+  [1911001, 5, 'CY YOUNG'],
+  [1909004, 4, 'WALTER JOHNSON'],
+  [1909005, 5, 'TRIS SPEAKER'],
+  [1933002, 6, 'BABE RUTH'],
 ]
 function demoCert(certId: bigint): PsaCert | undefined {
   if (network.name !== 'testnet' || certId < 90_000_000n || certId >= 90_000_000n + BigInt(DEMO_CARDS.length) * 10_000n) return undefined
