@@ -156,7 +156,7 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
       sub: cardSub(s.name),
       price: s.ask ? usd(s.ask) : s.bid ? usd(s.bid) : '—',
       line: s.ask ? 'to buy now' + (s.bid ? ` · top offer ${usd(s.bid)}` : '') : s.bid ? 'top offer' : 'no price yet',
-      img: c?.img,
+      img: c?.imageUrl,
       dark: matchMedia('(prefers-color-scheme: dark)').matches,
     })
     const r = await shareCard(blob, `${cardTitle(s.name)} is ${s.ask ? usd(s.ask) : 'listed'} on ${brand}.`, location.href)

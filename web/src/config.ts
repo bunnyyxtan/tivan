@@ -92,11 +92,11 @@ export const indexerUrl: string | undefined = import.meta.env.VITE_INDEXER_URL |
 /** Cards the demo grader registry knows (cre/fixtures/psa-certs.json). Shown as presets in "Vault a card". */
 const BASE = import.meta.env.BASE_URL // '/' in dev, '/<repo>/' on GitHub Pages
 export const catalog = [
-  { specId: 4n, title: 'Base Set Charizard Holo', set: 'Base Set · 1999', short: 'CHZ', category: 'Pokémon', img: BASE + 'cards/charizard.webp', tint: 'char' },
-  { specId: 58n, title: 'Base Set Pikachu Red Cheeks', set: 'Promo · 1999', short: 'PIKA', category: 'Pokémon', img: BASE + 'cards/pikachu.webp', tint: 'pika' },
-  { specId: 2003111n, title: 'Topps Chrome LeBron James Rookie #111', set: 'Topps Chrome · 2003', short: 'LBJ03', category: 'Sports', img: '', tint: 'lbj' },
-  { specId: 1986057n, title: 'Fleer Michael Jordan #57', set: 'Fleer · 1986', short: 'MJ86', category: 'Sports', img: '', tint: 'mj' },
-  { specId: 1993232n, title: 'Alpha Black Lotus', set: 'Alpha · 1993', short: 'LOTUS', category: 'Magic', img: BASE + 'cards/lotus.webp', tint: 'lotus' },
+  { specId: 4n, title: 'Base Set Charizard Holo', set: 'Base Set · 1999', short: 'CHZ', category: 'Pokémon', imageUrl: BASE + 'cards/charizard.webp', tint: 'char' },
+  { specId: 58n, title: 'Base Set Pikachu Red Cheeks', set: 'Promo · 1999', short: 'PIKA', category: 'Pokémon', imageUrl: BASE + 'cards/pikachu.webp', tint: 'pika' },
+  { specId: 2003111n, title: 'Topps Chrome LeBron James Rookie #111', set: 'Topps Chrome · 2003', short: 'LBJ03', category: 'Sports', imageUrl: '', tint: 'lbj' }, // MOCK IMAGE: add web/public/cards/<name>.webp and set imageUrl: BASE + 'cards/<name>.webp'
+  { specId: 1986057n, title: 'Fleer Michael Jordan #57', set: 'Fleer · 1986', short: 'MJ86', category: 'Sports', imageUrl: '', tint: 'mj' }, // MOCK IMAGE: add web/public/cards/<name>.webp and set imageUrl: BASE + 'cards/<name>.webp'
+  { specId: 1993232n, title: 'Alpha Black Lotus', set: 'Alpha · 1993', short: 'LOTUS', category: 'Magic', imageUrl: BASE + 'cards/lotus.webp', tint: 'lotus' },
 ]
 export const categories = ['Pokémon', 'Sports', 'Magic'] as const
 /** Category of an on-chain SKU name ("PSA 10 Base Set Charizard Holo"), by catalog title. */

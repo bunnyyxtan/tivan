@@ -1,3 +1,4 @@
+import { CardImage } from './fx'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { explorerTx } from './chain'
 import { friendlyError } from './account'
@@ -78,7 +79,7 @@ export function useWatch() {
 export function Slab({ name, size = 'md', tilt = false, vt }: { name: string; size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'; tilt?: boolean; vt?: string }) {
   const { grader, grade, title } = parseName(name)
   const c = catalogOf(name)
-  const img = c?.img
+  const src = c?.imageUrl
   const [setName, year] = c?.set.split(' · ') ?? []
   const [tf, setTf] = useState('')
   const move = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -100,7 +101,7 @@ export function Slab({ name, size = 'md', tilt = false, vt }: { name: string; si
           </div>
         )}
         {size === 'xs' || size === 'sm' ? <i className="slab-strip" /> : null}
-        {img ? <img src={img} alt={size === 'xs' || size === 'sm' ? '' : `${title}, in its ${grader} case`} /> : <span className="slab-none">Photo coming</span>}
+        <CardImage src={src} alt={`${cardTitle(name)}, ${grader} ${grade}`.trim()} />
       </div>
     </div>
   )

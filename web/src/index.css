@@ -157,14 +157,12 @@ label.lab { display: flex; flex-direction: column; gap: 8px; font-size: 13px; fo
 /* slab */
 .slab-wrap { display: flex; justify-content: center; }
 .slab { border-radius: 14px; background: var(--case); border: 1px solid var(--case-line); padding: 9px; box-shadow: 0 30px 60px -34px rgba(0, 0, 0, 0.55); transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
-.slab img, .slab-none { display: block; width: 100%; aspect-ratio: 600 / 825; border-radius: 4px; object-fit: cover; }
-.slab-none { display: flex; align-items: center; justify-content: center; background: var(--quiet2); color: var(--tx3); font-size: 13px; text-align: center; }
+.slab img { display: block; width: 100%; aspect-ratio: 600 / 825; border-radius: 4px; object-fit: cover; }
 .slab-label { display: flex; justify-content: space-between; align-items: center; gap: 8px; background: #fff; color: #121211; border-radius: 4px; border-top: 3px solid #b3261e; padding: 5px 8px 6px; margin-bottom: 8px; }
 .slab-label span { font-size: 8px; font-weight: 600; letter-spacing: 0.05em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .slab-label b { font-size: 17px; font-weight: 600; line-height: 1; }
 .slab-strip { display: block; height: 5px; background: #fff; border-top: 2px solid #b3261e; border-radius: 1px; margin-bottom: 2px; }
 .slab-xs { width: 44px; padding: 3px; border-radius: 6px; box-shadow: none; }
-.slab-xs .slab-none, .slab-sm .slab-none { font-size: 7px; line-height: 1.2; }
 .slab-sm { width: 56px; padding: 3px; border-radius: 7px; box-shadow: none; }
 .slab-md { width: 168px; }
 .slab-lg { width: 210px; }
@@ -455,3 +453,11 @@ html[data-motion='off'] .spark path { stroke-dashoffset: 0; }
 .o2 { opacity: 1; background: light-dark(color-mix(in oklab, color-mix(in oklab, var(--aura) 60%, var(--tx2)) 10%, transparent), color-mix(in oklab, color-mix(in oklab, var(--aura) 60%, var(--tx2)) 15%, transparent)); }
 .o3 { opacity: 1; background: light-dark(color-mix(in oklab, color-mix(in oklab, var(--aura) 70%, var(--up)) 8%, transparent), color-mix(in oklab, color-mix(in oklab, var(--aura) 70%, var(--up)) 12%, transparent)); }
 
+/* ---- CardImage: fixed ratio, shimmer while loading, soft unblur on load, plain neutral panel when there is no photo */
+.card-img { position: relative; display: block; width: 100%; aspect-ratio: 600 / 825; border-radius: 4px; overflow: hidden; background: var(--quiet2); box-shadow: inset 0 0 0 1px var(--line2); }
+.card-img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; filter: blur(12px); transform: scale(1.04); transition: opacity 0.5s var(--ease), filter 0.6s var(--ease), transform 0.7s var(--ease); }
+.card-img.loaded img { opacity: 1; filter: none; transform: scale(1); }
+.card-img.loading::before { content: ''; position: absolute; inset: 0; z-index: 1; background: linear-gradient(100deg, transparent 30%, color-mix(in oklab, var(--tx) 10%, transparent) 50%, transparent 70%); background-size: 220% 100%; animation: shimmer 1.5s linear infinite; }
+@media (hover: hover) { .slab-wrap:hover .card-img.loaded img, .fx-card:hover .card-img.loaded img { transform: scale(1.05); } }
+.nophoto { position: absolute; inset: 0; display: grid; place-items: center; padding: 8px; text-align: center; font-size: 12px; line-height: 1.3; color: var(--tx3); }
+.slab-xs .nophoto, .slab-sm .nophoto { font-size: 0; }
