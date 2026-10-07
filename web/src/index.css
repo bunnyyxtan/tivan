@@ -536,3 +536,36 @@ kbd { font: inherit; font-size: 12px; min-width: 22px; padding: 1px 6px; text-al
 .opt-row input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
 .opt-row small { margin-left: auto; color: var(--ink-3); font-size: 12px; }
 
+/* ---- item detail (desktop) */
+.title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.title-row h1 { font-size: 36px; line-height: 1.1; overflow-wrap: anywhere; min-width: 0; }
+.title-row .pill { height: 34px; min-height: 34px; }
+.below { margin-top: 48px; }
+.below .tabs { margin-top: 0; }
+.below .tabpanel { padding-top: 20px; }
+.viewer { display: flex; gap: 20px; align-items: flex-start; width: 100%; padding: 24px; }
+.thumbs { display: flex; flex-direction: column; gap: 10px; width: 72px; flex-shrink: 0; }
+.thumbs > button:not(.mini) { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px; border: 1px solid var(--line); border-radius: var(--r1); font-size: 12px; color: var(--ink-2); }
+.thumbs > button:not(.mini).on { border-color: var(--accent); color: var(--ink); background: var(--surface-3); }
+.thumbs .slab-wrap, .thumbs .card-img { width: 100%; }
+.thumbs .slab-xs { width: 100%; }
+.stage { flex: 1; min-width: 0; display: flex; justify-content: center; }
+.zoomer { width: min(100%, 420px); overflow: hidden; border-radius: var(--r1); cursor: zoom-in; }
+.zoomer.on { cursor: zoom-out; }
+.zoomer > div { transition: transform 0.16s; }
+.zoomer .card-img { box-shadow: none; }
+.stage .slab-xl { width: min(100%, 360px); }
+.book { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; }
+.booktable { width: 100%; border-collapse: collapse; font-size: 14px; }
+.booktable caption { text-align: left; padding: 0 0 8px; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); }
+.booktable th { height: 36px; padding: 0 12px; text-align: left; font-size: 12px; font-weight: 500; color: var(--ink-2); border-bottom: 1px solid var(--line-strong); }
+.booktable td { height: 40px; padding: 0 12px; border-bottom: 1px solid var(--line); }
+.booktable .num { text-align: right; font-variant-numeric: tabular-nums; }
+.booktable.sales { max-width: 760px; }
+@media (max-width: 1279px) { .viewer { flex-direction: column-reverse; align-items: center; } .thumbs { flex-direction: row; width: auto; } .thumbs > button:not(.mini) { width: 72px; } }
+@media (min-width: 1024px) {
+  .card-layout { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 40px; margin-top: 8px; }
+  .card-layout .card-hero { top: calc(var(--bar) + 24px); min-height: 0; padding: 0; margin: 0; align-items: stretch; }
+}
+@media (max-width: 1023px) { .book { grid-template-columns: 1fr; } }
+

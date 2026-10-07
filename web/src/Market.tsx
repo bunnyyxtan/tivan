@@ -7,7 +7,9 @@ import { usePortfolio } from './portfolio'
 import { ActivityFeed, FoundingCollectors } from './Feed'
 import { priceCard, shareCard } from './share'
 import { CashPill, type Acct } from './App'
-import { usePrefs } from './fx'
+import { CardImage, usePrefs } from './fx'
+import { useWide, WIDE } from './route'
+import { Breadcrumbs, Chart, PriceBlock, Shelf, Tabs, ago } from './desk'
 import { IconClose, IconGrid, IconList } from './icons'
 import { Empty, ErrorNote, ItemCardSkeleton, RowSkeleton, Skeleton } from './States'
 import { pct, stamp } from './format'
@@ -18,7 +20,7 @@ type Sort = 'featured' | 'high' | 'low' | 'spread' | 'name'
 type Grade = 'any' | '10' | '9' | 'lower'
 const price = (s: Sku) => s.ask ?? s.bid ?? 0
 const spreadOf = (s: Sku) => (s.ask && s.bid ? (s.ask - s.bid) / s.ask : undefined)
-const gradeOf = (s: Sku) => Number(parseName(s.name).grade)
+export const gradeOf = (s: Sku) => Number(parseName(s.name).grade)
 const grades: [Grade, string][] = [['any', 'Any grade'], ['10', 'PSA 10'], ['9', 'PSA 9'], ['lower', 'PSA 8 or lower']]
 const gradeLabel = (g: Grade) => grades.find((x) => x[0] === g)![1]
 const matchesGrade = (s: Sku, g: Grade) => g === 'any' || (g === 'lower' ? gradeOf(s) <= 8 : gradeOf(s) === Number(g))
@@ -137,19 +139,19 @@ const DemoNotice = () => (
   </p>
 )
 
-const askText = (s: Sku, live: boolean) => (!live ? 'Opening soon' : s.ask ? usd(s.ask) : 'No sellers')
-const offerText = (s: Sku, live: boolean) => (!live ? '—' : s.bid ? usd(s.bid) : 'No offers')
-const lastText = (s: Sku) => (s.last ? usd(s.last) : '—')
+export const askText = (s: Sku, live: boolean) => (!live ? 'Opening soon' : s.ask ? usd(s.ask) : 'No sellers')
+export const offerText = (s: Sku, live: boolean) => (!live ? '—' : s.bid ? usd(s.bid) : 'No offers')
+export const lastText = (s: Sku) => (s.last ? usd(s.last) : '—')
 
 /** The card anatomy used everywhere: media, title, grade line, then three labelled figures in fixed positions. */
-function ItemCard({ s, tag }: { s: Sku; tag: string }) {
+export function ItemCard({ s, tag, vt = true }: { s: Sku; tag: string; vt?: boolean }) {
   const { demo } = parseName(s.name)
   const live = hasMarket(s)
   return (
     <a className="item-card" href={`#/card/${s.sku}`}>
       {tag && <span className="item-badge">{tag}</span>}
       <div className="item-media">
-        <Slab name={s.name} size="md" vt={`card-${s.sku}`} />
+        <Slab name={s.name} size="md" vt={vt ? `card-${s.sku}` : undefined} />
       </div>
       <div className="item-body">
         <div className="item-title">{cardTitle(s.name)}</div>
@@ -200,28 +202,7 @@ function ItemRow({ s, tag }: { s: Sku; tag: string }) {
 
 // ===================================================================== detail
 type CardData = { sku: Sku; book: { bids: Level[]; asks: Level[] } }
-type Tab = 'details' | 'book' | 'sales'
-
-function Tabs({ value, onChange }: { value: Tab; onChange: (t: Tab) => void }) {
-  const tabs: [Tab, string][] = [['details', 'Details'], ['book', 'Order book'], ['sales', 'Sales history']]
-  const onKey = (e: React.KeyboardEvent) => {
-    const i = tabs.findIndex((t) => t[0] === value)
-    const next = e.key === 'ArrowRight' ? tabs[(i + 1) % tabs.length][0] : e.key === 'ArrowLeft' ? tabs[(i + tabs.length - 1) % tabs.length][0] : undefined
-    if (!next) return
-    e.preventDefault()
-    onChange(next)
-    requestAnimationFrame(() => document.getElementById(`tab-${next}`)?.focus())
-  }
-  return (
-    <div className="tabs" role="tablist" aria-label="Card information" onKeyDown={onKey}>
-      {tabs.map(([k, label]) => (
-        <button key={k} role="tab" id={`tab-${k}`} aria-selected={value === k} aria-controls={`panel-${k}`} tabIndex={value === k ? 0 : -1} onClick={() => onChange(k)}>
-          {label}
-        </button>
-      ))}
-    </div>
-  )
-}
+type Tab = 'history' | 'details' | 'book' | 'sales'
 
 export function CardPage({ sku, account }: { sku: string; account: Acct }) {
   const me = account?.address
@@ -241,7 +222,8 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
   const { data: orders = [], refresh: refreshOrders } = usePoll(async () => (me && data ? openOrders(data.sku.market, me) : []), 8000, [data?.sku.market, me])
   const watch = useWatch()
   const [toast, setToast] = useState<string>()
-  const [tab, setTab] = useState<Tab>('details')
+  const wide = useWide()
+  const [tab, setTab] = useState<Tab>(() => (matchMedia(WIDE).matches ? 'history' : 'details'))
 
   if (!data)
     return (
@@ -313,8 +295,99 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
       )}
     </>
   )
+  const deskButtons = (
+    <>
+      <a className="btn" href={s.ask ? `#/buy/${sku}` : `#/offer/${sku}`}>
+        {s.ask ? `Buy for ${usd(s.ask)}` : 'Make an offer'}
+      </a>
+      {own > 0 ? (
+        <a className="ghost line" href={`#/sell/${sku}`}>
+          Sell
+        </a>
+      ) : s.ask ? (
+        <a className="ghost line" href={`#/offer/${sku}`}>
+          Make offer
+        </a>
+      ) : null}
+    </>
+  )
+  const utility = (
+    <span style={{ display: 'flex', gap: 8 }}>
+      <button className="pill" onClick={share} aria-label="Share this price">
+        Share
+      </button>
+      <button className={`pill ${watching ? 'on' : ''}`} aria-pressed={watching} onClick={() => flash(watch.toggle(sku) ? 'Added to Watching.' : 'Removed from Watching.')}>
+        {watching ? 'Watching' : 'Watch'}
+      </button>
+    </span>
+  )
+  const t: Tab = wide ? tab : tab === 'history' ? 'sales' : tab
+  const sale = lastFill ? { value: lastFill.price, note: stamp(lastFill.t) } : { value: s.last, note: s.last ? 'From the index' : 'No sales yet' }
+  const catName = catalogOf(s.name)?.category
+  const related = (all ?? []).filter((x) => x.sku !== sku && (catalogOf(x.name)?.title === catalogOf(s.name)?.title || catalogOf(x.name)?.set === catalogOf(s.name)?.set)).slice(0, 12)
+  const tabsEl = live && (
+    <>
+      <Tabs
+        label="Card information"
+        value={t}
+        onChange={setTab}
+        tabs={(wide ? [['history', 'Price history'], ['book', 'Order book', book.asks.length + book.bids.length], ['sales', 'Sales history', fills.length], ['details', 'Details and population']] : [['details', 'Details'], ['book', 'Order book'], ['sales', 'Sales history']]) as [Tab, string, number?][]}
+      />
+      <div className="tabpanel" role="tabpanel" id={`panel-${t}`} aria-labelledby={`tab-${t}`}>
+        {t === 'history' && <SalesHistory fills={fills} source={hist?.source} loading={!hist} rows={false} h={300} />}
+        {t === 'details' && (
+          <>
+            <div className="rows">
+              <div className="kv">
+                <span>The card</span>
+                <span>{demo ? 'Demo token, no card behind it' : `One graded slab. ${s.vaulted} in the vault`}</span>
+              </div>
+              <div className="kv">
+                <span>Grade</span>
+                <span>{cardSub(s.name).split(' · ')[0]}, checked against the PSA registry</span>
+              </div>
+              {wide && (
+                <div className="kv">
+                  <span>Population</span>
+                  <span className="na">Information unavailable</span>
+                </div>
+              )}
+              {own > 0 && (
+                <div className="kv">
+                  <span>You own {own}</span>
+                  <span>
+                    {paid !== undefined && s.bid ? (
+                      <>
+                        Last paid {usd(paid)}
+                        <span className={`gain ${s.bid - paid >= 0 ? 'up' : 'down'}`}>{delta(s.bid - paid)} if sold at the top offer (estimate)</span>
+                      </>
+                    ) : s.bid ? (
+                      `Estimated ${usd(s.bid * own)} at the top offer`
+                    ) : (
+                      'No offers to value it against'
+                    )}
+                  </span>
+                </div>
+              )}
+              <div className="kv">
+                <span>Want it in hand?</span>
+                <span>{own > 0 ? <a className="u" href={`#/redeem/${sku}`}>Request the slab</a> : 'Own one, then request it'}</span>
+              </div>
+            </div>
+            <FoundingCollectors market={s.market} me={me} />
+            {orders.length > 0 && account && <OpenOrders orders={orders} s={s} account={account} done={() => (refresh(), refreshOrders(), refreshPort())} />}
+          </>
+        )}
+        {t === 'book' && (wide ? <BookTables book={book} chain={net.chain.name} /> : <OrderBook book={book} chain={net.chain.name} />)}
+        {t === 'sales' && (wide ? <SalesTable fills={fills} source={hist?.source} loading={!hist} /> : <SalesHistory fills={fills} source={hist?.source} loading={!hist} />)}
+      </div>
+    </>
+  )
   return (
     <>
+      {wide ? (
+        <Breadcrumbs items={[['Discover', '#/'], ['Browse', '#/browse'], ...(catName ? ([[catName, `#/browse?cat=${encodeURIComponent(catName)}`]] as [string, string][]) : []), [cardTitle(s.name)]]} />
+      ) : (
       <Header
         back="#/"
         backLabel="Markets"
@@ -329,12 +402,18 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
           </span>
         }
       />
+      )}
       <div className="card-layout">
-        <div className="card-hero">
-          <Slab name={s.name} size="lg" vt={`card-${s.sku}`} />
-        </div>
+        <div className="card-hero">{wide ? <Viewer s={s} /> : <Slab name={s.name} size="lg" vt={`card-${s.sku}`} />}</div>
         <div>
-          <h1 style={{ fontSize: 32, overflowWrap: 'anywhere' }}>{cardTitle(s.name)}</h1>
+          {wide ? (
+            <div className="title-row">
+              <h1>{cardTitle(s.name)}</h1>
+              {utility}
+            </div>
+          ) : (
+            <h1 style={{ fontSize: 32, overflowWrap: 'anywhere' }}>{cardTitle(s.name)}</h1>
+          )}
           <p className="muted" style={{ marginTop: 4, fontSize: 15 }}>
             {demo ? 'DEMO · ' : ''}
             {cardSub(s.name)}
@@ -359,6 +438,9 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
             </div>
           ) : (
             <>
+              {wide ? (
+                <PriceBlock ask={{ value: s.ask, note: s.ask ? `${askSize} for sale` : 'No sellers' }} bid={{ value: s.bid, note: s.bid ? `${book.bids.reduce((n, l) => n + l.size, 0)} wanted` : 'No offers' }} last={sale} />
+              ) : (
               <div className="stats">
                 <div className="stat">
                   <span className="lbl">Last sale</span>
@@ -376,6 +458,7 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
                   <small>{s.bid ? `${book.bids.reduce((n, l) => n + l.size, 0)} wanted` : 'No offers'}</small>
                 </div>
               </div>
+              )}
               <p className="fine" style={{ marginTop: 10, fontSize: 14 }}>
                 {gap !== undefined && s.ask
                   ? `Spread ${usd(gap)}, ${pct(gap / s.ask)} of the ask. An offer in between is the quickest way to meet.`
@@ -384,52 +467,11 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
                     : 'No offers yet. Yours would be the first.'}
               </p>
               <div className="actions desk-only" style={{ marginTop: 16 }}>
-                {buttons}
+                {deskButtons}
               </div>
               {s.ask && <AlertRow s={s} flash={flash} />}
 
-              <Tabs value={tab} onChange={setTab} />
-              <div className="tabpanel" role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
-                {tab === 'details' && (
-                  <>
-                    <div className="rows">
-                      <div className="kv">
-                        <span>The card</span>
-                        <span>{demo ? 'Demo token, no card behind it' : `One graded slab. ${s.vaulted} in the vault`}</span>
-                      </div>
-                      <div className="kv">
-                        <span>Grade</span>
-                        <span>{cardSub(s.name).split(' · ')[0]}, checked against the PSA registry</span>
-                      </div>
-                      {own > 0 && (
-                        <div className="kv">
-                          <span>You own {own}</span>
-                          <span>
-                            {paid !== undefined && s.bid ? (
-                              <>
-                                Last paid {usd(paid)}
-                                <span className={`gain ${s.bid - paid >= 0 ? 'up' : 'down'}`}>{delta(s.bid - paid)} if sold at the top offer (estimate)</span>
-                              </>
-                            ) : s.bid ? (
-                              `Estimated ${usd(s.bid * own)} at the top offer`
-                            ) : (
-                              'No offers to value it against'
-                            )}
-                          </span>
-                        </div>
-                      )}
-                      <div className="kv">
-                        <span>Want it in hand?</span>
-                        <span>{own > 0 ? <a className="u" href={`#/redeem/${sku}`}>Request the slab</a> : 'Own one, then request it'}</span>
-                      </div>
-                    </div>
-                    <FoundingCollectors market={s.market} me={me} />
-                    {orders.length > 0 && account && <OpenOrders orders={orders} s={s} account={account} done={() => (refresh(), refreshOrders(), refreshPort())} />}
-                  </>
-                )}
-                {tab === 'book' && <OrderBook book={book} chain={net.chain.name} />}
-                {tab === 'sales' && <SalesHistory fills={fills} source={hist?.source} loading={!hist} />}
-              </div>
+              {!wide && tabsEl}
             </>
           )}
 
@@ -442,6 +484,18 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
         </div>
         {toast && <Toast text={toast} />}
       </div>
+      {wide && live && (
+        <section className="below">
+          {tabsEl}
+          {related.length > 0 && (
+            <Shelf title="Related cards" href={catalogOf(s.name) ? `#/browse?set=${encodeURIComponent(catalogOf(s.name)!.set)}` : '#/browse'}>
+              {related.map((x) => (
+                <ItemCard key={x.sku} s={x} tag="" vt={false} />
+              ))}
+            </Shelf>
+          )}
+        </section>
+      )}
     </>
   )
 }
@@ -490,7 +544,7 @@ const RANGES = [['1M', 30], ['3M', 90], ['1Y', 365], ['All', 0]] as const
 type RangeKey = (typeof RANGES)[number][0]
 
 /** Sales over a chosen range, a plain chart with a labelled last-sale marker, and the source and range in words. */
-function SalesHistory({ fills, source, loading }: { fills: Fill[]; source?: 'envio' | 'rpc'; loading: boolean }) {
+function SalesHistory({ fills, source, loading, rows = true, h = 150 }: { fills: Fill[]; source?: 'envio' | 'rpc'; loading: boolean; rows?: boolean; h?: number }) {
   const [range, setRange] = useState<RangeKey>('All')
   if (loading) return <Skeleton h={190} r={12} />
   const days = RANGES.find((r) => r[0] === range)![1]
@@ -509,9 +563,9 @@ function SalesHistory({ fills, source, loading }: { fills: Fill[]; source?: 'env
           ))}
         </span>
       </div>
-      {pts.length > 1 ? <Chart fills={pts} /> : <Empty title={fills.length ? 'Not enough sales in this range' : 'No sales yet'} detail="A chart needs at least two sales. We don’t draw lines from guesses." />}
+      {pts.length > 1 ? <Chart pts={pts} h={h} label={`Sale prices from ${usd(pts[0].price)} to ${usd(pts.at(-1)!.price)}, last sale ${usd(pts.at(-1)!.price)}`} /> : <Empty title={fills.length ? 'Not enough sales in this range' : 'No sales yet'} detail="A chart needs at least two sales. We don’t draw lines from guesses." />}
       <p className="source">{where}. Range: {range === 'All' ? 'all time' : `last ${range}`}.</p>
-      {pts.length > 0 && (
+      {rows && pts.length > 0 && (
         <div className="rows" style={{ marginTop: 8 }}>
           {[...pts].reverse().slice(0, 8).map((f, i) => (
             <div className="kv" key={i}>
@@ -525,38 +579,119 @@ function SalesHistory({ fills, source, loading }: { fills: Fill[]; source?: 'env
   )
 }
 
-function Chart({ fills }: { fills: Fill[] }) {
-  const W = 340
-  const H = 150
-  const L = 46
-  const B = 22
-  const ps = fills.map((f) => f.price)
-  const pad = Math.max(1, (Math.max(...ps) - Math.min(...ps)) * 0.2)
-  const lo = Math.min(...ps) - pad
-  const hi = Math.max(...ps) + pad
-  const t0 = fills[0].t
-  const span = Math.max(60, fills.at(-1)!.t - t0)
-  const x = (t: number) => L + ((t - t0) / span) * (W - L - 8)
-  const y = (p: number) => 8 + (1 - (p - lo) / (hi - lo)) * (H - B - 12)
-  // Step line: each price holds until the next sale.
-  const d = fills.map((f, i) => (i ? `H${x(f.t).toFixed(1)}V${y(f.price).toFixed(1)}` : `M${x(f.t).toFixed(1)},${y(f.price).toFixed(1)}`)).join('')
-  const last = fills.at(-1)!
-  const day = (t: number) => new Date(t * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+/** Bids and asks side by side, same columns and row height: price, copies, and what that level is worth in dollars. */
+function BookTables({ book, chain }: { book: { bids: Level[]; asks: Level[] }; chain: string }) {
+  const asks = [...book.asks].sort((a, b) => a.price - b.price)
+  const bids = [...book.bids].sort((a, b) => b.price - a.price)
+  if (!asks.length && !bids.length) return <Empty title="The book is empty" detail="Nobody has posted an ask or an offer yet." />
+  const side = (name: string, rows: Level[], none: string) => (
+    <table className="booktable" aria-label={name}>
+      <caption>{name}</caption>
+      <thead>
+        <tr>
+          <th scope="col" className="num">Price</th>
+          <th scope="col" className="num">Copies</th>
+          <th scope="col" className="num">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.length ? rows.map((l, i) => (
+          <tr key={i}>
+            <td className="num">{usd(l.price)}</td>
+            <td className="num">{l.size}</td>
+            <td className="num">{usd(l.price * l.size)}</td>
+          </tr>
+        )) : <tr><td colSpan={3} className="na">{none}</td></tr>}
+      </tbody>
+    </table>
+  )
   return (
-    <div className="hist">
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Sale prices from ${usd(ps[0])} to ${usd(last.price)}, last sale ${usd(last.price)}`}>
-        {[hi, (hi + lo) / 2, lo].map((v, i) => (
-          <g key={i}>
-            <line className="grid" x1={L} x2={W - 8} y1={y(v)} y2={y(v)} />
-            <text className="axis" x={L - 6} y={y(v) + 3} textAnchor="end">{usd(Math.round(v))}</text>
-          </g>
-        ))}
-        <text className="axis" x={L} y={H - 6}>{day(t0)}</text>
-        <text className="axis" x={W - 8} y={H - 6} textAnchor="end">{day(last.t)}</text>
-        <path className="line" d={d} />
-        <circle className="last" cx={x(last.t)} cy={y(last.price)} r="4" />
-        <text className="tag" x={Math.min(x(last.t), W - 70)} y={Math.max(y(last.price) - 9, 12)}>Last sale {usd(last.price)}</text>
-      </svg>
+    <>
+      <div className="book">
+        {side('Offers (wanted), highest first', bids, 'No offers')}
+        {side('Asks (for sale), lowest first', asks, 'No asks')}
+      </div>
+      <p className="source">Source: the order book contract on {chain}, read live. Total is price times copies.</p>
+    </>
+  )
+}
+
+/** Every recorded sale, newest first. */
+function SalesTable({ fills, source, loading }: { fills: Fill[]; source?: 'envio' | 'rpc'; loading: boolean }) {
+  if (loading) return <Skeleton h={190} r={12} />
+  if (!fills.length) return <Empty title="No sales yet" detail="Sales appear here once this card trades." />
+  return (
+    <>
+      <table className="booktable sales" aria-label="Sales history">
+        <thead>
+          <tr>
+            <th scope="col">Date</th>
+            <th scope="col" className="num">Price</th>
+            <th scope="col" className="num">Copies</th>
+            <th scope="col">Taker</th>
+          </tr>
+        </thead>
+        <tbody>
+          {[...fills].reverse().slice(0, 50).map((f, i) => (
+            <tr key={i}>
+              <td>{stamp(f.t)} <span className="muted">· {ago(f.t)}</span></td>
+              <td className="num">{usd(f.price)}</td>
+              <td className="num">{f.size}</td>
+              <td>{f.takerBuy ? 'Bought' : 'Sold'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="source">{fills.length > 50 ? `Showing the latest 50 of ${fills.length}. ` : ''}{source === 'envio' ? 'Source: on-chain trades indexed by Envio.' : 'Source: Monad RPC logs, which only reach back about 20 minutes. Older sales need the indexer.'}</p>
+    </>
+  )
+}
+
+/** Front and slab views of one card. Zoom follows the pointer, or the arrow keys once switched on with Z or the button. */
+function Viewer({ s }: { s: Sku }) {
+  const [view, setView] = useState<'front' | 'slab'>('front')
+  const [zoom, setZoom] = useState(false)
+  const [at, setAt] = useState({ x: 50, y: 50 })
+  const c = catalogOf(s.name)
+  const name = cardTitle(s.name)
+  const move = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!zoom) return
+    const r = e.currentTarget.getBoundingClientRect()
+    setAt({ x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100 })
+  }
+  const key = (e: React.KeyboardEvent) => {
+    const k = e.key
+    if (k === 'z' || k === 'Z' || k === 'Enter') return (e.preventDefault(), setZoom(!zoom))
+    if (!zoom || !k.startsWith('Arrow')) return
+    e.preventDefault()
+    setAt((p) => ({ x: Math.max(0, Math.min(100, p.x + (k === 'ArrowRight' ? 12 : k === 'ArrowLeft' ? -12 : 0))), y: Math.max(0, Math.min(100, p.y + (k === 'ArrowDown' ? 12 : k === 'ArrowUp' ? -12 : 0))) }))
+  }
+  return (
+    <div className="viewer">
+      <div className="thumbs" role="group" aria-label="Views">
+        <button className={view === 'front' ? 'on' : ''} aria-pressed={view === 'front'} aria-label="Front of the card" onClick={() => setView('front')}>
+          <CardImage src={c?.imageUrl} alt="" label={name} />
+          <span>Front</span>
+        </button>
+        <button className={view === 'slab' ? 'on' : ''} aria-pressed={view === 'slab'} aria-label="Graded slab" onClick={() => (setView('slab'), setZoom(false))}>
+          <Slab name={s.name} size="xs" />
+          <span>Slab</span>
+        </button>
+        <button className={`mini ${zoom ? 'on' : ''}`} aria-pressed={zoom} disabled={view !== 'front'} onClick={() => setZoom(!zoom)}>
+          Zoom
+        </button>
+      </div>
+      <div className="stage">
+        {view === 'slab' ? (
+          <Slab name={s.name} size="xl" vt={`card-${s.sku}`} />
+        ) : (
+          <div className={`zoomer ${zoom ? 'on' : ''}`} tabIndex={0} role="group" aria-label={`${name}, front. Press Z to zoom, then use the arrow keys to move`} onPointerMove={move} onKeyDown={key} onClick={() => setZoom(!zoom)}>
+            <div style={zoom ? { transformOrigin: `${at.x}% ${at.y}%`, transform: 'scale(2.4)' } : undefined}>
+              <CardImage src={c?.imageUrl} alt={`${name}, ${cardSub(s.name)}`} label={name} />
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
