@@ -3,7 +3,7 @@ import { flushSync } from 'react-dom'
 import { formatEther, parseUnits, type LocalAccount } from 'viem'
 import { createAccount, deviceAccount, friendlyError, hasDeviceKey, savedPasskey, signIn, signOut } from './account'
 import { erc20Abi, marginAbi, pub, send } from './chain'
-import { Aurora, useRevealAll } from './fx'
+import { Aurora, Card, useRevealAll, usePrefs } from './fx'
 import { attestorUrl, brand, net } from './config'
 import { CardPage, MarketList } from './Market'
 import { BuyFlow, Receipt, TradeFlow } from './Trade'
@@ -212,6 +212,7 @@ function You({ account, onSignOut }: { account: LocalAccount; onSignOut: () => v
   const [theme, setT] = useState<Theme>(getTheme)
   const [notif, setNotif] = useState(notifyState)
   const recent = useActivity(me)
+  const [prefs, setPrefs] = usePrefs()
   const addFunds = async () => {
     const steps: [string, () => Promise<string | void>][] = []
     if ((data?.gas ?? 0n) < 5n * 10n ** 16n)
@@ -270,6 +271,63 @@ function You({ account, onSignOut }: { account: LocalAccount; onSignOut: () => v
         {!net.mintableQuote && <p className="fine" style={{ marginTop: 10 }}>Send USDC on Monad to your address. Only USDC on Monad.</p>}
         <div style={{ marginTop: 12 }}>
           <Steps steps={flow.steps} error={flow.error} />
+        </div>
+      </section>
+
+      <div className="cards-grid" style={{ marginTop: 14 }}>
+        <Card variant="action" i={0} href="#/collection">
+          <span className="t">Collection</span>
+          <span className="s">What you own, paid vs worth</span>
+          <i className="go">→</i>
+        </Card>
+        <Card variant="action" i={1} href="#/vault">
+          <span className="t">Vault a card</span>
+          <span className="s">Check a cert, list it</span>
+          <i className="go">→</i>
+        </Card>
+        <Card variant="action" i={2} href="#/league">
+          <span className="t">Price League</span>
+          <span className="s">See the standings</span>
+          <i className="go">→</i>
+        </Card>
+        <Card variant="action" i={3} onClick={() => (navigator.clipboard?.writeText(location.href.split('#')[0]), setCopied(true), setTimeout(() => setCopied(false), 1500))}>
+          <span className="t">{copied ? 'Link copied' : 'Invite a friend'}</span>
+          <span className="s">Share {brand} with a collector</span>
+          <i className="go">→</i>
+        </Card>
+      </div>
+
+      <section className="section">
+        <span className="cap">Experience</span>
+        <div className="rows">
+          <div className="pref">
+            <span>Motion<small>Full moves everything. Calm keeps it simple. Off holds still.</small></span>
+            <span className="seg" role="radiogroup" aria-label="Motion">
+              {(['full', 'calm', 'off'] as const).map((m) => (
+                <button key={m} role="radio" aria-checked={prefs.motion === m} className={prefs.motion === m ? 'on' : ''} onClick={() => setPrefs({ motion: m })}>
+                  {m[0].toUpperCase() + m.slice(1)}
+                </button>
+              ))}
+            </span>
+          </div>
+          <div className="pref">
+            <span>Animated background<small>Slow glow behind the app</small></span>
+            <button className="switch" role="switch" aria-checked={prefs.aurora} aria-label="Animated background" onClick={() => setPrefs({ aurora: !prefs.aurora })} />
+          </div>
+          <div className="pref">
+            <span>Compact lists<small>Tighter rows in list view</small></span>
+            <button className="switch" role="switch" aria-checked={prefs.dense} aria-label="Compact lists" onClick={() => setPrefs({ dense: !prefs.dense })} />
+          </div>
+          <div className="pref">
+            <span>Markets view<small>How cards are laid out</small></span>
+            <span className="seg" role="radiogroup" aria-label="Markets view">
+              {(['grid', 'list'] as const).map((v) => (
+                <button key={v} role="radio" aria-checked={prefs.view === v} className={prefs.view === v ? 'on' : ''} onClick={() => setPrefs({ view: v })}>
+                  {v[0].toUpperCase() + v.slice(1)}
+                </button>
+              ))}
+            </span>
+          </div>
         </div>
       </section>
 
