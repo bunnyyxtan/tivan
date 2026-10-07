@@ -44,6 +44,7 @@ const wal = createWalletClient({ account, chain: monadTestnet, transport: http()
 
 const vaultAbi = parseAbi(['function skuInfo(bytes32) view returns (address token, address market, uint256 vaulted)'])
 const erc20 = parseAbi(['function balanceOf(address) view returns (uint256)', 'function approve(address,uint256) returns (bool)'])
+const mintAbi = parseAbi(['function mint(address,uint256)'])
 const book = parseAbi(['function bestBidAsk() view returns (uint256,uint256)', 'function addSellOrder(uint32,uint96,bool)', 'function addBuyOrder(uint32,uint96,bool)'])
 const margin = parseAbi(['function deposit(address,address,uint256) payable', 'function getBalance(address,address) view returns (uint256)'])
 const router = parseAbi(['function marginAccountAddress() view returns (address)'])
@@ -110,10 +111,16 @@ async function pass() {
     if (!live(bid)) {
       const px = Math.round(ref * (1 - SPREAD / 2) * 100)
       const need = parseUnits(String(px / 100), 6)
-      const [wallet, onBook] = await Promise.all([
+      let [wallet, onBook] = await Promise.all([
         pub.readContract({ address: QUOTE, abi: erc20, functionName: 'balanceOf', args: [account.address] }),
         pub.readContract({ address: ma, abi: margin, functionName: 'getBalance', args: [account.address, QUOTE] }),
       ])
+      // TestUSD is an open-mint testnet token, so the maker simply mints more when a book needs it.
+      if (wallet + onBook < need) {
+        await send({ address: QUOTE, abi: mintAbi, functionName: 'mint', args: [account.address, parseUnits('1000000', 6)] })
+        wallet += parseUnits('1000000', 6)
+        say('minted 1,000,000 TestUSD for the maker')
+      }
       // Cash already on the exchange backs the bid directly; only top up from the wallet when it falls short.
       if (wallet + onBook < need) say(`${label}: no bid, maker cash $${formatUnits(wallet + onBook, 6)} is short of $${px / 100}`)
       else {
