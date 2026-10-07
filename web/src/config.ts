@@ -37,22 +37,22 @@ const networks: Record<Network['name'], Network> = {
       { specId: 4n, grade: 10 },
       { specId: 4n, grade: 9 },
       { specId: 58n, grade: 10 },
-      { specId: 2003111n, grade: 10 },
       { specId: 1993232n, grade: 9 },
       { specId: 2n, grade: 9 },
       { specId: 15n, grade: 9 },
       { specId: 10n, grade: 9 },
-      { specId: 1986057n, grade: 8 },
-      { specId: 1996138n, grade: 10 },
-      { specId: 1952311n, grade: 5 },
-      { specId: 2000144n, grade: 9 },
-      { specId: 1979018n, grade: 8 },
-      { specId: 2018700n, grade: 10 },
       { specId: 1993140n, grade: 8 },
       { specId: 1993180n, grade: 9 },
       { specId: 2002001n, grade: 9 },
       { specId: 2002005n, grade: 9 },
       { specId: 2002124n, grade: 9 },
+      { specId: 1909001n, grade: 3 },
+      { specId: 1909002n, grade: 4 },
+      { specId: 1909003n, grade: 5 },
+      { specId: 1911001n, grade: 5 },
+      { specId: 1909004n, grade: 4 },
+      { specId: 1909005n, grade: 5 },
+      { specId: 1933002n, grade: 6 },
     ],
   },
   mainnet: {
@@ -70,7 +70,6 @@ const networks: Record<Network['name'], Network> = {
     seedSkus: [
       { specId: 58n, grade: 10 },
       { specId: 4n, grade: 10 },
-      { specId: 2003111n, grade: 10 },
       { specId: 1993232n, grade: 9 },
     ],
   },
@@ -108,22 +107,22 @@ const BASE = import.meta.env.BASE_URL // '/' in dev, '/<repo>/' on GitHub Pages
 export const catalog = [
   { specId: 4n, title: 'Base Set Charizard Holo', set: 'Base Set · 1999', short: 'CHZ', category: 'Pokémon', imageUrl: BASE + 'cards/charizard.webp', tint: 'char' },
   { specId: 58n, title: 'Base Set Pikachu Red Cheeks', set: 'Promo · 1999', short: 'PIKA', category: 'Pokémon', imageUrl: BASE + 'cards/pikachu.webp', tint: 'pika' },
-  { specId: 2003111n, title: 'Topps Chrome LeBron James Rookie #111', set: 'Topps Chrome · 2003', short: 'LBJ03', category: 'Sports', imageUrl: '', tint: 'lbj' }, // MOCK IMAGE: add web/public/cards/<name>.webp and set imageUrl: BASE + 'cards/<name>.webp'
-  { specId: 1986057n, title: 'Fleer Michael Jordan #57', set: 'Fleer · 1986', short: 'MJ86', category: 'Sports', imageUrl: '', tint: 'mj' }, // MOCK IMAGE: add web/public/cards/<name>.webp and set imageUrl: BASE + 'cards/<name>.webp'
   { specId: 1993232n, title: 'Alpha Black Lotus', set: 'Alpha · 1993', short: 'LOTUS', category: 'Magic', imageUrl: BASE + 'cards/lotus.webp', tint: 'lotus' },
   { specId: 2n, title: 'Base Set Blastoise Holo', set: 'Base Set · 1999', short: 'BLST', category: 'Pokémon', imageUrl: BASE + 'cards/blastoise.webp', tint: 'blue' },
   { specId: 15n, title: 'Base Set Venusaur Holo', set: 'Base Set · 1999', short: 'VENU', category: 'Pokémon', imageUrl: BASE + 'cards/venusaur.webp', tint: 'green' },
   { specId: 10n, title: 'Base Set Mewtwo Holo', set: 'Base Set · 1999', short: 'MEW2', category: 'Pokémon', imageUrl: BASE + 'cards/mewtwo.webp', tint: 'blue' },
-  { specId: 1996138n, title: 'Topps Chrome Kobe Bryant Rookie #138', set: 'Topps Chrome · 1996', short: 'KOBE96', category: 'Sports', imageUrl: '', tint: 'pika' }, // MOCK IMAGE: add web/public/cards/<name>.webp and set imageUrl: BASE + 'cards/<name>.webp'
-  { specId: 1952311n, title: 'Topps Mickey Mantle #311', set: 'Topps · 1952', short: 'MANTLE', category: 'Sports', imageUrl: '', tint: 'mj' }, // MOCK IMAGE: add web/public/cards/<name>.webp and set imageUrl: BASE + 'cards/<name>.webp'
-  { specId: 2000144n, title: 'Contenders Tom Brady Autograph #144', set: 'Contenders · 2000', short: 'BRADY', category: 'Sports', imageUrl: '', tint: 'blue' }, // MOCK IMAGE: add web/public/cards/<name>.webp and set imageUrl: BASE + 'cards/<name>.webp'
-  { specId: 1979018n, title: 'O-Pee-Chee Wayne Gretzky Rookie #18', set: 'O-Pee-Chee · 1979', short: 'GRETZ', category: 'Sports', imageUrl: '', tint: 'blue' }, // MOCK IMAGE: add web/public/cards/<name>.webp and set imageUrl: BASE + 'cards/<name>.webp'
-  { specId: 2018700n, title: 'Topps Update Shohei Ohtani Rookie #US1', set: 'Topps Update · 2018', short: 'OHTANI', category: 'Sports', imageUrl: '', tint: 'mj' }, // MOCK IMAGE: add web/public/cards/<name>.webp and set imageUrl: BASE + 'cards/<name>.webp'
   { specId: 1993140n, title: 'Alpha Mox Sapphire', set: 'Alpha · 1993', short: 'MOXS', category: 'Magic', imageUrl: BASE + 'cards/moxsapphire.webp', tint: 'blue' },
   { specId: 1993180n, title: 'Alpha Underground Sea', set: 'Alpha · 1993', short: 'USEA', category: 'Magic', imageUrl: BASE + 'cards/undergroundsea.webp', tint: 'green' },
   { specId: 2002001n, title: 'Legend of Blue Eyes Blue-Eyes White Dragon', set: 'Legend of Blue Eyes · 2002', short: 'BEWD', category: 'Yu-Gi-Oh!', imageUrl: BASE + 'cards/blueeyes.webp', tint: 'blue' },
   { specId: 2002005n, title: 'Legend of Blue Eyes Dark Magician', set: 'Legend of Blue Eyes · 2002', short: 'DKMG', category: 'Yu-Gi-Oh!', imageUrl: BASE + 'cards/darkmagician.webp', tint: 'lbj' },
   { specId: 2002124n, title: 'Legend of Blue Eyes Exodia the Forbidden One', set: 'Legend of Blue Eyes · 2002', short: 'EXOD', category: 'Yu-Gi-Oh!', imageUrl: BASE + 'cards/exodia.webp', tint: 'pika' },
+  { specId: 1909001n, title: 'T206 Honus Wagner', set: 'T206 · 1909', short: 'WAGNER', category: 'Sports', imageUrl: BASE + 'cards/wagner.webp', tint: 'pika' },
+  { specId: 1909002n, title: 'T206 Ty Cobb', set: 'T206 · 1909', short: 'COBB', category: 'Sports', imageUrl: BASE + 'cards/cobb.webp', tint: 'green' },
+  { specId: 1909003n, title: 'T206 Christy Mathewson', set: 'T206 · 1909', short: 'MATHEW', category: 'Sports', imageUrl: BASE + 'cards/mathewson.webp', tint: 'blue' },
+  { specId: 1911001n, title: 'T205 Cy Young', set: 'T205 · 1911', short: 'CYYOUNG', category: 'Sports', imageUrl: BASE + 'cards/young.webp', tint: 'mj' },
+  { specId: 1909004n, title: 'T206 Walter Johnson', set: 'T206 · 1909', short: 'WJOHN', category: 'Sports', imageUrl: BASE + 'cards/johnson.webp', tint: 'lotus' },
+  { specId: 1909005n, title: 'T206 Tris Speaker', set: 'T206 · 1909', short: 'SPEAKER', category: 'Sports', imageUrl: BASE + 'cards/speaker.webp', tint: 'blue' },
+  { specId: 1933002n, title: 'Goudey Sport Kings Babe Ruth #2', set: 'Goudey Sport Kings · 1933', short: 'RUTH33', category: 'Sports', imageUrl: BASE + 'cards/ruth.webp', tint: 'mj' },
 ]
 export const categories = ['Pokémon', 'Sports', 'Magic', 'Yu-Gi-Oh!'] as const
 /** Category of an on-chain SKU name ("PSA 10 Base Set Charizard Holo"), by catalog title. */
