@@ -16,14 +16,19 @@ import { askPermission, notifyState, useAlertWatcher } from './alerts'
 import { Redeem, VaultPage, drip } from './Vault'
 import { usePortfolio } from './portfolio'
 import { Header, Slab, Steps, delta, short, useFlow, usd } from './ui'
+import { scrollFor, useWide } from './route'
+import { Browse, Compare, Discover } from './Browse'
+import { SearchBox, Shortcuts, openShortcuts } from './desk'
+import { Activity, Portfolio } from './Holdings'
 
 function useHash() {
   const [h, setH] = useState(location.hash)
   useEffect(() => {
     // NOTE: the browser morphs any element sharing a view-transition-name (the card image) between pages.
     // Limit: Chromium/Safari only; elsewhere, and with reduced motion, the page just changes.
-    const on = () => {
-      const go = () => (flushSync(() => setH(location.hash)), window.scrollTo(0, 0))
+    const on = (e: HashChangeEvent) => {
+      const y = scrollFor(e)
+      const go = () => (flushSync(() => setH(location.hash)), window.scrollTo(0, y))
       const still = matchMedia('(prefers-reduced-motion: reduce)').matches
       if (document.startViewTransition && !still) document.startViewTransition(go)
       else go()
@@ -31,7 +36,7 @@ function useHash() {
     addEventListener('hashchange', on)
     return () => removeEventListener('hashchange', on)
   }, [])
-  return h.replace(/^#\/?/, '').split('/')
+  return h.replace(/^#\/?/, '').split('?')[0].split('/')
 }
 
 export type Acct = LocalAccount | undefined
@@ -40,6 +45,7 @@ export default function App() {
   const [account, setAccount] = useState<LocalAccount>()
   const [guest, setGuest] = useState(false)
   const [route, ...args] = useHash()
+  const wide = useWide()
   useAlertWatcher()
   // Free hosting sleeps when idle and takes ~a minute to wake: ring the attestor as soon as anyone opens the app, so it is
   // awake by the time they ask for gas.
@@ -51,7 +57,7 @@ export default function App() {
         <SettingsSheet />
       </>
     )
-  const tab = route === 'collection' ? 'collection' : route === 'vault' ? 'vault' : route === 'you' ? 'you' : route === 'league' ? 'league' : 'markets'
+  const tab = route === 'browse' || route === 'compare' ? 'browse' : route === 'activity' ? 'activity' : route === 'collection' ? 'collection' : route === 'vault' ? 'vault' : route === 'you' ? 'you' : route === 'league' ? 'league' : 'markets'
   // Browsing is open; anything that moves money or cards asks for a passkey first.
   const need = (el: (a: LocalAccount) => React.ReactNode) => (account ? el(account) : <SignIn inline onReady={setAccount} />)
   const page =
@@ -60,11 +66,14 @@ export default function App() {
     : route === 'done' ? need((a) => <Receipt sku={args[0]} price={Number(args[1])} tx={args[2]} account={a} />)
     : route === 'sell' || route === 'offer' ? need((a) => <TradeFlow key={route} side={route} sku={args[0]} account={a} />)
     : route === 'redeem' ? need((a) => <Redeem sku={args[0]} account={a} />)
-    : route === 'collection' ? need((a) => <Collection account={a} />)
+    : route === 'collection' ? need((a) => (wide ? <Portfolio account={a} /> : <Collection account={a} />))
+    : route === 'activity' ? need((a) => <Activity account={a} />)
+    : route === 'browse' ? <Browse account={account} />
+    : route === 'compare' ? <Compare />
     : route === 'vault' ? need((a) => <VaultPage account={a} />)
     : route === 'league' ? <League account={account} />
     : route === 'you' ? need((a) => <You account={a} onSignOut={() => (signOut(), setAccount(undefined), setGuest(false), (location.hash = '#/'))} />)
-    : <MarketList account={account} />
+    : wide ? <Discover account={account} /> : <MarketList account={account} />
   const tabs = [
     ['markets', '#/', 'Markets', <IconMarkets />],
     ['collection', '#/collection', 'Collection', <IconCollection />],
@@ -72,26 +81,40 @@ export default function App() {
     ['league', '#/league', 'League', <IconLeague />],
     ['you', '#/you', 'You', <IconYou />],
   ] as const
+  const deskTabs = [
+    ['markets', '#/', 'Discover'],
+    ['browse', '#/browse', 'Browse'],
+    ['collection', '#/collection', 'Portfolio'],
+    ['activity', '#/activity', 'Activity'],
+    ['vault', '#/vault', 'Vault'],
+  ] as const
   return (
     <>
       <SettingsSheet />
-      <div className="desk-nav">
-        <a className="brand" href="#/">
-          {brand}
-        </a>
-        <nav aria-label="Primary">
-          {tabs.slice(0, 4).map(([k, href, label]) => (
-            <a key={k} href={href} className={tab === k ? 'on' : ''} aria-current={tab === k ? 'page' : undefined}>
-              {label}
-            </a>
-          ))}
-        </nav>
-        <div className="right">
-          <SettingsButton />
-          <CashPill account={account} />
-          <a className="ghost line" href="#/you">
-            {account ? 'You' : 'Sign in'}
+      <Shortcuts />
+      <div className="desk-bar">
+        <div className="desk-nav">
+          <a className="brand" href="#/">
+            {brand}
           </a>
+          <nav aria-label="Primary">
+            {deskTabs.map(([k, href, label]) => (
+              <a key={k} href={href} className={tab === k ? 'on' : ''} aria-current={tab === k ? 'page' : undefined}>
+                {label}
+              </a>
+            ))}
+          </nav>
+          <SearchBox />
+          <div className="right">
+            <button className="icon-btn" aria-label="Keyboard shortcuts" onClick={openShortcuts}>
+              ?
+            </button>
+            <SettingsButton />
+            <CashPill account={account} />
+            <a className="ghost line" href="#/you">
+              {account ? 'You' : 'Sign in'}
+            </a>
+          </div>
         </div>
       </div>
       <div className="app">
