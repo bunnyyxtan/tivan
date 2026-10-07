@@ -28,7 +28,16 @@ const CARDS = [
   [2002001n, 9, 4200, 'Legend of Blue Eyes Blue-Eyes White Dragon', 'BEWD'],
   [2002005n, 9, 1100, 'Legend of Blue Eyes Dark Magician', 'DKMG'],
   [2002124n, 9, 600, 'Legend of Blue Eyes Exodia the Forbidden One', 'EXOD'],
+  [1909001n, 3, 650000, 'T206 Honus Wagner', 'WAGNER'],
+  [1909002n, 4, 24000, 'T206 Ty Cobb', 'COBB'],
+  [1909003n, 5, 7500, 'T206 Christy Mathewson', 'MATHEW'],
+  [1911001n, 5, 3200, 'T205 Cy Young', 'CYYOUNG'],
+  [1909004n, 4, 5200, 'T206 Walter Johnson', 'WJOHN'],
+  [1909005n, 5, 6200, 'T206 Tris Speaker', 'SPEAKER'],
+  [1933002n, 6, 22000, 'Goudey Sport Kings Babe Ruth #2', 'RUTH33'],
 ]
+// Modern sports cards with no reusable photo were retired from the app. Their markets stay on-chain, unquoted.
+const RETIRED = new Set([2003111n, 1986057n, 1996138n, 1952311n, 2000144n, 1979018n, 2018700n])
 // When a card sells out the maker has nothing to list, so it vaults a fresh demo copy through the attestor (testnet demo
 // certs 9xxxxxxx, see attestor/src/psa.ts). Capped per hour so a buying spree cannot burn the faucet account's gas.
 const ATTESTOR = process.env.ATTESTOR_URL ?? `http://localhost:${process.env.PORT ?? 8787}`
@@ -86,6 +95,7 @@ async function restock(idx, spec, grade, title, short, label) {
 
 async function pass() {
   for (const [idx, [spec, grade, ref, title, short]] of CARDS.entries()) {
+    if (RETIRED.has(spec)) continue
     const sku = keccak256(encodeAbiParameters([{ type: 'uint256' }, { type: 'uint8' }], [spec, grade]))
     let [token, market] = await pub.readContract({ address: VAULT, abi: vaultAbi, functionName: 'skuInfo', args: [sku] })
     // A card nobody has vaulted yet has no token or market: vaulting its first copy creates both.
