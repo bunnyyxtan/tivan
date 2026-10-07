@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { keccak256, parseEventLogs, toBytes, type LocalAccount } from 'viem'
 import { confirmStep } from './account'
+import { Card, CountUp } from './fx'
 import { attestorUrl, catalog, net } from './config'
 import { erc20Abi, loadSkus, marginAbi, marginAccount, pub, send, vaultAbi } from './chain'
 import { usePortfolio } from './portfolio'
@@ -104,6 +105,34 @@ export function VaultPage({ account }: { account: LocalAccount }) {
   return (
     <>
       <Header title="Vault" />
+      <div className="cards-grid three" style={{ marginBottom: 14 }}>
+        <Card variant="stat" i={0}>
+          <div className="k">Yours</div>
+          <div className="n"><CountUp value={mine.reduce((n, h) => n + h.count, 0)} /></div>
+          <div className="s">in the vault</div>
+        </Card>
+        <Card variant="stat" i={1}>
+          <div className="k">Deposits</div>
+          <div className="n"><CountUp value={deps.length} /></div>
+          <div className="s">started here</div>
+        </Card>
+        <Card variant="stat" i={2}>
+          <div className="k">Cards</div>
+          <div className="n"><CountUp value={catalog.length} /></div>
+          <div className="s">you can vault</div>
+        </Card>
+      </div>
+      <section>
+        <div className="shelf-head"><span className="cap">Pick a card to vault</span><span className="fine">{catalog.length} cards</span></div>
+        <div className="shelf">
+          {catalog.map((c, i) => (
+            <Card key={c.specId.toString()} variant="action" i={i} className="shelf-card" tilt={false} onClick={() => setPick(i)}>
+              <span className="t" style={{ fontSize: 14, lineHeight: '18px' }}>{c.title.replace(c.set.split(' · ')[0] + ' ', '')}</span>
+              <span className="s">{c.set.replace(' · ', ' ')}{pick === i ? ' · selected' : ''}</span>
+            </Card>
+          ))}
+        </div>
+      </section>
       <section className="panel rise">
         <div className="item">
           <Slab name={name} size="xs" />
