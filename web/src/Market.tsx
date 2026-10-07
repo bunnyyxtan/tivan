@@ -648,7 +648,7 @@ function SalesTable({ fills, source, loading }: { fills: Fill[]; source?: 'envio
 }
 
 /** Front and slab views of one card. Zoom follows the pointer, or the arrow keys once switched on with Z or the button. */
-function Viewer({ s }: { s: Sku }) {
+export function Viewer({ s }: { s: { name: string; sku: string } }) {
   const [view, setView] = useState<'front' | 'slab'>('front')
   const [zoom, setZoom] = useState(false)
   const [at, setAt] = useState({ x: 50, y: 50 })
