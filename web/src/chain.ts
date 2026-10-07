@@ -99,6 +99,8 @@ export type Sku = {
   vaulted: number
   bid?: number
   ask?: number
+  /** Price of the most recent sale, in dollars. Needs the indexer; undefined when there is none or it is unavailable. */
+  last?: number
 }
 
 type Listed = { sku: Hex; token: Address; market: Address; name: string }
@@ -215,7 +217,19 @@ async function fetchSkus(): Promise<Sku[]> {
     }),
   )
   // Only cards in the catalog are shown; retired markets stay on-chain but out of sight.
-  return all.filter((s) => catalogOf(s.name))
+  const last = await lastSales()
+  return all.filter((s) => catalogOf(s.name)).map((s) => ({ ...s, last: last.get(s.sku.toLowerCase()) }))
+}
+
+/** The last sale per card from Envio in one query. Empty when no indexer is set or it is down. */
+async function lastSales(): Promise<Map<string, number>> {
+  if (!indexerUrl) return new Map()
+  try {
+    const { Market } = await gql<{ Market: { sku: string; lastPriceCents: string | number | null }[] }>('{ Market { sku lastPriceCents } }')
+    return new Map(Market.filter((m) => m.lastPriceCents).map((m) => [m.sku.toLowerCase(), Number(m.lastPriceCents) / 100]))
+  } catch {
+    return new Map()
+  }
 }
 
 const tradeEvent = parseAbiItem('event Trade(uint40 orderId, address makerAddress, bool isBuy, uint256 price, uint96 updatedSize, address takerAddress, address txOrigin, uint96 filledSize)')
