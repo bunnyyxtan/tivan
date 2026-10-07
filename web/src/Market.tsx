@@ -7,7 +7,7 @@ import { usePortfolio } from './portfolio'
 import { ActivityFeed, FoundingCollectors } from './Feed'
 import { priceCard, shareCard } from './share'
 import { CashPill, type Acct } from './App'
-import { Card, CountUp, useFlip, usePrefs } from './fx'
+import { Card, CountUp, Spark, useFlip, usePrefs } from './fx'
 import { Header, Roll, Slab, Steps, Toast, cardSub, cardTitle, delta, parseName, useFlow, usePoll, useTint, useWatch, usd } from './ui'
 
 type Sort = 'featured' | 'high' | 'low' | 'spread' | 'name'
@@ -369,6 +369,28 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
               {buttons}
             </div>
             {s.ask && <AlertRow s={s} flash={flash} />}
+            <div className="cards-grid" style={{ marginTop: 14 }}>
+              <Card variant="stat" i={0}>
+                <div className="k">Spread</div>
+                <div className="n">{gap !== undefined ? <CountUp value={gap} format={(n) => usd(Math.round(n))} /> : '—'}</div>
+                <div className="s">{gap !== undefined && s.ask ? `${((gap / s.ask) * 100).toFixed(1)}% of the ask` : 'Needs a bid and an ask'}</div>
+              </Card>
+              <Card variant="stat" i={1}>
+                <div className="k">Last sale</div>
+                <div className="n" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>{fills.length ? usd(fills.at(-1)!.price) : '—'}<Spark points={fills.map((f) => f.price)} /></div>
+                <div className="s">{fills.length ? `${fills.length} sale${fills.length === 1 ? '' : 's'} on record` : 'No sales yet'}</div>
+              </Card>
+              <Card variant="stat" i={2}>
+                <div className="k">In the vault</div>
+                <div className="n"><CountUp value={s.vaulted} /></div>
+                <div className="s">Slabs backing the tokens</div>
+              </Card>
+              <Card variant="status" i={3}>
+                <div className="k">Live order book</div>
+                <div className="n" style={{ fontSize: 20 }}>{book.bids.length} {book.bids.length === 1 ? 'bid' : 'bids'} · {book.asks.length} {book.asks.length === 1 ? 'ask' : 'asks'}</div>
+                <div className="s">Live from {net.chain.name}</div>
+              </Card>
+            </div>
             {own > 0 && (
               <div className="kv" style={{ marginTop: 10, borderTop: '1px solid var(--line)' }}>
                 <span>You own {own}</span>
@@ -410,6 +432,8 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
           </div>
         </section>
 
+        <MoreLike sku={sku} name={s.name} />
+
         {live && (
           <div className="sticky-bar mobile-only" style={{ marginTop: 24 }}>
             <div>{buttons}</div>
@@ -420,6 +444,29 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
       {toast && <Toast text={toast} />}
     </div>
     </>
+  )
+}
+
+/** Other cards in the same category, as a shelf. */
+function MoreLike({ sku, name }: { sku: string; name: string }) {
+  const { data } = usePoll(loadSkus, 20000, [])
+  const cat = categoryOf(name)
+  const items = (data ?? []).filter((x) => x.sku !== sku && categoryOf(x.name) === cat).slice(0, 8)
+  if (items.length < 1) return null
+  return (
+    <section>
+      <div className="shelf-head"><span className="cap">More {cat}</span><span className="fine">{items.length} cards</span></div>
+      <div className="shelf">
+        {items.map((x, n) => (
+          <Card key={x.sku} variant="feature" href={`#/card/${x.sku}`} i={n} className="shelf-card" tilt={false}>
+            <div className="gc-art"><Slab name={x.name} size="md" /></div>
+            <div className="gc-title">{cardTitle(x.name)}</div>
+            <div className="gc-sub">{cardSub(x.name)}</div>
+            <div className="gc-px"><b>{x.ask ? usd(x.ask) : '—'}</b><span>{x.bid ? `Offer ${usd(x.bid)}` : 'no offers'}</span></div>
+          </Card>
+        ))}
+      </div>
+    </section>
   )
 }
 
