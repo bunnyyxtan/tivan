@@ -1,5 +1,5 @@
 import { createPublicClient, createWalletClient, encodeAbiParameters, getAddress, http, keccak256, parseAbi, parseAbiItem, type Account, type Address, type Hex } from 'viem'
-import { house, indexerUrl, net } from './config'
+import { catalogOf, house, indexerUrl, net } from './config'
 
 // NOTE: public Monad RPCs allow roughly 15-25 requests/sec per IP each (batched calls count individually). Every call
 // goes through one client-side limiter with a budget per endpoint: reads take whichever endpoint has room, writes and
@@ -195,7 +195,7 @@ async function fetchSkus(): Promise<Sku[]> {
   if (!net.vault) return []
   const listed = await listedSkus()
   const top = (market: Address) => (market === ZERO ? Promise.resolve([0n, 0n] as const) : pub.readContract({ address: market, abi: bookAbi, functionName: 'bestBidAsk' }))
-  return Promise.all(
+  const all = await Promise.all(
     listed.map(async (s) => {
       const info = pub.readContract({
         address: net.vault!,
@@ -214,6 +214,8 @@ async function fetchSkus(): Promise<Sku[]> {
       }
     }),
   )
+  // Only cards in the catalog are shown; retired markets stay on-chain but out of sight.
+  return all.filter((s) => catalogOf(s.name))
 }
 
 const tradeEvent = parseAbiItem('event Trade(uint40 orderId, address makerAddress, bool isBuy, uint256 price, uint96 updatedSize, address takerAddress, address txOrigin, uint96 filledSize)')
