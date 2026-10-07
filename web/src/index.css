@@ -344,3 +344,114 @@ label.lab { display: flex; flex-direction: column; gap: 8px; font-size: 13px; fo
 .sheet { background: var(--surface); border: 1px solid var(--line); border-radius: 28px 28px 0 0; padding: 12px 20px 24px; margin: auto -20px 0; }
 .sheet-handle { display: block; width: 36px; height: 4px; border-radius: 2px; background: var(--line2); margin: 0 auto 6px; }
 @media (min-width: 960px) { .sheet { border-radius: 28px; margin: 0; } .sheet-page { min-height: 0; } }
+
+/* ===================================================================== alive: motion tokens */
+:root {
+  --ease: cubic-bezier(0.22, 0.8, 0.24, 1);
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --glow: light-dark(rgba(194, 65, 12, 0.22), rgba(255, 122, 69, 0.3));
+}
+@supports (transition-timing-function: linear(0, 1)) {
+  :root { --spring: linear(0, 0.009, 0.035 2.1%, 0.141 4.4%, 0.723 12.9%, 0.938 16.7%, 1.017 19.9%, 1.077 23.1%, 1.121 26.5%, 1.149 30.4%, 1.159 34.2%, 1.15 38.5%, 1.04 51.8%, 1.003 58.3%, 0.99 64.6%, 0.999 78.3%, 1); }
+}
+body { background: transparent; }
+#root { position: relative; }
+
+/* ---- background: orbs take the page tint, faint grid, drifting dust, light parallax (transform and opacity only) */
+.aurora { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; contain: strict; }
+html[data-aurora='false'] .aurora { display: none; }
+.aurora .layer { position: absolute; inset: -12%; transform: translate3d(calc(var(--px, 0) * var(--k) * 1px), calc(var(--py, 0) * var(--k) * 1px), 0); transition: transform 0.7s var(--ease); }
+.aurora .l1 { --k: -30; } .aurora .l2 { --k: 20; } .aurora .l3 { --k: -12; }
+.orb { position: absolute; border-radius: 50%; filter: blur(90px); will-change: transform; }
+.o1 { width: 62vmax; height: 62vmax; left: -10vmax; top: -18vmax; background: var(--btn); opacity: light-dark(0.14, 0.2); animation: drift1 34s ease-in-out infinite alternate; }
+.o2 { width: 48vmax; height: 48vmax; right: -14vmax; top: 22vh; background: color-mix(in oklab, var(--btn) 55%, var(--tx2)); opacity: light-dark(0.1, 0.15); animation: drift2 41s ease-in-out infinite alternate; }
+.o3 { width: 40vmax; height: 40vmax; left: 20vw; bottom: -22vmax; background: color-mix(in oklab, var(--btn) 70%, var(--up)); opacity: light-dark(0.08, 0.12); animation: drift3 47s ease-in-out infinite alternate; }
+@keyframes drift1 { to { transform: translate3d(14vmax, 9vmax, 0) scale(1.18); } }
+@keyframes drift2 { to { transform: translate3d(-12vmax, -8vmax, 0) scale(0.86); } }
+@keyframes drift3 { to { transform: translate3d(10vmax, -12vmax, 0) scale(1.22); } }
+.gridlines { position: absolute; inset: 0; opacity: 0.55; background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 56px 56px; -webkit-mask-image: radial-gradient(ellipse at 50% 24%, #000 10%, transparent 68%); mask-image: radial-gradient(ellipse at 50% 24%, #000 10%, transparent 68%); animation: gridPulse 9s ease-in-out infinite alternate; }
+@keyframes gridPulse { from { opacity: 0.3; } to { opacity: 0.7; } }
+.dust { position: absolute; left: var(--x); bottom: -12px; width: var(--s); height: var(--s); border-radius: 50%; background: var(--btn); opacity: 0; animation: dust var(--d) linear var(--w) infinite; }
+@keyframes dust { 0% { transform: translate3d(0, 0, 0); opacity: 0; } 12% { opacity: 0.5; } 100% { transform: translate3d(18px, -108vh, 0); opacity: 0; } }
+html[data-motion='calm'] .dust { display: none; }
+@media (max-width: 700px) { .dust:nth-of-type(n + 9) { display: none; } .orb { filter: blur(60px); } }
+
+/* ---- entrance: sections, rows and cards rise in as they scroll into view, staggered */
+.rv { transition: opacity 0.55s var(--ease), transform 0.7s var(--spring); transition-delay: calc(var(--i, 0) * 55ms); }
+.rv.done { transition-delay: 0ms; }
+html:not([data-motion='off']) .rv:not(.in) { opacity: 0; transform: translate3d(0, 18px, 0) scale(0.985); }
+.page { animation: pageIn 0.5s var(--ease) backwards; }
+@keyframes pageIn { from { opacity: 0; } }
+
+/* ---- spring micro-interactions on everything pressable */
+.btn, .ghost, .pill, .cash-pill, .tabbar a, .chips button, .seg button, .mrow, .check, .switch { transition: transform 0.5s var(--spring), background-color 0.16s, color 0.16s, border-color 0.16s, box-shadow 0.3s var(--ease); }
+.btn:active, .ghost:active, .pill:active, .cash-pill:active, .tabbar a:active, .chips button:active, .seg button:active { transform: scale(0.94); transition-duration: 0.1s; }
+@media (hover: hover) {
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 26px -12px var(--glow); }
+  .pill:hover, .chips button:hover, .ghost.line:hover { transform: translateY(-1px); }
+}
+.chips button[aria-pressed='true'], .seg button.on { animation: pop 0.45s var(--spring); }
+@keyframes pop { 0% { transform: scale(0.9); } 100% { transform: scale(1); } }
+.toast { animation: toastIn 0.55s var(--spring) both; }
+@keyframes toastIn { from { opacity: 0; transform: translate3d(0, 26px, 0) scale(0.94); } }
+.skeleton { background: linear-gradient(100deg, var(--quiet2) 28%, color-mix(in oklab, var(--quiet2), var(--tx) 9%) 50%, var(--quiet2) 72%); background-size: 220% 100%; animation: shimmer 1.5s linear infinite; }
+@keyframes shimmer { to { background-position: -220% 0; } }
+
+/* ---- Card primitive: pointer glow border, tilt, lift. Variants: stat, action, status, feature, list, empty */
+.fx-card { position: relative; display: block; width: 100%; text-align: left; color: inherit; text-decoration: none; padding: 16px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); overflow: hidden; isolation: isolate; cursor: default;
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(var(--lift, 0px)); transition: transform 0.5s var(--spring), opacity 0.3s, border-color 0.25s, box-shadow 0.35s var(--ease); will-change: transform; }
+.fx-card.rv { transition: opacity 0.55s var(--ease) calc(var(--i, 0) * 55ms), transform 0.7s var(--spring) calc(var(--i, 0) * 55ms), border-color 0.25s, box-shadow 0.35s var(--ease); }
+.fx-card.rv.done { transition: transform 0.5s var(--spring), opacity 0.3s, border-color 0.25s, box-shadow 0.35s var(--ease); }
+a.fx-card, button.fx-card { cursor: pointer; }
+.fx-card::before { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none; opacity: 0; transition: opacity 0.3s;
+  background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 0%), var(--btn), transparent 62%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+.fx-card::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0; transition: opacity 0.3s; background: radial-gradient(280px circle at var(--mx, 50%) var(--my, 0%), color-mix(in oklab, var(--btn) 15%, transparent), transparent 70%); }
+@media (hover: hover) { .fx-card:hover { --lift: -3px; box-shadow: 0 16px 42px -20px var(--glow); } .fx-card:hover::before, .fx-card:hover::after { opacity: 1; } }
+.fx-card:active { --lift: 0px; transform: perspective(900px) scale(0.975); transition-duration: 0.12s; }
+.fx-card:focus-visible { outline: 2px solid var(--tx); outline-offset: 2px; }
+.fx-card .k { font-size: 11px; font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase; color: var(--tx2); }
+.fx-card .n { font-size: 30px; font-weight: 300; letter-spacing: -0.035em; line-height: 1.1; margin-top: 6px; font-variant-numeric: tabular-nums; }
+.fx-card .s { font-size: 13px; color: var(--tx2); margin-top: 4px; line-height: 18px; }
+.v-action { display: flex; flex-direction: column; justify-content: space-between; gap: 10px; min-height: 92px; padding: 14px 16px; }
+.v-action .t { font-size: 16px; font-weight: 500; }
+.v-action .go { align-self: flex-end; font-size: 18px; color: var(--tx2); transition: transform 0.4s var(--spring), color 0.2s; }
+.v-action:hover .go { transform: translateX(4px); color: var(--tx); }
+.v-status { padding-left: 20px; }
+.v-status::before { opacity: 1; inset: 0 auto 0 0; width: 4px; padding: 0; border-radius: 0; background: var(--btn); -webkit-mask: none; mask: none; }
+.v-feature { padding: 20px; background: linear-gradient(140deg, color-mix(in oklab, var(--btn) 20%, var(--surface)), var(--surface) 70%); }
+.v-feature .n { font-size: 40px; }
+.v-list { padding: 6px 16px; }
+.v-empty { text-align: center; padding: 28px 18px; border-style: dashed; background: transparent; color: var(--tx2); }
+.cards-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.cards-grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (min-width: 960px) { .cards-grid.stats { grid-template-columns: repeat(4, minmax(0, 1fr)); } .cards-grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* ---- rings, sparklines, live dots */
+.ring { position: relative; display: inline-grid; place-items: center; flex-shrink: 0; }
+.ring svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring-bg { fill: none; stroke: var(--line2); stroke-width: 3.4; }
+.ring-fg { fill: none; stroke: var(--btn); stroke-width: 3.4; stroke-linecap: round; transition: stroke-dashoffset 1.2s var(--ease); }
+.ring-in { position: relative; font-size: 13px; font-weight: 600; }
+.spark path { fill: none; stroke: var(--btn); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 1.3s var(--ease) 0.2s forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+
+/* ---- motion levels. calm: no parallax, tilt or dust. off: nothing moves (also the default under prefers-reduced-motion) */
+html[data-motion='off'] *, html[data-motion='off'] *::before, html[data-motion='off'] *::after { animation: none !important; transition-duration: 0.01ms !important; transition-delay: 0ms !important; scroll-behavior: auto !important; }
+html[data-motion='off'] .spark path { stroke-dashoffset: 0; }
+@media (max-width: 700px) { .fx-card { --rx: 0deg !important; --ry: 0deg !important; } }
+
+/* ---- background accent: its own colour so neutral pages glow warm instead of white; always low strength for readability */
+:root { --aura: light-dark(#d9602f, #ff7a45); }
+:root[data-tint] { --aura: var(--btn); }
+.o1 { background: var(--aura); opacity: light-dark(0.1, 0.15); }
+.o2 { background: color-mix(in oklab, var(--aura) 60%, var(--tx2)); opacity: light-dark(0.07, 0.1); }
+.o3 { background: color-mix(in oklab, var(--aura) 70%, var(--up)); opacity: light-dark(0.06, 0.08); }
+.dust { background: var(--aura); }
+.v-feature { background: linear-gradient(140deg, color-mix(in oklab, var(--aura) 14%, var(--surface)), var(--surface) 70%); }
+:is(.grid-card, .shelf-card) .gc-px { flex-wrap: wrap; column-gap: 8px; }
+
+/* light-dark() accepts colours only, so the orb strength lives in the colour's alpha */
+.o1 { opacity: 1; background: light-dark(color-mix(in oklab, var(--aura) 14%, transparent), color-mix(in oklab, var(--aura) 20%, transparent)); }
+.o2 { opacity: 1; background: light-dark(color-mix(in oklab, color-mix(in oklab, var(--aura) 60%, var(--tx2)) 10%, transparent), color-mix(in oklab, color-mix(in oklab, var(--aura) 60%, var(--tx2)) 15%, transparent)); }
+.o3 { opacity: 1; background: light-dark(color-mix(in oklab, color-mix(in oklab, var(--aura) 70%, var(--up)) 8%, transparent), color-mix(in oklab, color-mix(in oklab, var(--aura) 70%, var(--up)) 12%, transparent)); }
+
