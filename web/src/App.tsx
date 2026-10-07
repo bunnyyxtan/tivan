@@ -20,6 +20,7 @@ import { scrollFor, useWide } from './route'
 import { Browse, Compare, Discover } from './Browse'
 import { SearchBox, Shortcuts, openShortcuts } from './desk'
 import { Activity, Portfolio } from './Holdings'
+import { Onboard, useOnboardWide } from './Onboard'
 
 function useHash() {
   const [h, setH] = useState(location.hash)
@@ -149,6 +150,7 @@ export function CashPill({ account }: { account: Acct }) {
 }
 
 function SignIn({ onReady, onGuest, inline }: { onReady: (a: LocalAccount) => void; onGuest?: () => void; inline?: boolean }) {
+  const desk = useOnboardWide()
   const [err, setErr] = useState<string>()
   const [busy, setBusy] = useState(false)
   const returning = !!savedPasskey()
@@ -205,6 +207,7 @@ function SignIn({ onReady, onGuest, inline }: { onReady: (a: LocalAccount) => vo
         {actions}
       </div>
     )
+  if (desk && onGuest) return <Onboard onReady={onReady} onGuest={onGuest} />
   return (
     <div className="signin">
       <div className="signin-top">
