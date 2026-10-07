@@ -14,7 +14,7 @@ import { logActivity, useActivity, when } from './activity'
 import { askPermission, notifyState, useAlertWatcher } from './alerts'
 import { Redeem, VaultPage, drip } from './Vault'
 import { usePortfolio } from './portfolio'
-import { Header, Slab, Steps, delta, getTheme, setTheme, short, useFlow, useTint, usd, type Theme } from './ui'
+import { Header, Slab, Steps, delta, getTheme, setTheme, short, useFlow, useTint, usd } from './ui'
 
 function useHash() {
   const [h, setH] = useState(location.hash)
@@ -216,7 +216,7 @@ function You({ account, onSignOut }: { account: LocalAccount; onSignOut: () => v
   const { data, totalCash, bidCash, refresh } = usePortfolio(me, true)
   const flow = useFlow()
   const [copied, setCopied] = useState(false)
-  const [theme, setT] = useState<Theme>(getTheme)
+  const theme = getTheme()
   const [notif, setNotif] = useState(notifyState)
   const recent = useActivity(me)
   const [prefs, setPrefs] = usePrefs()
@@ -387,7 +387,7 @@ function You({ account, onSignOut }: { account: LocalAccount; onSignOut: () => v
             <span>Appearance</span>
             <span className="seg" role="radiogroup" aria-label="Appearance">
               {(['auto', 'light', 'dark'] as const).map((t) => (
-                <button key={t} role="radio" aria-checked={theme === t} className={theme === t ? 'on' : ''} onClick={() => (setTheme(t), setT(t))}>
+                <button key={t} role="radio" aria-checked={theme === t} className={theme === t ? 'on' : ''} onClick={() => (setTheme(t), setPrefs({}))}>
                   {t[0].toUpperCase() + t.slice(1)}
                 </button>
               ))}
