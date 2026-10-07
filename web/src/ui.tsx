@@ -1,4 +1,4 @@
-import { CardImage } from './fx'
+import { CardImage, SettingsButton, readPrefs, usePrefs } from './fx'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { explorerTx } from './chain'
 import { friendlyError } from './account'
@@ -35,11 +35,14 @@ export const cardSub = (name: string) => {
 
 /** The page takes its colour from the card on it (solid tones, see index.css [data-tint]). */
 export function useTint(name: string | undefined) {
+  const [p] = usePrefs()
   useEffect(() => {
+    if (p.skin !== 'card') return // a fixed colour theme was chosen in Settings
     const t = name ? catalogOf(name)?.tint : undefined
     if (t) document.documentElement.dataset.tint = t
-    return () => void delete document.documentElement.dataset.tint
-  }, [name])
+    // Only clear it while pages own the tint; a fixed colour theme keeps its own.
+    return () => void (readPrefs().skin === 'card' && delete document.documentElement.dataset.tint)
+  }, [name, p.skin])
 }
 
 export type Theme = 'auto' | 'light' | 'dark'
@@ -203,7 +206,10 @@ export const Header = ({ title, back, backLabel, right }: { title?: ReactNode; b
       <h1 className="page-title">{title}</h1>
     )}
     {back && title ? <span className="topbar-title">{title}</span> : null}
-    <div className="topbar-right">{right}</div>
+    <div className="topbar-right">
+      {right}
+      {!back && <SettingsButton className="mobile-only" />}
+    </div>
   </header>
 )
 

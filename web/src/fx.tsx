@@ -1,9 +1,11 @@
 import { createElement, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react'
 
 // ---- preferences: motion level, background, list density and view. Saved in this browser, applied as <html> attributes.
-export type Prefs = { motion: 'full' | 'calm' | 'off'; aurora: boolean; dense: boolean; view: 'list' | 'grid' }
+export type Skin = 'card' | 'neutral' | 'char' | 'pika' | 'lbj' | 'mj' | 'lotus' | 'blue' | 'green'
+export type Prefs = { motion: 'full' | 'calm' | 'off'; aurora: boolean; dense: boolean; view: 'list' | 'grid'; skin: Skin }
 const KEY = 'tivan.prefs'
-const defaults = (): Prefs => ({ motion: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'off' : 'full', aurora: true, dense: false, view: 'grid' })
+const defaults = (): Prefs => ({ motion: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'off' : 'full', aurora: true, dense: false, view: 'grid', skin: 'card' })
+export const defaultPrefs = defaults
 export const readPrefs = (): Prefs => {
   try {
     return { ...defaults(), ...JSON.parse(localStorage.getItem(KEY) ?? '{}') }
@@ -16,6 +18,10 @@ const apply = (p: Prefs) => {
   d.motion = p.motion
   d.aurora = String(p.aurora)
   d.dense = String(p.dense)
+  d.skin = p.skin
+  // A fixed colour theme sets the page tint itself; "follow the card" lets each page choose (useTint).
+  if (p.skin === 'card' || p.skin === 'neutral') delete d.tint
+  else d.tint = p.skin
 }
 apply(readPrefs())
 const PREFS_EVT = 'tivan-prefs'
@@ -218,3 +224,22 @@ export function CardImage({ src, alt }: { src?: string; alt: string }) {
     </span>
   )
 }
+
+// ---- colour themes (the same palettes the card pages use) and the Settings button, which needs no account
+export const skins: { id: Skin; label: string; bg?: string; accent?: string }[] = [
+  { id: 'card', label: 'Follow the card' },
+  { id: 'neutral', label: 'Neutral', bg: '#12100e', accent: '#f6f1ec' },
+  { id: 'char', label: 'Ember', bg: '#1d110b', accent: '#ff7a45' },
+  { id: 'pika', label: 'Gold', bg: '#1a170a', accent: '#f5c842' },
+  { id: 'lbj', label: 'Rose', bg: '#1a0e11', accent: '#f08aa3' },
+  { id: 'mj', label: 'Crimson', bg: '#1b0d0c', accent: '#ff8a7a' },
+  { id: 'lotus', label: 'Sage', bg: '#0e110f', accent: '#bfe0c8' },
+  { id: 'blue', label: 'Ocean', bg: '#0b111d', accent: '#6aa4ff' },
+  { id: 'green', label: 'Forest', bg: '#0c130e', accent: '#6fdc96' },
+]
+export const openSettings = () => window.dispatchEvent(new Event('tivan-settings'))
+export const SettingsButton = ({ className = '' }: { className?: string }) => (
+  <button className={`ghost line settings-btn ${className}`} onClick={openSettings} aria-haspopup="dialog">
+    Settings
+  </button>
+)
