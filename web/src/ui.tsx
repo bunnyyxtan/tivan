@@ -54,7 +54,7 @@ export function useWatch() {
 }
 
 /** A graded slab: acrylic case, grader label, the card photo (or an honest placeholder). Tilts under the pointer. */
-export function Slab({ name, size = 'md', vt }: { name: string; size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'; vt?: string }) {
+export function Slab({ name, size = 'md', vt, alt }: { name: string; size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'; vt?: string; alt?: string }) {
   const { grader, grade, title } = parseName(name)
   const c = catalogOf(name)
   const [setName, year] = c?.set.split(' · ') ?? []
@@ -70,7 +70,7 @@ export function Slab({ name, size = 'md', vt }: { name: string; size?: 'xs' | 's
           </div>
         )}
         {size === 'xs' || size === 'sm' ? <i className="slab-strip" /> : null}
-        <CardImage src={c?.imageUrl} alt={`${cardTitle(name)}, ${grader} ${grade}`.trim()} label={cardTitle(name)} />
+        <CardImage src={c?.imageUrl} alt={alt ?? `${cardTitle(name)}, ${grader} ${grade}`.trim()} label={cardTitle(name)} />
       </div>
     </div>
   )
