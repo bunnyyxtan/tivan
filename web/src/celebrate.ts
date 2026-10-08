@@ -3,7 +3,7 @@ import type { TxKind } from './tx'
 // The moment an action settles: a short confetti burst and, the first time, a badge. Motion respects the device and the
 // app's Reduce motion setting; the badge and the words carry the meaning on their own.
 
-const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.dataset.motion === 'off'
+export const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.dataset.motion === 'off'
 
 /** A one-second burst of paper from the centre of the screen, drawn on a canvas that removes itself. */
 export function confetti() {

@@ -1,73 +1,238 @@
-import { useEffect, useRef, useState } from 'react'
-import { brand, net } from './config'
-import { explorerAddress, loadSkus, type Sku } from './chain'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { brand, catalog, net } from './config'
+import { explorerAddress, loadSkus, pub, readBook, type FeedItem, type Sku } from './chain'
 import { cents, usdC } from './cardParts'
-import { useSales } from './desk'
+import { confetti, still } from './celebrate'
+import { ago, useSales } from './desk'
+import { aggregate } from './logic/orders.ts'
+import { formatQty } from './logic/money.ts'
 import { openPalette } from './Palette'
 import { IconChevron, IconSearch } from './icons'
 import { Slab, cardTitle, parseName, usePoll } from './ui'
 
-// The public front door, shown at the site root to visitors. Built to the owner's reference: a poster-style hero, a
-// popular-markets carousel, a crossing marquee, a popular-cards grid, a call to action and a footer. Every name and
-// price is live; nothing here is invented.
+// The public front door, shown at the site root to visitors. A poster-style hero over a moving wall of cards, a live
+// trade ticker, a popular-markets carousel, a live order book, crossing marquee ribbons, a popular-cards grid, a
+// pull-a-card toy, a call to action and a footer. Every name, price, block and trade is live; nothing here is invented.
 
 const PSA: Record<string, string> = { '10': 'Gem Mint', '9': 'Mint', '8': 'NM-MT', '7': 'Near Mint', '6': 'EX-MT', '5': 'Excellent', '4': 'VG-EX', '3': 'Very Good', '2': 'Good', '1': 'Poor' }
-const gradeLabel = (s: Sku) => `${parseName(s.name).grader} ${parseName(s.name).grade} · ${PSA[parseName(s.name).grade] ?? ''}`.trim()
+const gradeLabel = (name: string) => `${parseName(name).grader} ${parseName(name).grade} · ${PSA[parseName(name).grade] ?? ''}`.trim()
 const price = (s: Sku) => (s.ask ? usdC(cents(s.ask)) : s.last ? usdC(cents(s.last)) : 'No ask')
 
-function Hero({ list }: { list: Sku[] }) {
+/** Pointer tilt with a moving holographic shine. Off on touch screens and when motion is reduced. */
+function Holo({ children, className = '' }: { children: ReactNode; className?: string }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el || still() || matchMedia('(hover: none)').matches) return
+    let raf = 0
+    const move = (e: PointerEvent) => {
+      const r = el.getBoundingClientRect()
+      const x = (e.clientX - r.left) / r.width
+      const y = (e.clientY - r.top) / r.height
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => {
+        el.style.setProperty('--mx', `${x * 100}%`)
+        el.style.setProperty('--my', `${y * 100}%`)
+        el.style.setProperty('--rx', `${(0.5 - y) * 18}deg`)
+        el.style.setProperty('--ry', `${(x - 0.5) * 22}deg`)
+        el.classList.add('tilting')
+      })
+    }
+    const leave = () => {
+      cancelAnimationFrame(raf)
+      el.classList.remove('tilting')
+      for (const p of ['--mx', '--my', '--rx', '--ry']) el.style.removeProperty(p)
+    }
+    el.addEventListener('pointermove', move)
+    el.addEventListener('pointerleave', leave)
+    return () => (cancelAnimationFrame(raf), el.removeEventListener('pointermove', move), el.removeEventListener('pointerleave', leave))
+  }, [])
+  return (
+    <span ref={ref} className={`lp-holo ${className}`}>
+      {children}
+      <i className="lp-shine" aria-hidden />
+    </span>
+  )
+}
+
+/** The chain's latest block, read every few seconds. */
+function useBlock() {
+  const [b, setB] = useState<bigint>()
+  useEffect(() => {
+    let live = true
+    const read = () => pub.getBlockNumber().then((x) => live && setB(x), () => {})
+    read()
+    const id = setInterval(read, 3000)
+    return () => ((live = false), clearInterval(id))
+  }, [])
+  return b
+}
+
+/** Columns of card art drifting up and down on a tilted plane. Decorative; the pictures are reference art. */
+function Wall({ cols = 6 }: { cols?: number }) {
+  const imgs = catalog.map((c) => c.imageUrl)
+  return (
+    <div className="lp-wall" aria-hidden>
+      <div className="lp-wall-plane">
+        {Array.from({ length: cols }, (_, c) => {
+          const col = [...imgs.slice((c * 5) % imgs.length), ...imgs].slice(0, 6)
+          return (
+            <div key={c} className="lp-col">
+              <div className="lp-col-run">
+                {[...col, ...col].map((src, k) => (
+                  <img key={k} src={src} alt="" loading="lazy" decoding="async" />
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+type Chip = { key: string; name: string; label: string; amount: string; when?: string }
+/** The latest real trades as chips floating around the hero card; asks when the trade feed is unavailable. */
+function liveChips(fills: FeedItem[] | undefined, all: Sku[]): Chip[] {
+  const seen = new Set<string>()
+  const out: Chip[] = []
+  for (const f of fills ?? []) {
+    const k = f.sku.toLowerCase()
+    if (seen.has(k)) continue
+    seen.add(k)
+    out.push({ key: `${k}-${f.t}`, name: f.name, label: 'Just sold', amount: usdC(cents(f.price)), when: ago(f.t) })
+  }
+  if (!out.length) for (const s of all.filter((x) => x.ask)) out.push({ key: s.sku, name: s.name, label: 'Lowest ask', amount: price(s) })
+  return out
+}
+
+function Chips({ items }: { items: Chip[] }) {
+  const [k, setK] = useState(0)
+  useEffect(() => {
+    if (items.length < 4 || still()) return
+    const id = setInterval(() => setK((x) => x + 1), 4200)
+    return () => clearInterval(id)
+  }, [items.length])
+  if (!items.length) return null
+  return (
+    <>
+      {[0, 1, 2].map((slot) => {
+        const c = items[(k + slot) % items.length]
+        if (slot >= items.length) return null
+        return (
+          <span key={`${slot}-${c.key}`} className={`lp-chip c${slot}`}>
+            <Slab name={c.name} size="xs" />
+            <span>
+              <small>{c.label}{c.when ? ` · ${c.when}` : ''}</small>
+              <b>{c.amount}</b>
+              <em>{cardTitle(c.name)} · {parseName(c.name).grader} {parseName(c.name).grade}</em>
+            </span>
+          </span>
+        )
+      })}
+    </>
+  )
+}
+
+function Hero({ list, all, fills }: { list: Sku[]; all: Sku[]; fills?: FeedItem[] }) {
   const [i, setI] = useState(0)
+  const block = useBlock()
   const n = list.length
   const go = (d: number) => n && setI((x) => (x + d + n) % n)
   const at = (k: number) => list[(i + k + n) % n]
-  const s = at(0)
+  const s = n ? at(0) : undefined
+  const vaulted = all.reduce((t, x) => t + x.vaulted, 0)
   return (
-    <section className="lp-hero" aria-label="Tivan">
-      <div className="lp-wrap lp-hero-in">
+    <section className="lp-hero" aria-label={brand}>
+      <div className="lp-aurora" aria-hidden><i /><i /><i /></div>
+      <Wall />
+      <div className="lp-hero-in">
         <div className="lp-hero-copy">
+          <p className="lp-kicker"><span className="lp-pulse" aria-hidden />{all.length ? `${all.length} markets live on ${net.chain.name}` : `Live on ${net.chain.name}`}</p>
           <h1 className="lp-poster">
-            Trade graded
-            <br />
-            cards on a real
-            <br />
-            exchange<span className="lp-bang">!</span>
+            <span className="ln">Trade graded</span>
+            <span className="ln">cards on a real</span>
+            <span className="ln">exchange<span className="lp-bang">!</span></span>
           </h1>
-          <p className="lp-sub">Chase grails!</p>
+          <p className="lp-sub">
+            <span className="lp-words" aria-hidden>
+              <span>Chase grails!</span>
+              <span>Name your price!</span>
+              <span>Sell in a tap!</span>
+              <span>Chase grails!</span>
+            </span>
+            <span className="sr-only">Chase grails, name your price, sell in a tap.</span>
+          </p>
           <p className="lp-lead">Every slab sits in a vault with its own live order book. Buy at the ask, name your price, or sell in a tap. Trades settle on {net.chain.name} in about a second.</p>
           <div className="lp-cta">
             <a className="lp-btn" href="#/markets">Browse markets</a>
             <a className="lp-btn ghost" href="#/sell">Sell a card</a>
           </div>
+          <dl className="lp-stats">
+            <div><dt>Markets</dt><dd>{all.length || '—'}</dd></div>
+            <div><dt>Cards in the vault</dt><dd>{all.length ? formatQty(BigInt(vaulted)) : '—'}</dd></div>
+            <div><dt>Latest block</dt><dd key={String(block)} className="tick">{block ? block.toLocaleString('en-US') : '—'}</dd></div>
+          </dl>
         </div>
-        <div className="lp-hero-art" aria-live="polite">
+        <div className="lp-hero-art">
           {s && (
-            <a key={s.sku} className="lp-stack" href={`#/card/${s.sku}`} aria-label={`${cardTitle(s.name)}, ${gradeLabel(s)}, ${price(s)}`}>
-              <span className="lp-back b1"><Slab name={at(1).name} size="lg" /></span>
-              <span className="lp-back b2"><Slab name={at(-1).name} size="lg" /></span>
-              <span className="lp-front"><Slab name={s.name} size="xl" /></span>
+            <div className="lp-stage" aria-live="polite">
+              <span className="lp-ring" aria-hidden />
+              <span className="lp-back b1" aria-hidden><Slab name={at(1).name} size="lg" /></span>
+              <span className="lp-back b2" aria-hidden><Slab name={at(-1).name} size="lg" /></span>
+              <a key={s.sku} className="lp-front" href={`#/card/${s.sku}`} aria-label={`${cardTitle(s.name)}, ${gradeLabel(s.name)}, ${price(s)}`}>
+                <Holo><Slab name={s.name} size="xl" /></Holo>
+              </a>
               <span className="lp-spark" aria-hidden>✦</span>
-              <span className="lp-vert" aria-hidden>{brand}</span>
-              <span className="lp-tag"><b>{price(s)}</b>{cardTitle(s.name)} · {gradeLabel(s)}</span>
-            </a>
+              <span className="lp-spark s2" aria-hidden>✦</span>
+              <span className="lp-tag"><b>{price(s)}</b>{cardTitle(s.name)} · {gradeLabel(s.name)}</span>
+              <Chips items={liveChips(fills, all)} />
+            </div>
+          )}
+          {n > 1 && (
+            <div className="lp-pager">
+              <button className="lp-arrow prev" onClick={() => go(-1)} aria-label="Previous card"><IconChevron /></button>
+              <div className="lp-dots" role="tablist" aria-label="Featured cards">
+                {list.map((x, k) => <button key={x.sku} role="tab" aria-selected={k === i} aria-label={cardTitle(x.name)} onClick={() => setI(k)} />)}
+              </div>
+              <button className="lp-arrow next" onClick={() => go(1)} aria-label="Next card"><IconChevron /></button>
+            </div>
           )}
         </div>
       </div>
-      {n > 1 && (
-        <>
-          <button className="lp-arrow prev" onClick={() => go(-1)} aria-label="Previous card"><IconChevron /></button>
-          <button className="lp-arrow next" onClick={() => go(1)} aria-label="Next card"><IconChevron /></button>
-          <div className="lp-dots" role="tablist" aria-label="Featured cards">
-            {list.map((x, k) => <button key={x.sku} role="tab" aria-selected={k === i} aria-label={cardTitle(x.name)} onClick={() => setI(k)} />)}
-          </div>
-        </>
-      )}
+      <span className="lp-scroll" aria-hidden />
     </section>
   )
 }
 
-function Heading({ children }: { children: string }) {
+/** A running tape of the latest trades, or of asks when the trade feed is unavailable. */
+function Ticker({ fills, all }: { fills?: FeedItem[]; all: Sku[] }) {
+  const items = fills?.length
+    ? fills.slice(0, 18).map((f, k) => ({ k: `${f.sku}-${f.t}-${k}`, name: f.name, side: f.takerBuy ? 'Bought' : 'Sold', up: f.takerBuy, amount: usdC(cents(f.price)), when: ago(f.t) }))
+    : all.filter((s) => s.ask).map((s) => ({ k: s.sku, name: s.name, side: 'Ask', up: true, amount: price(s), when: '' }))
+  if (!items.length) return null
+  const run = items.map((x) => (
+    <span key={x.k} className="lp-tk">
+      <i className={x.up ? 'up' : 'down'} aria-hidden>{x.up ? '▲' : '▼'}</i>
+      <b>{cardTitle(x.name)}</b>
+      <em>{parseName(x.name).grader} {parseName(x.name).grade}</em>
+      <span>{x.side} {x.amount}</span>
+      {x.when && <small>{x.when}</small>}
+    </span>
+  ))
   return (
-    <h2 className="lp-h">
+    <div className="lp-ticker" role="region" aria-label={fills?.length ? 'Latest trades' : 'Lowest asks'}>
+      <span className="lp-ticker-tag"><span className="lp-pulse" aria-hidden />{fills?.length ? 'Live trades' : 'Live asks'}</span>
+      <div className="lp-ticker-view">
+        <div className="lp-ticker-run">{run}<span aria-hidden className="lp-tk-dup">{run}</span></div>
+      </div>
+    </div>
+  )
+}
+
+function Heading({ children, light }: { children: string; light?: boolean }) {
+  return (
+    <h2 className={`lp-h lp-rv ${light ? 'on-dark' : ''}`}>
       <span className="lp-h-mark" aria-hidden />
       {children}
     </h2>
@@ -100,8 +265,10 @@ function Popular({ list }: { list: Sku[] }) {
     return () => (el.removeEventListener('scroll', pick), removeEventListener('resize', pick))
   }, [list.length])
   return (
-    <section className="lp-sec lp-light" aria-labelledby="lp-pop-h">
-      <div className="lp-wrap">
+    <section className="lp-sec lp-light lp-pop-sec" aria-label="Popular markets">
+      <span className="lp-blob a" aria-hidden />
+      <span className="lp-blob b" aria-hidden />
+      <div className="lp-wrap wide">
         <Heading>Popular markets</Heading>
         <div className="lp-carousel">
           <button className="lp-arrow in prev" onClick={() => step(-1)} aria-label="Scroll back"><IconChevron /></button>
@@ -110,14 +277,94 @@ function Popular({ list }: { list: Sku[] }) {
               <a key={s.sku} className={`lp-pop ${k === mid ? 'on' : ''}`} href={`#/card/${s.sku}`}>
                 <span className="lp-pop-art"><Slab name={s.name} size="md" /></span>
                 <b>{cardTitle(s.name)}</b>
-                <small>{gradeLabel(s)}</small>
+                <small>{gradeLabel(s.name)}</small>
+                <span className="lp-pop-price">{price(s)}</span>
                 <span className="lp-mini">View market</span>
               </a>
             ))}
           </div>
           <button className="lp-arrow in next" onClick={() => step(1)} aria-label="Scroll on"><IconChevron /></button>
         </div>
-        <div className="lp-dots light" aria-hidden>{list.slice(0, 5).map((s, k) => <i key={s.sku} className={k === Math.min(mid, 4) ? 'on' : ''} />)}</div>
+      </div>
+    </section>
+  )
+}
+
+/** One market's real order book, read from its contract every few seconds. Rows that change flash. */
+function Exchange({ list }: { list: Sku[] }) {
+  const [pick, setPick] = useState(0)
+  const s = list[Math.min(pick, list.length - 1)]
+  const block = useBlock()
+  const { data, error } = usePoll(async () => (s ? { m: s.market, book: await readBook(s.market) } : undefined), 6000, [s?.market])
+  const book = data && s && data.m === s.market ? data.book : undefined
+  const asks = book ? aggregate(book.asks, 'ask').slice(0, 6) : []
+  const bids = book ? aggregate(book.bids, 'bid').slice(0, 6) : []
+  const spread = asks[0] && bids[0] ? usdC(asks[0].price - bids[0].price) : undefined
+  const steps: [string, string][] = [
+    ['Graded and vaulted', `Each slab is checked against its grader's certificate and held in custody, and one token stands for one slab.${net.name === 'testnet' ? ' On this test network the check and custody are simulated.' : ''}`],
+    ['Its own order book', 'Every card and grade trades on its own Kuru order book. Bids and asks are on chain, where anyone can read them.'],
+    ['Settles in about a second', `Buy at the ask, sell to the best offer, or name your price. Trades settle on ${net.chain.name}, and the token is yours to keep or withdraw.`],
+  ]
+  return (
+    <section className="lp-sec lp-dark lp-ex" aria-label="How it works">
+      <div className="lp-grid-bg" aria-hidden />
+      <div className="lp-wrap wide lp-ex-in">
+        <div className="lp-ex-copy">
+          <Heading light>A real order book for every slab</Heading>
+          <ol className="lp-steps">
+            {steps.map(([t, d], k) => (
+              <li key={t} className="lp-rv" style={{ animationDelay: `${k * 80}ms` }}>
+                <span className="lp-step-n">0{k + 1}</span>
+                <div><b>{t}</b><p>{d}</p></div>
+              </li>
+            ))}
+          </ol>
+        </div>
+        <div className="lp-book lp-rv" aria-live="off">
+          <div className="lp-book-head">
+            {s && <Slab name={s.name} size="sm" />}
+            <div>
+              <b>{s ? cardTitle(s.name) : 'Loading markets'}</b>
+              <small>{s ? gradeLabel(s.name) : ''}</small>
+            </div>
+            <span className="lp-live"><span className="lp-pulse" aria-hidden />Live</span>
+          </div>
+          {list.length > 1 && (
+            <div className="lp-book-tabs" role="tablist" aria-label="Market">
+              {list.map((x, k) => (
+                <button key={x.sku} role="tab" aria-selected={x === s} onClick={() => setPick(k)}>{cardTitle(x.name).split(' ').slice(-1)[0]} {parseName(x.name).grade}</button>
+              ))}
+            </div>
+          )}
+          <div className="lp-ladder">
+            <div className="lp-ladder-h"><span>Price</span><span>Cards</span></div>
+            {error && !book && <p className="lp-ladder-note">The order book is not answering right now.</p>}
+            {!book && !error && <p className="lp-ladder-note">Reading the order book…</p>}
+            {book && (
+              <>
+                {[...asks].reverse().map((r) => (
+                  <div key={`a${r.price}-${r.size}`} className="lp-row ask">
+                    <i style={{ width: `${Number(r.depthBps) / 100}%` }} />
+                    <span>{usdC(r.price, 2)}</span>
+                    <span>{formatQty(r.size)}</span>
+                  </div>
+                ))}
+                <div className="lp-mid">{spread ? <>Spread <b>{spread}</b></> : asks.length || bids.length ? 'One side only' : 'No orders yet'}</div>
+                {bids.map((r) => (
+                  <div key={`b${r.price}-${r.size}`} className="lp-row bid">
+                    <i style={{ width: `${Number(r.depthBps) / 100}%` }} />
+                    <span>{usdC(r.price, 2)}</span>
+                    <span>{formatQty(r.size)}</span>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+          <div className="lp-book-foot">
+            <span>Read from the order book contract{block ? ` · block ${block.toLocaleString('en-US')}` : ''}</span>
+            {s && <a href={`#/card/${s.sku}`}>Trade this card</a>}
+          </div>
+        </div>
       </div>
     </section>
   )
@@ -140,14 +387,14 @@ function Marquee() {
 
 function Cards({ list }: { list: Sku[] }) {
   return (
-    <section className="lp-sec lp-light" aria-labelledby="lp-cards-h">
-      <div className="lp-wrap">
+    <section className="lp-sec lp-light" aria-label="Popular cards">
+      <div className="lp-wrap wide">
         <Heading>Popular cards</Heading>
         <div className="lp-grid">
-          {list.map((s) => (
-            <a key={s.sku} className="lp-card" href={`#/card/${s.sku}`}>
-              <span className="lp-card-art"><Slab name={s.name} size="md" /></span>
-              <b>{gradeLabel(s).split(' · ')[1] || parseName(s.name).grade}</b>
+          {list.map((s, k) => (
+            <a key={s.sku} className="lp-card lp-rv" style={{ animationDelay: `${(k % 4) * 60}ms` }} href={`#/card/${s.sku}`}>
+              <span className="lp-card-art"><Holo><Slab name={s.name} size="md" /></Holo></span>
+              <b>{gradeLabel(s.name).split(' · ')[1] || parseName(s.name).grade}</b>
               <small>{cardTitle(s.name)}</small>
               <span className="lp-card-price">{price(s)}</span>
               <span className="lp-mini">Buy now</span>
@@ -160,17 +407,76 @@ function Cards({ list }: { list: Sku[] }) {
   )
 }
 
+/** A toy: shuffle, flip and reveal a random live market. Nothing is bought. */
+function Pull({ list }: { list: Sku[] }) {
+  const [phase, setPhase] = useState<'idle' | 'shuffle' | 'shown'>('idle')
+  const [s, setS] = useState<Sku>()
+  const timer = useRef(0)
+  useEffect(() => () => clearTimeout(timer.current), [])
+  const pull = () => {
+    if (!list.length || phase === 'shuffle') return
+    const pool = list.length > 1 ? list.filter((x) => x !== s) : list
+    const next = pool[Math.floor(Math.random() * pool.length)]
+    setPhase('shuffle')
+    timer.current = window.setTimeout(() => (setS(next), setPhase('shown'), confetti()), still() ? 0 : 1100)
+  }
+  return (
+    <section className="lp-pull" aria-label="Pull a card">
+      <div className="lp-pull-burst" aria-hidden />
+      <div className="lp-wrap wide lp-pull-in">
+        <div className={`lp-pull-art ${phase}`}>
+          <span className="lp-deck d1" aria-hidden />
+          <span className="lp-deck d2" aria-hidden />
+          <Holo className="lp-flip-holo">
+            <span className="lp-flip">
+              <span className="lp-face front" aria-hidden>
+                <span className="lp-cardback"><b>{brand}</b><small>Graded · Vaulted</small></span>
+              </span>
+              <span className="lp-face back">{s && <Slab name={s.name} size="lg" />}</span>
+            </span>
+          </Holo>
+        </div>
+        <div className="lp-pull-copy">
+          <h2 className="lp-poster md lp-rv">Pull a random grail<span className="lp-bang">!</span></h2>
+          <p>Shuffle the live markets and see what comes out. Every card here is a real market you can trade.</p>
+          <div className="lp-pull-result" aria-live="polite">
+            {phase === 'shown' && s ? (
+              <>
+                <small>You pulled</small>
+                <b>{cardTitle(s.name)}</b>
+                <span>{gradeLabel(s.name)} · <strong>{price(s)}</strong></span>
+              </>
+            ) : (
+              <small>{phase === 'shuffle' ? 'Shuffling…' : 'Your card shows up here.'}</small>
+            )}
+          </div>
+          <div className="lp-cta">
+            <button className="lp-btn dark" onClick={pull} disabled={!list.length || phase === 'shuffle'}>{phase === 'shown' ? 'Pull again' : 'Pull a card'}</button>
+            {phase === 'shown' && s && <a className="lp-btn ghost-dark" href={`#/card/${s.sku}`}>View market</a>}
+          </div>
+          <p className="lp-pull-fine">A random pick from the live markets, just for fun. Nothing is bought until you review and confirm a trade.</p>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 function Cta({ a, b, c }: { a?: Sku; b?: Sku; c?: Sku }) {
   return (
     <section className="lp-cta-band" aria-label="Get started">
-      <div className="lp-wrap lp-cta-in">
+      <Wall cols={11} />
+      <div className="lp-wrap wide lp-cta-in">
         <div className="lp-float" aria-hidden>
           {a && <span className="f1"><Slab name={a.name} size="lg" /></span>}
           {b && <span className="f2"><Slab name={b.name} size="lg" /></span>}
         </div>
         <div className="lp-cta-copy">
-          <h2 className="lp-poster md">Ready to own your first grail?</h2>
-          <a className="lp-btn" href="#/markets">Get your first card</a>
+          <h2 className="lp-poster md lp-rv">Ready to own your first grail?</h2>
+          <p>Sign in with a passkey. No seed phrase, no extension, and browsing never needs an account.</p>
+          <div className="lp-cta">
+            <a className="lp-btn" href="#/markets">Get your first card</a>
+            <a className="lp-btn ghost" href="#/help">How it works</a>
+          </div>
         </div>
       </div>
       {c && <span className="lp-peek" aria-hidden><Slab name={c.name} size="lg" /></span>}
@@ -181,7 +487,7 @@ function Cta({ a, b, c }: { a?: Sku; b?: Sku; c?: Sku }) {
 function Footer() {
   return (
     <footer className="lp-foot">
-      <div className="lp-wrap lp-foot-in">
+      <div className="lp-wrap wide lp-foot-in">
         <div>
           <span className="lp-brand">{brand}</span>
           <p>Graded trading cards held in a vault, each with its own on-chain order book.</p>
@@ -203,6 +509,7 @@ function Footer() {
           {net.name === 'testnet' && <p className="lp-fine">Test network: prices come from an automated market maker; cash and custody are simulated and have no value.</p>}
         </div>
       </div>
+      <div className="lp-foot-word" aria-hidden>{brand}</div>
     </footer>
   )
 }
@@ -219,7 +526,7 @@ export function Landing() {
     <div className="lp">
       {net.name === 'testnet' && <p className="lp-strip">Test network. Prices come from an automated market maker. Cash and custody are simulated.</p>}
       <header className="lp-nav">
-        <div className="lp-wrap lp-nav-in">
+        <div className="lp-wrap wide lp-nav-in">
           <a className="lp-brand" href="#/">{brand}</a>
           <nav aria-label="Primary">
             <a href="#/markets">Markets</a>
@@ -232,10 +539,13 @@ export function Landing() {
           <a className="lp-btn sm" href="#/markets">Open the app</a>
         </div>
       </header>
-      <Hero list={byAsk.slice(0, 6)} />
+      <Hero list={byAsk.slice(0, 6)} all={all} fills={sales.fills} />
+      <Ticker fills={sales.fills} all={all} />
       <Popular list={popular.slice(0, 10)} />
+      <Exchange list={popular.slice(0, 4)} />
       <Marquee />
       <Cards list={popular.slice(0, 8)} />
+      <Pull list={all} />
       <Cta a={byAsk[2]} b={byAsk[0]} c={byAsk[1]} />
       <Footer />
     </div>
