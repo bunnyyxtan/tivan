@@ -9,10 +9,7 @@ const block = (open) => {
 }
 const read = (b) => Object.fromEntries([...b.matchAll(/--([\w-]+):\s*(#[0-9a-fA-F]{6})\b/g)].map((m) => [m[1], m[2]]))
 const dark = read(block(':root {'))
-// extra tokens set in later layers
-const tail = css.slice(css.indexOf('phase 1 layer'))
-Object.assign(dark, read(tail.slice(tail.indexOf(':root { --negative-label'), tail.indexOf('\n', tail.indexOf(':root { --negative-label'))).replace(/\n/g, ' ')))
-const light = { ...dark, ...read(block(":root[data-theme='light'] {")), 'negative-label': '#ffffff' }
+const light = { ...dark, ...read(block(":root[data-theme='light'] {")) }
 
 const lin = (c) => ((c /= 255) <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)
 const lum = (h) => {
@@ -27,12 +24,13 @@ const ratio = (a, b) => {
 // [foreground, background, minimum, note]
 const text = (fg, bgs, min = 4.5) => bgs.map((bg) => [fg, bg, min])
 const pairs = (t) => [
-  ...text('text-primary', ['canvas', 'surface-1', 'surface-2', 'surface-3', 'haze-0', 'haze-1']),
-  ...text('text-secondary', ['canvas', 'surface-1', 'surface-2', 'surface-3', 'haze-0', 'haze-1']),
-  ...text('text-tertiary', ['canvas', 'surface-1', 'surface-2', 'haze-0', 'haze-1', ...(t === 'dark' ? ['surface-3'] : [])]),
+  ...text('text-primary', ['canvas', 'surface-1', 'surface-2', 'surface-3']),
+  ...text('text-secondary', ['canvas', 'surface-1', 'surface-2', 'surface-3']),
+  ...text('text-tertiary', ['canvas', 'surface-1', 'surface-2', ...(t === 'dark' ? ['surface-3'] : [])]),
   ...text('action-label', ['action-solid', 'action-hover', 'action-pressed']),
   ...text('chip-selected-label', ['chip-selected-fill']),
   ...text('accent-text', ['canvas', 'surface-1', 'surface-2']),
+  ...text('brass', ['canvas', 'surface-1'], 3),
   ...text('positive', ['canvas', 'surface-1', 'surface-2']),
   ...text('negative', ['canvas', 'surface-1', 'surface-2']),
   ...text('warning', ['canvas', 'surface-1', 'surface-2']),

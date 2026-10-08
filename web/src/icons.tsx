@@ -28,13 +28,7 @@ export const IconVault = ({ size }: { size?: number }) => (
     <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" />
   </Icon>
 )
-export const IconLeague = ({ size }: { size?: number }) => (
-  <Icon size={size}>
-    <path d="M8 4h8v5a4 4 0 0 1-8 0V4Z" />
-    <path d="M8 6H5a2 2 0 0 0 2 4M16 6h3a2 2 0 0 1-2 4" />
-    <path d="M12 13v4M9 20h6" />
-  </Icon>
-)
+
 export const IconYou = ({ size }: { size?: number }) => (
   <Icon size={size}>
     <circle cx="12" cy="8.5" r="3.5" />
@@ -79,5 +73,45 @@ export const IconSearch = ({ size }: { size?: number }) => (
   <Icon size={size}>
     <circle cx="11" cy="11" r="6" />
     <path d="m20 20-4.2-4.2" />
+  </Icon>
+)
+export const IconActivity = ({ size }: { size?: number }) => (
+  <Icon size={size}>
+    <path d="M3 12h4l2.5-6 5 12 2.5-6h4" />
+  </Icon>
+)
+export const IconTag = ({ size }: { size?: number }) => (
+  <Icon size={size}>
+    <path d="M4 4h7.5l8.5 8.5-7.5 7.5L4 11.5V4Z" />
+    <circle cx="8.5" cy="8.5" r="1.5" />
+  </Icon>
+)
+export const IconHelp = ({ size }: { size?: number }) => (
+  <Icon size={size}>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M9.6 9.5a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.1-2.4 3.6M12 17h.01" />
+  </Icon>
+)
+export const IconCompass = ({ size }: { size?: number }) => (
+  <Icon size={size}>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="m15.5 8.5-2 5-5 2 2-5 5-2Z" />
+  </Icon>
+)
+export const IconStar = ({ size }: { size?: number }) => (
+  <Icon size={size}>
+    <path d="m12 4 2.4 4.9 5.4.8-3.9 3.8.9 5.3L12 16.3l-4.8 2.5.9-5.3-3.9-3.8 5.4-.8L12 4Z" />
+  </Icon>
+)
+export const IconShare = ({ size }: { size?: number }) => (
+  <Icon size={size}>
+    <path d="M12 15V4M8 8l4-4 4 4" />
+    <path d="M6 12v6.5A1.5 1.5 0 0 0 7.5 20h9a1.5 1.5 0 0 0 1.5-1.5V12" />
+  </Icon>
+)
+export const IconCheck = ({ size }: { size?: number }) => (
+  <Icon size={size}>
+    <path d="M12 3.5 19 6v5.5c0 4.2-3 7.6-7 9-4-1.4-7-4.8-7-9V6l7-2.5Z" />
+    <path d="m9 12 2.2 2.2L15.5 10" />
   </Icon>
 )
