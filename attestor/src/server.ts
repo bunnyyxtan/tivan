@@ -22,8 +22,9 @@ const wallet = createWalletClient({ account, chain: network.chain, transport })
 // ~0.2 MON covers a first listing (approve, deposit, order) plus a few trades at testnet gas prices.
 const DRIP = parseEther(process.env.DRIP_MON ?? '0.2')
 const dripFile = new URL('../drips.json', import.meta.url)
-// A wallet can top up again once it runs low, at most once per DRIP_EVERY.
-const LOW = DRIP / 4n
+// A wallet can top up again once it runs low, at most once per DRIP_EVERY. "Low" must cover the app's biggest action:
+// a first buy is three transactions (approve, deposit, order) at about 0.02 MON each, so anything under 0.1 MON tops up.
+const LOW = DRIP / 2n
 const DRIP_EVERY = 10 * 60 * 1000
 // Fresh addresses are free to make, so cap total drips per hour and keep enough MON for attest gas (a new market ~0.23).
 const DRIPS_PER_HOUR = Number(process.env.DRIPS_PER_HOUR ?? 30)
