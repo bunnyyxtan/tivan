@@ -11,7 +11,6 @@ export const signed = (n: number) => `${n < 0 ? '−' : n > 0 ? '+' : ''}${money
 export const pct = (fraction: number, digits = 1) => `${(fraction * 100).toFixed(digits)}%`
 
 /** A fraction as a signed percentage: +5.8%, −2.0%. */
-export const signedPct = (fraction: number, digits = 1) => `${fraction < 0 ? '−' : fraction > 0 ? '+' : ''}${pct(Math.abs(fraction), digits)}`
 
 /** Unix seconds as "Oct 6, 11:57 PM". */
-export const stamp = (t: number) => new Date(t * 1000).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+

@@ -339,28 +339,6 @@ export async function leaderboard(): Promise<Trader[]> {
   }
 }
 
-export type Founder = { owner: string; at: number }
-/** The first accounts to post a price on one card's market (its founding collectors), oldest first. Envio only. */
-export async function foundingCollectors(market: Address, n = 5): Promise<Founder[]> {
-  if (!indexerUrl || market === ZERO) return []
-  try {
-    const { Order } = await gql<{ Order: { owner: string; createdAt: number }[] }>('query($m: String!) { Order(where: { market: { _eq: $m } }, order_by: { createdAt: asc }) { owner createdAt } }', { m: getAddress(market) })
-    const seen = new Set<string>()
-    const out: Founder[] = []
-    for (const o of Order) {
-      const owner = o.owner.toLowerCase()
-      if (seen.has(owner)) continue
-      seen.add(owner)
-      out.push({ owner, at: o.createdAt })
-      if (out.length >= n) break
-    }
-    return out
-  } catch (e) {
-    console.warn('indexer down, no founders', e)
-    return []
-  }
-}
-
 export type Order = { id: number; price: number; size: number; isBuy: boolean }
 /** Order ids this owner placed on a market: Envio's Order index, or a walk over the book's order slots. */
 async function orderIds(market: Address, owner: Address): Promise<bigint[]> {
@@ -447,12 +425,6 @@ export async function send(
 
 export const explorerTx = (hash: string) => `${net.chain.blockExplorers?.default.url}/tx/${hash}`
 export const explorerAddress = (a: string) => `${net.chain.blockExplorers?.default.url}/address/${a}`
-
-/** What `me` last paid for one card on this market, from its fills (taker buy, or a filled bid). */
-export const lastPaid = (fills: Fill[], me: string) => {
-  const m = me.toLowerCase()
-  return fills.filter((f) => (f.taker === m && f.takerBuy) || (f.maker === m && !f.takerBuy)).at(-1)?.price
-}
 
 // ===================================================================== phase 2: rules, exact book, timed sends
 const rulesAbi = parseAbi(['function verifiedMarket(address) view returns (uint32 pricePrecision, uint96 sizePrecision, address base, uint256 baseDecimals, address quote, uint256 quoteDecimals, uint32 tickSize, uint96 minSize, uint96 maxSize, uint256 takerFeeBps, uint256 makerFeeBps)'])

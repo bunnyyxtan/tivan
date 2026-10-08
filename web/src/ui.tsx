@@ -1,5 +1,5 @@
 import { CardImage, SettingsButton } from './fx'
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { explorerTx } from './chain'
 import { friendlyError } from './account'
 import { catalogOf } from './config'
@@ -181,42 +181,6 @@ export const Header = ({ title, back, backLabel, right }: { title?: ReactNode; b
 )
 
 /** A short confirmation at the bottom of the screen, with an optional action (Undo). */
-export function Toast({ text, action, onAction }: { text: string; action?: string; onAction?: () => void }) {
-  return (
-    <div className="toast" role="status">
-      <span>{text}</span>
-      {action && (
-        <button className="toast-act" onClick={onAction}>
-          {action}
-        </button>
-      )}
-    </div>
-  )
-}
 
 /** A price that rolls to its new value when it changes. It shows the first value as is: no count-up on load. */
-export function Roll({ value, digits = 0 }: { value: number | undefined; digits?: number }) {
-  const [shown, setShown] = useState(value)
-  const from = useRef(value)
-  useEffect(() => {
-    const a = from.current
-    if (value === undefined || a === undefined || a === value || matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      from.current = value
-      setShown(value)
-      return
-    }
-    let raf = 0
-    const t0 = performance.now()
-    const tick = (now: number) => {
-      const k = Math.min(1, (now - t0) / 450)
-      const e = 1 - Math.pow(1 - k, 3) // ease-out: fast start, soft landing
-      const v = a + (value - a) * e
-      setShown(k < 1 ? v : value)
-      if (k < 1) raf = requestAnimationFrame(tick)
-      else from.current = value
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [value])
-  return <>{usd(shown, digits)}</>
-}
+
