@@ -70,6 +70,7 @@ export function buyNow(c: Ctx, asks: Level[], qty: bigint): Built {
       receiptSentence: `Bought ${formatQty(qty)} ${c.label} for ${usd(total, 2)}.`,
       amountUnits: -total,
       sku: c.s.sku,
+    art: c.s.name,
     },
   }
 }
@@ -104,6 +105,7 @@ export function makeOffer(c: Ctx, priceCents: bigint, qty: bigint, askCents?: bi
       receiptSentence: `Offered ${usd(centsToUnits(priceCents), 2)} for ${formatQty(qty)} ${c.label}. ${usd(need, 2)} is reserved until it fills or you cancel.`,
       amountUnits: -need,
       sku: c.s.sku,
+    art: c.s.name,
     },
   }
 }
@@ -139,6 +141,7 @@ export function sellNow(c: Ctx, bids: Level[], qty: bigint): Built {
       receiptSentence: `Sold ${formatQty(qty)} ${c.label} for ${usd(proceeds, 2)}.`,
       amountUnits: proceeds,
       sku: c.s.sku,
+    art: c.s.name,
     },
   }
 }
@@ -173,6 +176,7 @@ export function listAsk(c: Ctx, priceCents: bigint, qty: bigint, bidCents?: bigi
       receiptSentence: `Listed ${formatQty(qty)} ${c.label} at ${usd(centsToUnits(priceCents), 2)}. It waits on the order book until it sells or you cancel.`,
       amountUnits: gross,
       sku: c.s.sku,
+    art: c.s.name,
     },
   }
 }
@@ -191,5 +195,6 @@ export function cancelOrder(c: Ctx, o: { id: number; priceCents: bigint; size: b
     reconcile: c.reconcile,
     receiptSentence: `Cancelled your ${o.isBuy ? 'offer' : 'listing'} of ${usd(centsToUnits(o.priceCents), 2)} on ${c.label}.`,
     sku: c.s.sku,
+    art: c.s.name,
   }
 }

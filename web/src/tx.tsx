@@ -5,6 +5,9 @@ import { ensureGas } from './attestor'
 import { explorerTx, pub } from './chain'
 import { later, Button } from './controls'
 import { buzz } from './fx'
+import { confetti, earn, type Badge } from './celebrate'
+import { IconCheck, IconClose } from './icons'
+import { Slab } from './ui'
 import { decodeError, initialTx, stepSeconds, txReducer, type Failure } from './logic/txMachine.ts'
 
 // One shared lifecycle and one shared panel for every on-chain action (approve, buy, offer, sell, cancel, deposit, withdraw, vault).
@@ -36,6 +39,8 @@ export type TxSpec = {
   receiptSentence: string | (() => string)
   amountUnits?: bigint
   sku?: string
+  /** The card being traded, drawn as a slab at the top of the panel. */
+  art?: string
 }
 
 // ---------------------------------------------------------------- what the user did, kept in this browser
@@ -123,6 +128,8 @@ export function TxProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(txReducer, initialTx([]))
   const [view, setView] = useState<'action' | 'pending'>('action')
   const [note, setNote] = useState<string>()
+  const [badges, setBadges] = useState<Badge[]>([])
+  const [now, setNow] = useState(Date.now())
   const dlg = useRef<HTMLDialogElement>(null)
   const busy = useRef(false)
   const lastHash = useRef<Hex | undefined>(undefined)
@@ -133,6 +140,7 @@ export function TxProvider({ children }: { children: ReactNode }) {
     if (busy.current) return
     setSpec(s)
     setNote(undefined)
+    setBadges([])
     setView('action')
     dispatch({ type: 'init', steps: s.steps.map(({ id, label }) => ({ id, label })) })
     show()
@@ -212,6 +220,8 @@ export function TxProvider({ children }: { children: ReactNode }) {
       }
       dispatch({ type: 'reconciled', at: Date.now() })
       buzz()
+      confetti()
+      setBadges(earn(reviewed.kind, last?.seconds))
       writeLog((l) => [{ id, t: Date.now(), kind: reviewed.kind, title: reviewed.title, sentence: sentenceOf(reviewed), amountUnits: reviewed.amountUnits?.toString(), status: 'Confirmed', hash: last?.hash, block: last && String(last.block), seconds: last?.seconds, feeSpent: true, sku: reviewed.sku }, ...l])
     } finally {
       busy.current = false
@@ -227,152 +237,155 @@ export function TxProvider({ children }: { children: ReactNode }) {
   const close = () => dlg.current?.close()
   const f = state.failure
   const doneSteps = state.steps
+  const live = state.phase === 'confirming' || state.phase === 'running' || state.phase === 'updating'
+  // A ticking clock while the action is in flight, so the wait is visible and short.
+  useEffect(() => {
+    if (!live) return
+    const id = setInterval(() => setNow(Date.now()), 100)
+    return () => clearInterval(id)
+  }, [live])
+  const started = doneSteps.find((x) => x.sentAt)?.sentAt
+  const lastStep = doneSteps.at(-1)
+  const secs = lastStep ? stepSeconds(lastStep) : undefined
+  const headline: Record<TxKind, string> = { buy: 'It’s yours', offer: 'Offer placed', sell: 'Sold', list: 'Listed for sale', cancel: 'Order cancelled', deposit: 'Cash added', withdraw: 'Sent', vault: 'Checked in', redeem: 'Request recorded', approve: 'Approved' }
+  const verb: Record<TxKind, string> = { buy: 'Buy', offer: 'Offer', sell: 'Sell', list: 'List', cancel: 'Cancel', deposit: 'Cash', withdraw: 'Withdraw', vault: 'Vault', redeem: 'Redeem', approve: 'Approve' }
   return (
     <TxContext.Provider value={{ open, pendingCount: pending.length, openPanel }}>
       {children}
-      <dialog ref={dlg} className="tx-dialog" aria-labelledby="tx-title" onClick={(e) => e.target === dlg.current && state.phase !== 'confirming' && close()}>
-        <div className="tx-head">
-          <h2 id="tx-title">{view === 'pending' ? 'Pending transactions' : spec?.title}</h2>
-          <button className="ghost line s32" autoFocus onClick={close} disabled={state.phase === 'confirming'}>
-            {state.phase === 'done' ? 'Done' : 'Close'}
-          </button>
-        </div>
+      <dialog ref={dlg} className={`trade ${state.phase}`} aria-labelledby="tx-title" onClick={(e) => e.target === dlg.current && !live && close()}>
+        <header className="trade-top">
+          <span className="eyebrow">{view === 'pending' ? 'Pending' : spec ? verb[spec.kind] : ''}</span>
+          <button className="icon-btn trade-x" autoFocus onClick={close} disabled={state.phase === 'confirming'} aria-label={state.phase === 'done' ? 'Done' : 'Close'}><IconClose /></button>
+        </header>
         {view === 'pending' ? (
-          pending.length ? (
-            <ul className="tx-list">
-              {pending.map((p) => (
-                <li key={p.hash}>
-                  <b>{p.title}</b>
-                  <span className="fine">Sent at {clock(p.sentAt)}. Waiting for confirmation.</span>
-                  <HashLine hash={p.hash} />
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="fine">Nothing is pending. Recent activity is on the Activity page.</p>
-          )
+          <div className="trade-body">
+            <h2 id="tx-title" className="trade-h">Pending transactions</h2>
+            {pending.length ? (
+              <ul className="tx-list">
+                {pending.map((p) => (
+                  <li key={p.hash}>
+                    <b>{p.title}</b>
+                    <span className="fine">Sent at {clock(p.sentAt)}. Waiting for confirmation.</span>
+                    <HashLine hash={p.hash} />
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="fine">Nothing is pending. Recent activity is on the Activity page.</p>
+            )}
+          </div>
         ) : spec ? (
-          <>
+          <div className="trade-body">
+            {state.phase !== 'done' && (
+              <div className="trade-hero">
+                {spec.art ? <span className="trade-art"><Slab name={spec.art} size="sm" /></span> : null}
+                <div className="trade-hero-text">
+                  <h2 id="tx-title" className="trade-h">{spec.title}</h2>
+                  {spec.total && (
+                    <p className="trade-total">
+                      <small>{spec.total.label}</small>
+                      <b>{spec.total.value}</b>
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
             {state.phase === 'review' && (
               <>
-                {spec.summary.map((s) => (
-                  <p key={s} className="tx-sum">
-                    {s}
-                  </p>
-                ))}
-                <dl className="tx-rows">
+                {spec.summary.map((x) => <p key={x} className="trade-sum">{x}</p>)}
+                <dl className="trade-rows">
                   {spec.rows.map((r) => (
                     <div key={r.label}>
                       <dt>{r.label}</dt>
-                      <dd>
-                        {r.value}
-                        {r.note && <small>{r.note}</small>}
-                      </dd>
+                      <dd>{r.value}{r.note && <small>{r.note}</small>}</dd>
                     </div>
                   ))}
-                  {spec.total && (
-                    <div className="total">
-                      <dt>{spec.total.label}</dt>
-                      <dd>{spec.total.value}</dd>
-                    </div>
-                  )}
                 </dl>
-                {spec.protection && <p className="fine">{spec.protection}</p>}
-                <p className="fine">{spec.account.source === 'mera' ? 'Next your device asks for your passkey: fingerprint, face recognition or screen lock. That prompt is your device’s, not ours.' : 'This is a test account stored in this browser, so there is no passkey prompt.'}</p>
-                <div className="tx-actions">
-                  <Button size={48} onClick={go}>
-                    {spec.confirmLabel}
-                  </Button>
-                  <Button variant="tertiary" size={40} onClick={close}>
-                    Cancel
-                  </Button>
-                </div>
+                {spec.protection && <p className="trade-note"><IconCheck />{spec.protection}</p>}
+                <Button size={48} onClick={go}>{spec.confirmLabel}</Button>
+                <p className="fine trade-fine">{spec.account.source === 'mera' ? 'Next, your device asks for your passkey. That prompt is your device’s, not ours.' : 'Test account in this browser: no passkey prompt.'} Nothing is sent until you confirm.</p>
               </>
             )}
-            {state.phase !== 'review' && (
-              <ol className="tx-steps" aria-live="polite">
-                {doneSteps.map((s) => {
-                  const sec = stepSeconds(s)
-                  return (
-                    <li key={s.id} data-status={s.status}>
-                      <b>{s.label}</b>
-                      <span className="fine">
-                        {state.phase === 'confirming' && s.status === 'confirm'
-                          ? 'Waiting for your device'
-                          : s.status === 'todo'
-                            ? 'Waiting'
-                            : s.status === 'confirm'
-                              ? 'Ready to send'
-                              : s.status === 'sent'
-                                ? `Sent to Monad at ${clock(s.sentAt!)}. Waiting for confirmation`
-                                : s.status === 'confirmed'
-                                  ? `Confirmed on Monad in block #${s.block}${sec !== undefined ? ` in ${sec.toFixed(1)} s` : ''} at ${clock(s.confirmedAt!)}`
-                                  : 'Did not complete'}
-                      </span>
-                      {s.hash && <HashLine hash={s.hash} />}
-                    </li>
-                  )
-                })}
-              </ol>
+
+            {(live || state.phase === 'failed') && (
+              <>
+                <div className="trade-clock" aria-hidden={!live}>
+                  <span className="trade-ring" />
+                  <b>{state.phase === 'failed' ? 'Not completed' : started ? `${((now - started) / 1000).toFixed(1)} s` : state.phase === 'confirming' ? 'Confirm' : 'Preparing'}</b>
+                  <small>{state.phase === 'confirming' ? 'Waiting for your confirmation' : state.phase === 'updating' ? 'Updating your balances' : state.phase === 'failed' ? (f?.feeSpent === false ? 'Nothing left your account' : 'See below for what happened') : started ? 'Settling on Monad' : 'Checking your balance and the price'}</small>
+                </div>
+                <ol className="trade-steps" aria-live="polite">
+                  {doneSteps.map((x) => {
+                    const sec = stepSeconds(x)
+                    return (
+                      <li key={x.id} data-status={x.status}>
+                        <span className="ts-dot" aria-hidden>{x.status === 'confirmed' ? <IconCheck /> : null}</span>
+                        <span className="ts-text">
+                          <b>{x.label}</b>
+                          <small>
+                            {state.phase === 'confirming' && x.status === 'confirm' ? 'Waiting for your device' : x.status === 'todo' ? 'Next' : x.status === 'confirm' ? 'Ready' : x.status === 'sent' ? 'Sent to Monad, confirming' : x.status === 'confirmed' ? `Block #${x.block}${sec !== undefined ? ` · ${sec.toFixed(1)} s` : ''}` : 'Did not complete'}
+                          </small>
+                        </span>
+                        {x.hash && <a className="ts-link" href={explorerTx(x.hash)} target="_blank" rel="noreferrer">View</a>}
+                      </li>
+                    )
+                  })}
+                </ol>
+              </>
             )}
-            {state.phase === 'updating' && <p className="fine" role="status">Updating your balance, holdings and order book from chain data.</p>}
+
             {state.phase === 'done' && (
-              <section className="tx-receipt" aria-label="Receipt">
-                <p className="tx-sum">{sentenceOf(spec)}</p>
-                <dl className="tx-rows">
-                  {spec.rows.map((r) => (
-                    <div key={r.label}>
-                      <dt>{r.label}</dt>
-                      <dd>{r.value}</dd>
-                    </div>
-                  ))}
-                  {spec.total && (
-                    <div className="total">
-                      <dt>{spec.total.label}</dt>
-                      <dd>{spec.total.value}</dd>
-                    </div>
-                  )}
-                  <div>
-                    <dt>Confirmed</dt>
-                    <dd>
-                      On Monad, block #{doneSteps.at(-1)?.block}
-                      {stepSeconds(doneSteps.at(-1)!) !== undefined ? ` in ${stepSeconds(doneSteps.at(-1)!)!.toFixed(1)} s` : ''}
-                    </dd>
+              <section className="trade-done" aria-label="Done">
+                <span className="done-check" aria-hidden>
+                  <svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24" /><path d="M15 27l7 7 15-15" /></svg>
+                </span>
+                {spec.art && <span className="done-art"><Slab name={spec.art} size="md" /></span>}
+                <h2 id="tx-title" className="done-h">{headline[spec.kind]}</h2>
+                <p className="done-sum">{sentenceOf(spec)}</p>
+                <div className="done-chips">
+                  {secs !== undefined && <span className="done-chip"><b>{secs.toFixed(1)} s</b> to settle</span>}
+                  {lastStep?.block !== undefined && <span className="done-chip">Block <b>#{String(lastStep.block)}</b></span>}
+                  {spec.total && <span className="done-chip">{spec.total.label} <b>{spec.total.value}</b></span>}
+                </div>
+                {badges.map((b) => (
+                  <div key={b.id} className="badge-card" role="status">
+                    <span className="badge-medal" aria-hidden>{b.title.slice(0, 1)}</span>
+                    <span><small>Badge unlocked</small><b>{b.title}</b><span>{b.text}</span></span>
                   </div>
-                  <div>
-                    <dt>Time</dt>
-                    <dd>{state.updatedAt ? new Date(state.updatedAt).toLocaleString() : ''}</dd>
-                  </div>
-                  <div>
-                    <dt>Transaction</dt>
-                    <dd>{doneSteps.at(-1)?.hash && <HashLine hash={doneSteps.at(-1)!.hash!} />}</dd>
-                  </div>
-                </dl>
-                <p className="fine">
-                  Updated from chain data. <a className="u" href="#/activity" onClick={close}>View in Activity</a>
-                </p>
+                ))}
+                <div className="done-actions">
+                  {spec.sku ? <a className="btn lg" href="#/collection" onClick={close}>View portfolio</a> : <a className="btn lg" href="#/" onClick={close}>Find a card</a>}
+                  <Button variant="secondary" size={48} onClick={close}>Done</Button>
+                </div>
+                <details className="done-receipt">
+                  <summary>Receipt</summary>
+                  <dl className="trade-rows">
+                    {spec.rows.map((r) => (
+                      <div key={r.label}><dt>{r.label}</dt><dd>{r.value}</dd></div>
+                    ))}
+                    <div><dt>Time</dt><dd>{state.updatedAt ? new Date(state.updatedAt).toLocaleString() : ''}</dd></div>
+                    {lastStep?.hash && <div><dt>Transaction</dt><dd><HashLine hash={lastStep.hash} /></dd></div>}
+                  </dl>
+                  <p className="fine">Updated from chain data. <a className="u" href="#/activity" onClick={close}>View in Activity</a></p>
+                </details>
               </section>
             )}
+
             {state.phase === 'failed' && f && (
-              <section className={`tx-fail ${f.kind}`} role="alert">
-                <p className="tx-sum">{f.message}</p>
+              <section className={`trade-fail ${f.kind}`} role="alert">
+                <b>{f.message}</b>
                 <p className="fine">{f.next}</p>
                 <p className="fine">{f.feeSpent === true ? 'A network fee was spent on this attempt.' : f.feeSpent === false ? 'No network fee was spent.' : 'We cannot tell whether a network fee was spent.'}</p>
                 {f.newCents !== undefined && <p className="fine">The new price will be shown when you review again.</p>}
-                <div className="tx-actions">
-                  {f.kind === 'unknown' && f.feeSpent === null ? (
-                    <Button variant="secondary" size={40} onClick={checkStatus}>
-                      Check status
-                    </Button>
-                  ) : null}
-                  <Button size={40} onClick={() => dispatch({ type: 'back-to-review' })}>
-                    Review again
-                  </Button>
+                <div className="done-actions">
+                  <Button size={48} onClick={() => dispatch({ type: 'back-to-review' })}>Review again</Button>
+                  {f.kind === 'unknown' && f.feeSpent === null ? <Button variant="secondary" size={48} onClick={checkStatus}>Check status</Button> : null}
                 </div>
               </section>
             )}
-            {note && <p className="fine" role="status">{note}</p>}
-          </>
+            {note && <p className="fine trade-fine" role="status">{note}</p>}
+          </div>
         ) : null}
       </dialog>
     </TxContext.Provider>
