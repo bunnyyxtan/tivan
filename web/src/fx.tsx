@@ -24,7 +24,7 @@ export const readPrefs = (): Prefs => {
   }
 }
 const LIGHT = '(prefers-color-scheme: light)'
-const THEME_COLOR = { light: '#f7f6f2', dark: '#0a0a0b' }
+const THEME_COLOR = { light: '#eef8f0', dark: '#051f20' }
 const apply = (p: Prefs) => {
   const root = document.documentElement
   const d = root.dataset

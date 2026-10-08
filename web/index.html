@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#0a0a0b" />
+    <meta name="theme-color" content="#051f20" />
     <script>
       // Sets the colour mode before first paint so there is no flash. Mirrors apply() in src/fx.tsx.
       try {
@@ -14,7 +14,7 @@
         r.dataset.theme = t
         r.dataset.appearance = p.theme === 'light' || p.theme === 'system' ? p.theme : 'dark'
         r.style.colorScheme = t
-        document.querySelector('meta[name=theme-color]').setAttribute('content', t === 'light' ? '#f7f6f2' : '#0a0a0b')
+        document.querySelector('meta[name=theme-color]').setAttribute('content', t === 'light' ? '#eef8f0' : '#051f20')
       } catch (e) {}
     </script>
     <title>Tivan</title>

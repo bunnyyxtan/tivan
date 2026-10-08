@@ -30,7 +30,7 @@ const pairs = (t) => [
   ...text('action-label', ['action-solid', 'action-hover', 'action-pressed']),
   ...text('chip-selected-label', ['chip-selected-fill']),
   ...text('accent-text', ['canvas', 'surface-1', 'surface-2']),
-  ...text('brass', ['canvas', 'surface-1'], 3),
+  ...text('brand', ['canvas', 'surface-1'], 3),
   ...text('positive', ['canvas', 'surface-1', 'surface-2']),
   ...text('negative', ['canvas', 'surface-1', 'surface-2']),
   ...text('warning', ['canvas', 'surface-1', 'surface-2']),
