@@ -15,6 +15,7 @@ import { ErrorNote, Skeleton } from './States'
 import { useTx } from './tx'
 import { cardSub, cardTitle, parseName, usePoll, useWatch } from './ui'
 import { ItemCard, Viewer, gradeOf } from './Market'
+import { IconActivity, IconCheck, IconShare, IconStar, IconVault } from './icons'
 
 const PriceChart = lazy(() => import('./PriceChart'))
 const Inspector = lazy(() => import('./Inspector'))
@@ -114,7 +115,7 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
   if (!d)
     return (
       <>
-        <Breadcrumbs items={[['Discover', '#/'], ['Browse', '#/browse'], ['Card']]} />
+        <Breadcrumbs items={[['Markets', '#/'], ['Card']]} />
         {m.error ? <ErrorNote what="Couldn’t load this card." why={m.error} next="Check your connection, then try again." onRetry={m.refresh} /> : <div className="card-layout" aria-hidden><div className="card-hero"><Skeleton h={420} r={12} /></div><div><Skeleton h={36} w="70%" r={6} /><div style={{ marginTop: 16 }}><Skeleton h={180} r={12} /></div></div></div>}
       </>
     )
@@ -154,86 +155,100 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
     requestAnimationFrame(() => document.getElementById('order-form')?.scrollIntoView({ block: 'center', behavior: 'smooth' }))
   }
 
-  const primary = live && askC !== undefined ? (
-    <Button size={48} onClick={() => (setMode('buy'), setPrefill({}))}>Buy now for {usdC(askC)}</Button>
-  ) : live ? (
-    <Button size={48} onClick={() => (setMode('offer'), setPrefill({}))}>Make offer</Button>
-  ) : null
+  const share = async () => {
+    const url = location.href
+    try {
+      if (navigator.share) await navigator.share({ title: `${title} on Tivan`, url })
+      else (await navigator.clipboard.writeText(url), setShared('Link copied.'))
+    } catch {
+      setShared('Sharing was cancelled or blocked. Copy the address from your browser.')
+    }
+  }
+  const toggleWatch = () => {
+    const on = watch.toggle(sku)
+    setUndo(on ? 'Added to your watchlist.' : 'Removed from your watchlist.')
+  }
+  const lastC = lastTrade ? lastTrade.price : s.last ? cents(s.last) : undefined
   const buttons = live && (
-    <div className="actions-row">
-      {primary}
-      {askC !== undefined && <Button variant="secondary" size={48} onClick={() => (setMode('offer'), setPrefill({}))}>Make offer</Button>}
-      {owned > 0n && <Button variant="secondary" size={48} onClick={() => (setMode('sell'), setPrefill({}))}>Sell</Button>}
-      <Button variant="tertiary" size={48} onClick={async () => { const url = location.href; try { if (navigator.share) await navigator.share({ title: `${title} on Tivan`, url }); else { await navigator.clipboard.writeText(url); setShared('Link copied.') } } catch { setShared('Sharing was cancelled or blocked. Copy the address from your browser.') } }}>Share</Button>
-      <Button variant="tertiary" size={48} aria-pressed={watching} onClick={() => { const on = watch.toggle(sku); setUndo(on ? 'Added to your watchlist.' : 'Removed from your watchlist.') }}>
-        {watching ? 'Watching' : 'Watch'}
-      </Button>
+    <div className="buy-actions" ref={actions}>
+      {askC !== undefined ? (
+        <Button size={48} onClick={() => (setMode('buy'), setPrefill({}))}>Buy now · {usdC(askC)}</Button>
+      ) : (
+        <Button size={48} onClick={() => (setMode('offer'), setPrefill({}))}>Make an offer</Button>
+      )}
+      {askC !== undefined && <Button variant="secondary" size={48} onClick={() => (setMode('offer'), setPrefill({}))}>Make an offer</Button>}
+      {owned > 0n && <Button variant="secondary" size={48} onClick={() => (setMode('sell'), setPrefill({}))}>Sell yours</Button>}
     </div>
   )
 
   return (
     <>
-      <Breadcrumbs items={[['Discover', '#/'], ['Browse', '#/browse'], ...(c ? ([[c.category, `#/browse?cat=${encodeURIComponent(c.category)}`]] as [string, string][]) : []), [title]]} />
-      <div className="card-layout">
-        <div className="card-hero">
-          <Viewer s={s} onInspect={() => setInspect(true)} />
-          {inspect && <Suspense fallback={null}><Inspector name={s.name} sibs={sibs.map((x) => ({ name: x.name, sku: x.sku }))} onClose={() => setInspect(false)} /></Suspense>}
+      <Breadcrumbs items={[['Markets', '#/'], ...(c ? ([[c.category, `#/browse?cat=${encodeURIComponent(c.category)}`]] as [string, string][]) : [['Browse', '#/browse']] as [string, string][]), [title]]} />
+      <div className="cx">
+        <div className="cx-media">
+          <div className="card-hero">
+            <Viewer s={s} onInspect={() => setInspect(true)} />
+            {inspect && <Suspense fallback={null}><Inspector name={s.name} sibs={sibs.map((x) => ({ name: x.name, sku: x.sku }))} onClose={() => setInspect(false)} /></Suspense>}
+          </div>
         </div>
-        <div className="card-main">
-          <h1 className="card-title">{title}</h1>
-          <p className="muted card-sub">
-            {demo ? 'Demo listing · ' : ''}
-            {c ? c.set.replace(' · ', ' · ') : cardSub(s.name)}
-          </p>
+        <aside className="cx-trade" aria-label="Trade">
+          <header className="cx-head">
+            <div className="cx-title">
+              <p className="eyebrow">{c?.category ?? 'Graded card'} · {parseName(s.name).grader} {parseName(s.name).grade}</p>
+              <h1 className="card-title">{title}</h1>
+              <p className="card-sub">
+                {demo ? 'Demo listing · ' : ''}
+                {c ? c.set : cardSub(s.name)}
+              </p>
+            </div>
+            <div className="cx-icons">
+              <button className={`icon-btn ${watching ? 'on' : ''}`} aria-pressed={watching} aria-label={watching ? 'Watching. Stop watching' : 'Watch this market'} title={watching ? 'Watching' : 'Watch'} onClick={toggleWatch}><IconStar /></button>
+              <button className="icon-btn" aria-label="Share" title="Share" onClick={share}><IconShare /></button>
+            </div>
+          </header>
           {sibs.length > 1 && (
-            <nav className="grades" aria-label="Grades of this card">
-              {sibs.map((x) => (
-                <a key={x.sku} href={`#/card/${x.sku}`} aria-current={x.sku === sku ? 'page' : undefined}>
-                  <b>{parseName(x.name).grader} {parseName(x.name).grade}</b>
-                  <small>{x.ask ? usdC(cents(x.ask)) : 'No ask'}</small>
-                </a>
-              ))}
-            </nav>
+            <div className="grade-pick">
+              <span className="lbl-caps">Grade</span>
+              <nav className="grades" aria-label="Grades of this card">
+                {sibs.map((x) => (
+                  <a key={x.sku} href={`#/card/${x.sku}`} aria-current={x.sku === sku ? 'page' : undefined}>
+                    <b>{parseName(x.name).grade}</b>
+                    <small>{x.ask ? usdC(cents(x.ask)) : 'No ask'}</small>
+                  </a>
+                ))}
+              </nav>
+            </div>
           )}
-          {sibs.length > 1 && <p className="fine"><a className="u" href={`#/compare?ids=${sibs.map((x) => x.sku).join(',')}`}>Compare grades</a></p>}
-
           {!live ? (
-            <div className="panel" style={{ marginTop: 24 }}>
-              <b style={{ fontWeight: 500 }}>This market opens soon</b>
-              <p className="fine" style={{ marginTop: 6 }}>
+            <div className="buybox">
+              <b>This market opens soon</b>
+              <p className="fine">
                 The token is live on {net.chain.name}, but its order book is not listed yet, so buying, selling and offers open once it is.
                 {demo ? ' Demo listing: no physical card backs this token.' : ''}
               </p>
             </div>
           ) : (
-            <>
-              <dl className="vals">
+            <div className="buybox">
+              <div className="quote2">
                 <div>
-                  <dt>Ask <Define term="ask">The lowest price anyone is asking for one card at this grade right now. Buy now pays this price.</Define></dt>
-                  <dd>{askC !== undefined ? usdC(askC) : '—'}</dd>
+                  <span className="lbl-caps">Lowest ask <Define term="ask">The lowest price anyone is asking for one card at this grade right now. Buy now pays this price.</Define></span>
+                  <b className="quote2-v">{askC !== undefined ? usdC(askC) : '—'}</b>
                   <small>{askC !== undefined ? `${formatQty(asksAgg[0].size)} for sale at this price` : 'No one is selling at this grade'}</small>
                 </div>
                 <div>
-                  <dt>Best offer <Define term="best offer">The highest price anyone is bidding for one card at this grade. Selling now receives this price.</Define></dt>
-                  <dd>{bidC !== undefined ? usdC(bidC) : '—'}</dd>
-                  <small>{bidC !== undefined ? `${formatQty(bidsAgg[0].size)} wanted at this price` : 'No offers yet'}</small>
+                  <span className="lbl-caps">Best offer <Define term="best offer">The highest price anyone is bidding for one card at this grade. Selling now receives this price.</Define></span>
+                  <b className="quote2-v sm">{bidC !== undefined ? usdC(bidC) : '—'}</b>
+                  <small>{bidC !== undefined ? `${formatQty(bidsAgg[0].size)} wanted` : 'No offers yet'}</small>
                 </div>
-                <div>
-                  <dt>Last sale</dt>
-                  <dd>{lastTrade ? usdC(lastTrade.price) : s.last ? usdC(cents(s.last)) : '—'}</dd>
-                  <small>{lastTrade ? `${ago(lastTrade.t * 1000, now)}` : s.last ? 'From the index' : 'No sales yet'}</small>
-                </div>
-              </dl>
-              <div className="spread-wrap">
-                <span className="fine">
-                  Spread <Define term="spread">The gap between the best offer and the ask. A narrow gap means buyers and sellers agree on the price.</Define>
-                </span>
-                <SpreadBar bid={bidC} ask={askC} last={lastTrade?.price} />
               </div>
-              <FirstHint />
-              <div ref={actions}>{buttons}</div>
+              {buttons}
+              {owned > 0n && bidC !== undefined && (
+                <p className="fine sell-line">
+                  You hold {formatQty(owned)}. <button className="linkbtn" onClick={() => (setMode('sell'), setPrefill({ sellMode: 'now' }))}>Sell now for {usdC(bidC)}</button> or <button className="linkbtn" onClick={() => (setMode('sell'), setPrefill({ sellMode: 'list' }))}>list it higher</button>.
+                </p>
+              )}
               <p className="fine ctx" role="status">
-                {!account ? <button className="linkbtn" onClick={signInHere}>Sign in to trade</button> : available === undefined ? 'Checking your cash…' : <>You have {usdU(available, 2)} available.{askC !== undefined && centsToUnits(askC) > available ? <> <button className="linkbtn" onClick={() => dispatchEvent(new Event('tivan-cash'))}>Add cash to buy</button></> : null}</>}
+                {!account ? <><button className="linkbtn" onClick={signInHere}>Sign in to trade</button> Browsing needs no account.</> : available === undefined ? 'Checking your cash' : <>You have {usdU(available, 2)} available.{askC !== undefined && centsToUnits(askC) > available ? <> <button className="linkbtn" onClick={() => dispatchEvent(new Event('tivan-cash'))}>Add cash</button></> : null}</>}
                 {undo && <> {undo} <button className="linkbtn" onClick={() => (watch.toggle(sku), setUndo(undefined))}>Undo</button></>}
                 {shared && <> {shared}</>}
               </p>
@@ -241,16 +256,26 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
                 <OrderForm key={`${mode}-${JSON.stringify(prefill)}`} mode={mode} ctx={ctx} asks={book.asks} bids={book.bids} askC={askC} bidC={bidC} owned={owned} prefill={prefill} onClose={() => setMode(undefined)} />
               )}
               {mode && !account && <p className="notice">Sign in first. Your passkey is your account and it takes a few seconds. We will bring you back here with this order ready. <button className="linkbtn" onClick={signInHere}>Sign in</button></p>}
-              <p className="fine backing">
-                {s.vaulted === 0 ? 'No slabs are in the vault for this market right now.' : `${s.vaulted} slab${s.vaulted === 1 ? '' : 's'} in the vault back this market.`}{' '}
-                <button className="linkbtn" onClick={() => document.getElementById('vault')?.scrollIntoView({ behavior: 'smooth' })}>See verification</button>
-              </p>
-              {account && s.ask && <AlertRow s={s} />}
-            </>
+            </div>
           )}
-        </div>
-      </div>
+          {live && (
+            <dl className="mstats">
+              <div><dt>Last sale</dt><dd>{lastC !== undefined ? usdC(lastC) : '—'}</dd><small>{lastTrade ? ago(lastTrade.t * 1000, now) : s.last ? 'From the index' : 'No sales yet'}</small></div>
+              <div><dt>Spread <Define term="spread">The gap between the best offer and the ask. A narrow gap means buyers and sellers agree on the price.</Define></dt><dd>{spreadInfo ? formatBps(spreadInfo.bps, { digits: 1 }) : '—'}</dd><small>{spreadInfo ? `${usdC(spreadInfo.cents)} between them` : 'Needs an ask and an offer'}</small></div>
+              <div><dt>Vaulted</dt><dd>{s.vaulted}</dd><small>{s.vaulted === 1 ? 'slab backs this market' : 'slabs back this market'}</small></div>
+            </dl>
+          )}
+          {live && <SpreadBar bid={bidC} ask={askC} last={lastTrade?.price} />}
+          <ul className="trust">
+            <li><IconVault /><span><b>Held in the vault</b>{net.name === 'testnet' ? 'Custody is simulated on the test network.' : 'Each token is backed by one graded slab.'} <button className="linkbtn" onClick={() => document.getElementById('vault')?.scrollIntoView({ behavior: 'smooth' })}>See verification</button></span></li>
+            <li><IconCheck /><span><b>{net.name === 'testnet' ? 'Simulated check' : 'Certificate matched'}</b>{net.name === 'testnet' ? 'Certificates are matched against a demo registry.' : 'Matched against the grader’s registry before listing.'}</span></li>
+            <li><IconActivity /><span><b>Settles on {net.chain.name}</b>Every order and trade is an on-chain transaction you can look up.</span></li>
+          </ul>
+          {account && s.ask && <AlertRow s={s} />}
+          <FirstHint />
+        </aside>
 
+        <div className="cx-rest">
       {live && (
         <>
           <nav className="section-nav" aria-label="On this page">
@@ -365,6 +390,8 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
           )}
         </>
       )}
+        </div>
+      </div>
 
       {live && barOn && (
         <div className="sticky-bar-m" role="region" aria-label="Quick actions">
