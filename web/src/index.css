@@ -612,6 +612,7 @@ label.lab, .lab { display: flex; flex-direction: column; gap: 8px; font: var(--f
 .card-hero { display: grid; place-items: center; min-height: min(78vh, 760px); padding: 32px; border: 1px solid var(--line); border-radius: 20px; background: var(--stage); }
 .viewer { display: flex; flex-direction: column-reverse; align-items: center; gap: 18px; width: 100%; }
 .stage { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.stage .slab-wrap { width: 100%; }
 .stage .slab-xl { width: min(100%, 380px); box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45); }
 .zoomer { width: min(100%, 400px); overflow: hidden; border-radius: 10px; cursor: zoom-in; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45); }
 .zoomer.on { cursor: zoom-out; }
