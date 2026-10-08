@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
+import { PageHead } from './kit'
 import { setQuery, useQuery } from './route'
-import { Breadcrumbs, openShortcuts } from './desk'
+import { openShortcuts } from './desk'
 import { Button, Seg } from './controls'
 import { explorerAddress, hasMarket, loadSkus, marketRules, type MarketRules } from './chain'
 import { brand, net } from './config'
@@ -42,8 +43,7 @@ export function HelpPage() {
   const rules = useRules()
   return (
     <div className="c-reading help">
-      <Breadcrumbs items={[['Discover', '#/'], ['Help']]} />
-      <h1 className="page-h">Help</h1>
+      <PageHead title="Help" sub="How Tivan works, what is real on the test network, and answers to common questions" />
       <Seg label="Help topic" value={topic} onChange={(t) => setQuery({ s: t === 'faq' ? '' : t })} options={TOPICS} />
       <div className="help-body">
         {topic === 'faq' && (
@@ -98,20 +98,3 @@ export function HelpPage() {
 }
 
 /** The footer: only links that resolve. "Built on Monad" is plain text until Monad's brand terms are confirmed. */
-export function SiteFooter() {
-  return (
-    <footer className="site-foot">
-      <div className="site-foot-in">
-        <span>Built on Monad</span>
-        <nav aria-label="Footer">
-          <a href="#/help">Help center</a>
-          <a href="#/help?s=fees">Fees</a>
-          <a href="#/help?s=custody">Custody and verification</a>
-          <a href="#/help?s=how">How it works</a>
-          <button className="linkbtn quiet" onClick={openShortcuts}>Keyboard shortcuts</button>
-          <a href="https://github.com/bunnyyxtan/tivan" target="_blank" rel="noreferrer">Source on GitHub</a>
-        </nav>
-      </div>
-    </footer>
-  )
-}

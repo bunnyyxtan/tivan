@@ -2,31 +2,30 @@ import { useEffect, useState } from 'react'
 import { flushSync } from 'react-dom'
 import type { LocalAccount } from 'viem'
 import { createAccount, deviceAccount, friendlyError, hasDeviceKey, savedPasskey, signIn, signOut } from './account'
-import { SettingsButton } from './fx'
-import { IconCollection, IconLeague, IconMarkets, IconVault, IconYou } from './icons'
+import { openSettings } from './fx'
+import { IconActivity, IconChevron, IconCollection, IconCompass, IconHelp, IconMarkets, IconSettings, IconTag, IconYou } from './icons'
 import { SettingsSheet } from './Settings'
 import { attestorUrl, brand, net } from './config'
-import { MarketList } from './Market'
 import { CardPage } from './Card'
 import { League } from './League'
 import { useAlertWatcher } from './alerts'
 import { Redeem } from './Redeem'
 import { Sell } from './Sell'
 import { Slab } from './ui'
-import { scrollFor, useWide } from './route'
+import { scrollFor } from './route'
 import { Browse, Compare, Discover } from './Browse'
 import { AccountMenu, DemoStrip, SearchBox, Shortcuts } from './desk'
 import { Portfolio } from './Holdings'
 import { AccountPage } from './AccountPage'
 import { Activity } from './ActivityPage'
-import { Onboard, useOnboardWide } from './Onboard'
 import { TxChip } from './tx'
 import { Palette } from './Palette'
-import { HelpPage, SiteFooter } from './Help'
+import { HelpPage } from './Help'
 import { Boundary, OfflineBar } from './Boundary'
 import { Tour } from './Tour'
 import { Welcome } from './Welcome'
-import { BalancePill, CashSheet, NetworkChip } from './Cash'
+import { BalancePill, CashSheet } from './Cash'
+import { StatusBar } from './StatusBar'
 
 function useHash() {
   const [h, setH] = useState(location.hash)
@@ -50,9 +49,19 @@ export type Acct = LocalAccount | undefined
 
 export default function App() {
   const [account, setAccount] = useState<LocalAccount>()
-  const [guest, setGuest] = useState(false)
+  const [rail, setRail] = useState(() => {
+    try {
+      return localStorage.getItem('tivan.rail') === '1'
+    } catch {
+      return false
+    }
+  })
+  useEffect(() => {
+    try {
+      localStorage.setItem('tivan.rail', rail ? '1' : '0')
+    } catch {}
+  }, [rail])
   const [route, ...args] = useHash()
-  const wide = useWide()
   useAlertWatcher()
   // Signing in at an action point returns to that exact place, with what was typed kept.
   useEffect(() => {
@@ -67,18 +76,10 @@ export default function App() {
   // Free hosting sleeps when idle and takes ~a minute to wake: ring the attestor as soon as anyone opens the app, so it is
   // awake by the time they ask for gas.
   useEffect(() => void fetch(`${attestorUrl}/health`).catch(() => {}), [])
-  if (!account && !guest)
-    return (
-      <>
-        <SignIn onReady={setAccount} onGuest={() => setGuest(true)} />
-        <SettingsSheet />
-      </>
-    )
-  const tab = route === 'browse' || route === 'compare' ? 'browse' : route === 'activity' ? 'activity' : route === 'collection' ? 'collection' : route === 'vault' || route === 'sell' ? 'vault' : route === 'you' ? 'you' : route === 'league' ? 'league' : 'markets'
-  // Browsing is open; anything that moves money or cards asks for a passkey first.
-  const out = () => (signOut(), setAccount(undefined), setGuest(false), (location.hash = '#/'))
-  const acctRoute = route === 'league'
-  const need = (el: (a: LocalAccount) => React.ReactNode) => (account ? el(account) : <SignIn inline onReady={setAccount} />)
+  const tab = route === 'browse' || route === 'compare' ? 'browse' : route === 'activity' ? 'activity' : route === 'collection' ? 'collection' : route === 'vault' || route === 'sell' ? 'vault' : route === 'you' ? 'you' : route === 'help' ? 'help' : route === 'league' ? 'league' : 'markets'
+  // Browsing is open to everyone; anything that moves money or cards asks for a passkey first.
+  const out = () => (signOut(), setAccount(undefined), (location.hash = '#/'))
+  const need = (el: (a: LocalAccount) => React.ReactNode) => (account ? el(account) : <SignIn onReady={setAccount} />)
   const page =
     route === 'card' ? <CardPage sku={args[0]} account={account} />
     : (route === 'buy' || route === 'sell' || route === 'offer' || route === 'done') && args[0] ? <CardPage sku={args[0]} account={account} />
@@ -91,21 +92,15 @@ export default function App() {
     : route === 'league' ? <League account={account} />
     : route === 'you' ? need((a) => <AccountPage account={a} onSignOut={out} />)
     : route === 'help' ? <HelpPage />
-    : wide ? <Discover account={account} /> : <MarketList account={account} />
-  const tabs = [
+    : <Discover account={account} />
+  const nav = [
     ['markets', '#/', 'Markets', <IconMarkets />],
-    ['collection', '#/collection', 'Collection', <IconCollection />],
-    ['vault', '#/vault', 'Vault', <IconVault />],
-    ['league', '#/league', 'League', <IconLeague />],
-    ['you', '#/you', 'You', <IconYou />],
+    ['browse', '#/browse', 'Browse', <IconCompass />],
+    ['collection', '#/collection', 'Portfolio', <IconCollection />],
+    ['activity', '#/activity', 'Activity', <IconActivity />],
+    ['vault', '#/sell', 'Sell', <IconTag />],
   ] as const
-  const deskTabs = [
-    ['markets', '#/', 'Discover'],
-    ['browse', '#/browse', 'Browse'],
-    ['collection', '#/collection', 'Portfolio'],
-    ['activity', '#/activity', 'Activity'],
-    ['vault', '#/sell', 'Sell'],
-  ] as const
+  const tabs = [nav[0], nav[1], nav[2], nav[4], ['you', '#/you', 'Account', <IconYou />]] as const
   return (
     <>
       <SettingsSheet />
@@ -114,56 +109,63 @@ export default function App() {
       {account && <CashSheet account={account} />}
       {account && <Welcome />}
       <Tour />
-      <DemoStrip />
-      <div className="desk-bar">
-        <div className="desk-nav">
-          <a className="brand" href="#/">
-            {brand}
-          </a>
-          <nav aria-label="Primary">
-            {deskTabs.map(([k, href, label]) => (
-              <a key={k} href={href} data-tour={k === 'browse' ? 'browse' : k === 'vault' ? 'sell' : undefined} className={tab === k ? 'on' : ''} aria-current={tab === k ? 'page' : undefined}>
-                {label}
+      <div className="shell" data-rail={rail ? 'mini' : undefined}>
+        <aside className="side" aria-label="Sidebar">
+          <div className="side-top">
+            <a className="brand side-brand" href="#/" aria-label={`${brand}, markets`}>
+              <span className="brand-mark" aria-hidden>T</span>
+              <span className="brand-word">{brand}</span>
+            </a>
+            <button className="side-fold" onClick={() => setRail(!rail)} aria-label={rail ? 'Expand the sidebar' : 'Collapse the sidebar'} aria-pressed={rail}>
+              <IconChevron />
+            </button>
+          </div>
+          <nav className="side-nav" aria-label="Primary">
+            {nav.map(([k, href, label, icon]) => (
+              <a key={k} href={href} title={rail ? label : undefined} data-tour={k === 'browse' ? 'browse' : k === 'vault' ? 'sell' : undefined} className={tab === k ? 'on' : ''} aria-current={tab === k ? 'page' : undefined}>
+                {icon}
+                <span>{label}</span>
               </a>
             ))}
           </nav>
-          <SearchBox />
-          <div className="right">
-            <NetworkChip />
-            <TxChip />
-            {account ? (
-              <>
-                <CashPill account={account} />
-                <AccountMenu address={account.address} onSignOut={out} />
-              </>
-            ) : (
-              <a className="btn md" href="#/you" data-tour="signin">
-                Sign in
-              </a>
-            )}
+          <div className="side-low">
+            <DemoStrip />
+            <nav className="side-nav" aria-label="Support">
+              <a href="#/help" title={rail ? 'Help' : undefined} className={tab === 'help' ? 'on' : ''} aria-current={tab === 'help' ? 'page' : undefined}><IconHelp /><span>Help</span></a>
+              <button title={rail ? 'Settings' : undefined} onClick={openSettings}><IconSettings /><span>Settings</span></button>
+            </nav>
           </div>
-        </div>
-      </div>
-      <OfflineBar />
-      <div className="app">
-        <main>
-          <div className="page" key={`${route}/${args[0] ?? ''}`}>
-            <Boundary key={`${route}/${args[0] ?? ''}`}>
-              {acctRoute ? (
-                <div className="acct-page solo">
-                  <div className="acct-col">{page}</div>
-                </div>
+        </aside>
+        <div className="mainc">
+          <header className="top">
+            <a className="brand top-brand" href="#/" aria-label={`${brand}, markets`}>
+              <span className="brand-mark" aria-hidden>T</span>
+            </a>
+            <SearchBox />
+            <div className="top-right">
+              <TxChip />
+              {account ? (
+                <>
+                  <CashPill account={account} />
+                  <AccountMenu address={account.address} onSignOut={out} />
+                </>
               ) : (
-                page
+                <a className="btn md" href="#/you" data-tour="signin">Sign in</a>
               )}
-            </Boundary>
-          </div>
-        </main>
-        <SiteFooter />
+            </div>
+          </header>
+          <OfflineBar />
+          <main>
+            <div className="page" key={`${route}/${args[0] ?? ''}`}>
+              <Boundary key={`${route}/${args[0] ?? ''}`}>{page}</Boundary>
+            </div>
+          </main>
+          <StatusBar />
+        </div>
       </div>
       <nav className="tabbar" aria-label="Primary">
         {tabs.map(([k, href, label, icon]) => (
-          <a key={k} href={href} className={tab === k ? 'on' : ''} aria-current={tab === k ? 'page' : undefined} aria-label={label}>
+          <a key={k} href={href} className={tab === k ? 'on' : ''} aria-current={tab === k ? 'page' : undefined}>
             {icon}
             <span className="lbl">{label}</span>
           </a>
@@ -178,8 +180,8 @@ export function CashPill({ account }: { account: Acct }) {
   return account ? <BalancePill account={account} /> : null
 }
 
-function SignIn({ onReady, onGuest, inline }: { onReady: (a: LocalAccount) => void; onGuest?: () => void; inline?: boolean }) {
-  const desk = useOnboardWide()
+/** One calm sign-in card, shown wherever an action needs an account. Browsing never does. */
+function SignIn({ onReady }: { onReady: (a: LocalAccount) => void }) {
   const [err, setErr] = useState<string>()
   const [busy, setBusy] = useState(false)
   const returning = !!savedPasskey()
@@ -195,71 +197,42 @@ function SignIn({ onReady, onGuest, inline }: { onReady: (a: LocalAccount) => vo
       setBusy(false)
     }
   }
-  const actions = (
-    <div className="signin-actions">
-      {returning ? (
-        <button className="btn wide" disabled={busy} onClick={() => go(signIn)}>
-          {busy ? <span className="spin" aria-hidden /> : null}
-          Continue with your passkey
-        </button>
-      ) : (
-        <button className="btn wide" disabled={busy} onClick={() => go(() => createAccount(`Collector ${new Date().toLocaleDateString()}`))}>
-          {busy ? <span className="spin" aria-hidden /> : null}
-          Continue with a passkey
-        </button>
-      )}
-      <button className="ghost" disabled={busy} onClick={() => go(returning ? () => signIn(true) : signIn)}>
-        {returning ? 'Use a different passkey' : 'I already have an account'}
-      </button>
-      {net.name === 'testnet' && (err || hasDeviceKey()) && (
-        <button className="ghost" disabled={busy} onClick={() => go(async () => deviceAccount())}>
-          {hasDeviceKey() ? 'Continue with this device’s test account' : 'Continue without a passkey (test mode)'}
-        </button>
-      )}
-      {err && (
-        <p className="error" role="alert">
-          {err}
-        </p>
-      )}
-      <p className="fine" style={{ textAlign: 'center' }}>
-        Your device’s fingerprint, face recognition or screen lock. No app to install, and no seed phrase needed to start.
-      </p>
-    </div>
-  )
-  if (inline)
-    return (
-      <div className="flow" style={{ paddingTop: 40 }}>
-        <h1 className="big" style={{ fontSize: 32 }}>
-          Sign in to continue
-        </h1>
-        <p className="muted">Your passkey is your account. It takes a few seconds.</p>
-        {actions}
-      </div>
-    )
-  if (desk && onGuest) return <Onboard onReady={onReady} onGuest={onGuest} />
   return (
-    <div className="signin">
-      <div className="signin-top">
-        <span className="brand">{brand}</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <SettingsButton />
-          <button className="ghost" style={{ marginRight: -14, color: 'var(--ink-2)' }} onClick={onGuest}>
-            Look around first
+    <div className="gate">
+      <div className="gate-card">
+        <div className="gate-art" aria-hidden>
+          <Slab name="PSA 10 Base Set Charizard Holo" size="sm" />
+        </div>
+        <h1>{returning ? 'Welcome back' : 'Sign in to trade'}</h1>
+        <p className="gate-sub">Your passkey is your account: your device’s fingerprint, face or screen lock. Nothing to install and no seed phrase.</p>
+        <div className="gate-actions">
+          {returning ? (
+            <button className="btn wide" disabled={busy} onClick={() => go(signIn)}>
+              {busy ? <span className="spin" aria-hidden /> : null}
+              Continue with your passkey
+            </button>
+          ) : (
+            <button className="btn wide" disabled={busy} onClick={() => go(() => createAccount(`Collector ${new Date().toLocaleDateString()}`))}>
+              {busy ? <span className="spin" aria-hidden /> : null}
+              Create an account with a passkey
+            </button>
+          )}
+          <button className="ghost line wide" disabled={busy} onClick={() => go(returning ? () => signIn(true) : signIn)}>
+            {returning ? 'Use a different passkey' : 'I already have an account'}
           </button>
-        </span>
+          {net.name === 'testnet' && (err || hasDeviceKey()) && (
+            <button className="ghost wide" disabled={busy} onClick={() => go(async () => deviceAccount())}>
+              {hasDeviceKey() ? 'Continue with this device’s test account' : 'Continue without a passkey (test mode)'}
+            </button>
+          )}
+          {err && <p className="error" role="alert">{err}</p>}
+        </div>
+        <ul className="gate-points">
+          <li><b>Browsing is open.</b> Prices, order books and trades need no account.</li>
+          <li><b>You hold the key.</b> It is made on this device and stays on it.</li>
+          {net.name === 'testnet' && <li><b>Test network.</b> Cash and custody are simulated and have no value.</li>}
+        </ul>
       </div>
-      <div className="signin-hero">
-        <Slab name="PSA 10 Base Set Charizard Holo" size="lg" />
-      </div>
-      <div className="rise">
-        <h1>
-          Own the card.
-          <br />
-          Trade it any time.
-        </h1>
-        <p className="lead">Graded cards held in a vault, each with its own live order book. Buy and sell whenever you like, and request the physical slab when you want it.</p>
-      </div>
-      {actions}
     </div>
   )
 }

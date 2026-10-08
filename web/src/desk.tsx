@@ -6,7 +6,6 @@ import { recentFills, type FeedItem } from './chain'
 import { IconClose, IconSearch } from './icons'
 import { Skeleton } from './States'
 import { short, usd, usePoll } from './ui'
-import { signedPct } from './format'
 
 // ===================================================================== keyboard
 /** True when a key press belongs to text editing or the browser, so a shortcut must stand down. */
@@ -189,28 +188,7 @@ export const Breadcrumbs = ({ items }: { items: [string, string?][] }) => (
   </nav>
 )
 
-export const StatPill = ({ label, value, note, tone }: { label: string; value: ReactNode; note?: ReactNode; tone?: 'up' | 'down' }) => (
-  <div className="stat">
-    <span className="lbl">{label}</span>
-    <b className={tone}>{value}</b>
-    {note && <small>{note}</small>}
-  </div>
-)
-
-type Price = { value?: number; note: string }
-/** Ask, Best offer and Last sale, each labelled and never merged. A missing value says why in words. */
-export const PriceBlock = ({ ask, bid, last, large }: { ask: Price; bid: Price; last: Price; large?: boolean }) => (
-  <dl className={`pblock ${large ? 'large' : ''}`}>
-    {([['Ask', ask], ['Best offer', bid], ['Last sale', last]] as const).map(([label, p]) => (
-      <div key={label}>
-        <dt>{label}</dt>
-        <dd>{p.value !== undefined ? usd(p.value) : '—'}</dd>
-        <small>{p.note}</small>
-      </div>
-    ))}
-  </dl>
-)
-
+/** Tabs, each with an optional count. */
 export function Tabs<T extends string>({ tabs, value, onChange, label }: { tabs: [T, string, number?][]; value: T; onChange: (t: T) => void; label: string }) {
   const onKey = (e: React.KeyboardEvent) => {
     const i = tabs.findIndex((t) => t[0] === value)
@@ -406,8 +384,6 @@ export function useSales() {
   return { fills: data as FeedItem[] | undefined, change, error }
 }
 
-export const ChangeText = ({ c }: { c?: Change }) => (c ? <span className={c.pct >= 0 ? 'up' : 'down'}>{signedPct(c.pct)}</span> : <span className="muted">—</span>)
-
 const CK = 'tivan.compare'
 const CEVT = 'tivan-compare'
 const readIds = (raw: string): string[] => {
@@ -465,34 +441,6 @@ export function CompareTray({ names }: { names: (sku: string) => string | undefi
   )
 }
 
-// ===================================================================== shelf
-/** A heading with View all, and a row of items that peeks the next one and scrolls with the arrow keys. */
-export function Shelf({ title, href, children }: { title: string; href: string; children: ReactNode }) {
-  const ref = useEdgeCue<HTMLDivElement>()
-  return (
-    <section className="shelf-sec" aria-label={title}>
-      <div className="shelf-head">
-        <h2>{title}</h2>
-        <a href={href}>View all</a>
-      </div>
-      <div
-        className="shelf"
-        ref={ref}
-        tabIndex={0}
-        role="group"
-        aria-label={`${title}. Use the arrow keys to scroll`}
-        onKeyDown={(e) => {
-          if (e.target !== e.currentTarget || (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft')) return
-          e.preventDefault()
-          ref.current?.scrollBy({ left: e.key === 'ArrowRight' ? 240 : -240, behavior: 'smooth' })
-        }}
-      >
-        {children}
-      </div>
-    </section>
-  )
-}
-
 // ===================================================================== account menu and the sample-market notice
 /** The signed-in account button: the user's initial, opening Account, Settings, Help and shortcuts, Sign out. */
 export function AccountMenu({ address, onSignOut, initial = 'C' }: { address: string; onSignOut: () => void; initial?: string }) {
@@ -544,9 +492,10 @@ export function DemoStrip() {
   return (
     <>
       <div className="strip">
-        <span>Test network. Prices come from an automated market maker. Custody and cash are simulated.</span>
+        <b><i aria-hidden />Test network</b>
+        <span>Prices come from an automated market maker. Cash and custody are simulated.</span>
         <button className="linkbtn" onClick={() => ref.current?.showModal()}>
-          Details
+          What is real
         </button>
       </div>
       <dialog ref={ref} className="strip-dialog" aria-labelledby="demo-title" onClick={(e) => e.target === ref.current && ref.current?.close()}>
