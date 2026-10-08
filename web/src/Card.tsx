@@ -116,7 +116,7 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
     return (
       <>
         <Breadcrumbs items={[['Markets', '#/'], ['Card']]} />
-        {m.error ? <ErrorNote what="Couldn’t load this card." why={m.error} next="Check your connection, then try again." onRetry={m.refresh} /> : <div className="card-layout" aria-hidden><div className="card-hero"><Skeleton h={420} r={12} /></div><div><Skeleton h={36} w="70%" r={6} /><div style={{ marginTop: 16 }}><Skeleton h={180} r={12} /></div></div></div>}
+        {m.error ? <ErrorNote what="Couldn’t load this card." why={m.error} next="Check your connection, then try again." onRetry={m.refresh} /> : <div className="cx" aria-hidden><div className="cx-media"><div className="card-hero"><Skeleton h={460} w={320} r={14} /></div></div><div className="cx-trade"><Skeleton h={14} w="30%" r={4} /><Skeleton h={40} w="80%" r={6} /><Skeleton h={64} r={10} /><Skeleton h={240} r={16} /></div></div>}
       </>
     )
 
