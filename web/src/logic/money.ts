@@ -60,7 +60,7 @@ const INTL_MODE = { floor: 'floor', ceil: 'ceil', halfUp: 'halfExpand' } as cons
 export function formatUsd(units: bigint, o: FormatOptions = {}, decimals = USDC_DECIMALS): string {
   const whole = units % pow10(decimals) === 0n
   const d = o.digits === undefined || o.digits === 'auto' ? (whole ? 0 : 2) : o.digits
-  const nf = new Intl.NumberFormat(o.locale, {
+  const nf = new Intl.NumberFormat(o.locale ?? 'en-US', {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: d,
@@ -75,7 +75,7 @@ export function formatUsd(units: bigint, o: FormatOptions = {}, decimals = USDC_
 /** Basis points (1 bp = 0.01%) as a percentage: 580n -> "5.8%". Rounds halves up at the shown digit. */
 export function formatBps(bps: bigint, o: { locale?: string; digits?: number; sign?: 'auto' | 'always' } = {}): string {
   const d = o.digits ?? 1
-  const nf = new Intl.NumberFormat(o.locale, {
+  const nf = new Intl.NumberFormat(o.locale ?? 'en-US', {
     style: 'percent',
     minimumFractionDigits: d,
     maximumFractionDigits: d,
@@ -86,4 +86,4 @@ export function formatBps(bps: bigint, o: { locale?: string; digits?: number; si
 }
 
 /** A quantity of cards ("1", "1,000"). */
-export const formatQty = (n: bigint, locale?: string) => new Intl.NumberFormat(locale).format(n)
+export const formatQty = (n: bigint, locale?: string) => new Intl.NumberFormat(locale ?? 'en-US').format(n)
