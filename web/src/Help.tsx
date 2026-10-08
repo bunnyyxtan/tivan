@@ -42,16 +42,23 @@ export function HelpPage() {
   const topic = (TOPICS.find((t) => t.value === sp.get('s'))?.value ?? 'faq') as Topic
   const rules = useRules()
   return (
-    <div className="c-reading help">
+    <div className="help">
       <PageHead title="Help" sub="How Tivan works, what is real on the test network, and answers to common questions" />
-      <Seg label="Help topic" value={topic} onChange={(t) => setQuery({ s: t === 'faq' ? '' : t })} options={TOPICS} />
+      <div className="help-grid">
+      <nav className="subnav help-nav" aria-label="Help topics">
+        {TOPICS.map((t) => (
+          <button key={t.value} aria-current={topic === t.value ? 'true' : undefined} onClick={() => setQuery({ s: t.value === 'faq' ? '' : t.value })}>
+            {t.label}
+          </button>
+        ))}
+      </nav>
+      <div className="help-seg">
+        <Seg label="Help topic" value={topic} onChange={(t) => setQuery({ s: t === 'faq' ? '' : t })} options={TOPICS} />
+      </div>
       <div className="help-body">
         {topic === 'faq' && (
           <>
-            <div className="help-tools">
-              <Button variant="secondary" size={40} onClick={startTour}>Take the tour</Button>
-              <Button variant="tertiary" size={40} onClick={openShortcuts}>Keyboard shortcuts</Button>
-            </div>
+            <h2>Frequently asked</h2>
             {FAQ.map(([q, a]) => (
               <details key={q} className="faq">
                 <summary>{q}</summary>
@@ -93,8 +100,29 @@ export function HelpPage() {
           </>
         )}
       </div>
+      <aside className="help-aside" aria-label="Quick help">
+        <section className="panel">
+          <h2>New here?</h2>
+          <p className="fine">A short tour of the main controls, five steps at most. It never starts on its own.</p>
+          <div className="help-tools">
+            <Button variant="secondary" size={40} onClick={startTour}>Take the tour</Button>
+            <Button variant="tertiary" size={40} onClick={openShortcuts}>Keyboard shortcuts</Button>
+          </div>
+        </section>
+        <section className="panel">
+          <h2>At a glance</h2>
+          <dl className="help-facts">
+            <div><dt>Network</dt><dd>{net.chain.name}</dd></div>
+            <div><dt>Trading fee</dt><dd>{rules ? `Currently ${formatBps(rules.takerBps, { digits: 2 })}` : 'Reading'}</dd></div>
+            <div><dt>Network fee</dt><dd>About 0.02 MON</dd></div>
+            <div><dt>Cash</dt><dd>{test ? 'Test dollars, no value' : 'USDC on Monad'}</dd></div>
+            <div><dt>Custody</dt><dd>{test ? 'Simulated' : 'Vault partner'}</dd></div>
+          </dl>
+          {net.vault && <a className="linkbtn" href={explorerAddress(net.vault)} target="_blank" rel="noreferrer">Vault contract on the explorer</a>}
+        </section>
+      </aside>
+      </div>
     </div>
   )
 }
 
-/** The footer: only links that resolve. "Built on Monad" is plain text until Monad's brand terms are confirmed. */
