@@ -65,4 +65,13 @@ prices or grades, auto-rotating carousels, cursor-following effects, a toast for
   fanned slab stack and arrows, a "Popular markets" carousel with the centre card lifted, crossing marquee ribbons, a
   "Popular cards" grid, a call-to-action band and a dark footer. The landing page may use exclamation marks, a sparkle
   and the spring green #3FE59B; the app does not.
-- Everything on it is live data. No packs, newsletter or social accounts that do not exist.
+- Alive, full-bleed sections (rebuilt 2026-10-09 after the owner called the first version dead):
+  - hero: drifting aurora, a tilted wall of card art scrolling in columns that bleeds off the right edge, the featured
+    slab with a holographic pointer tilt, floating chips of the latest real sales, rolling sub-lines, and live stats
+    (markets, cards in the vault, latest block);
+  - a live trade ticker band, a live order book section (read from the contract every 6 s, changed rows flash), a
+    "Pull a random grail" toy (shuffle, flip, confetti; nothing is bought), a card wall in the CTA gutters and a giant
+    footer wordmark.
+- The landing page may use holo tilt, rotating chips and words, and the spring green #3FE59B; the app does not.
+- Everything on it is live data. No packs, newsletter or social accounts that do not exist. Reduced motion stops all of
+  it.

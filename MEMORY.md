@@ -1,7 +1,7 @@
 # Tivan project memory
 
 Facts and decisions that are not obvious from the code. Update this file with every change that alters them; keep it short.
-Last updated 2026-10-08.
+Last updated 2026-10-09.
 
 ## What Tivan is
 A marketplace for graded trading cards on Monad. Each slab sits in a vault and is backed by one ERC-20 token
@@ -30,7 +30,8 @@ bunnyyxtan/tivan (public), branch `main` only.
 - The app is an app, not a website: sidebar, top bar, status bar. No sign-in wall, no landing hero, no site footer.
   Pages use the full width; nothing sits in a narrow left column with empty space on the right.
 - The site root shows the public landing page to visitors (owner's Fankado-style reference); the app's home is
-  `#/markets`. Signed-in people at `#/` see Markets.
+  `#/markets`. Signed-in people at `#/` see Markets. The owner wants it alive and full-screen (motion, card walls, live
+  data in the side space), not a static poster.
 - Cash opens as a centred modal (a bottom sheet on phones) with tabs: Test dollars, Deposit, Withdraw, Network fees.
   Not a side drawer.
 - Key export only behind a fresh passkey check plus press-and-hold. Never say "seed phrase". No backup passkey: each
