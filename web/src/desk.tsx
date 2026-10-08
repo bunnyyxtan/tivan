@@ -332,6 +332,7 @@ function useWidth() {
 /** A plain step chart sized to its box: each value holds until the next point; the final point is labelled. */
 export function Chart({ pts, h = 150, tag = 'Last sale', label }: { pts: { t: number; price: number }[]; h?: number; tag?: string; label: string }) {
   const [ref, W] = useWidth()
+  const gid = useId()
   const L = 54
   const B = 22
   const ps = pts.map((p) => p.price)
@@ -349,6 +350,12 @@ export function Chart({ pts, h = 150, tag = 'Last sale', label }: { pts: { t: nu
   return (
     <div className="hist" ref={ref}>
       <svg viewBox={`0 0 ${W} ${h}`} style={{ height: h }} role="img" aria-label={label}>
+        <defs>
+          <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" style={{ stopColor: 'var(--chart-fill-top)' }} />
+            <stop offset="1" style={{ stopColor: 'var(--chart-fill-bottom)' }} />
+          </linearGradient>
+        </defs>
         {[hi, (hi + lo) / 2, lo].map((v, i) => (
           <g key={i}>
             <line className="grid" x1={L} x2={W - 8} y1={y(v)} y2={y(v)} />
@@ -363,6 +370,7 @@ export function Chart({ pts, h = 150, tag = 'Last sale', label }: { pts: { t: nu
         <text className="axis" x={W - 8} y={h - 6} textAnchor="end">
           {day(last.t)}
         </text>
+        <path className="area" d={`${d}V${y(lo)}H${x(t0)}Z`} fill={`url(#${gid})`} />
         <path className="line" d={d} />
         <circle className="last" cx={x(last.t)} cy={y(last.price)} r="4" />
         <text className="tag" x={x(last.t) + (left ? -10 : 10)} y={Math.max(y(last.price) - 9, 12)} textAnchor={left ? 'end' : 'start'}>

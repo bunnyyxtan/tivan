@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { askPermission, canNotify, notifyState } from './alerts'
 import { defaultPrefs, usePrefs } from './fx'
+import { Seg } from './controls'
 import { IconBell, IconGrid, IconList, IconMotion } from './icons'
 
 const EVT = 'tivan-settings'
@@ -50,6 +51,14 @@ export function SettingsSheet() {
           </button>
         </div>
         <p className="fine" style={{ marginTop: 4 }}>Saved in this browser. No account needed.</p>
+
+        <h3 className="settings-h">Appearance</h3>
+        <div className="settings-group">
+          <div className="settings-row">
+            <span className="row-text">Theme<small>System follows your device and changes with it</small></span>
+            <Seg label="Appearance" value={prefs.theme} onChange={(theme) => setPrefs({ theme })} options={[{ value: 'system', label: 'System' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} />
+          </div>
+        </div>
 
         <h3 className="settings-h">Motion</h3>
         <div className="settings-group">

@@ -116,7 +116,7 @@ export default function App() {
                 <AccountMenu address={account.address} onSignOut={out} />
               </>
             ) : (
-              <a className="btn sm" href="#/you">
+              <a className="btn md" href="#/you">
                 Sign in
               </a>
             )}

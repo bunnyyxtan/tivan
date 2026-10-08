@@ -2,9 +2,10 @@ import { createElement, useEffect, useRef, useState, type ReactNode } from 'reac
 import { IconSettings } from './icons'
 
 // ---- preferences: saved in this browser, applied as <html> attributes
-export type Prefs = { motion: 'full' | 'off'; dense: boolean; view: 'list' | 'grid' }
+export type Theme = 'system' | 'light' | 'dark'
+export type Prefs = { motion: 'full' | 'off'; dense: boolean; view: 'list' | 'grid'; theme: Theme }
 const KEY = 'tivan.prefs'
-const defaults = (): Prefs => ({ motion: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'off' : 'full', dense: false, view: 'grid' })
+const defaults = (): Prefs => ({ motion: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'off' : 'full', dense: false, view: 'grid', theme: 'system' })
 export const defaultPrefs = defaults
 
 export const readPrefs = (): Prefs => {
@@ -15,17 +16,29 @@ export const readPrefs = (): Prefs => {
       motion: s.motion === 'off' ? 'off' : s.motion ? 'full' : d.motion,
       dense: typeof s.dense === 'boolean' ? s.dense : d.dense,
       view: s.view === 'list' ? 'list' : s.view === 'grid' ? 'grid' : d.view,
+      theme: s.theme === 'light' || s.theme === 'dark' ? s.theme : 'system',
     }
   } catch {
     return defaults()
   }
 }
+const LIGHT = '(prefers-color-scheme: light)'
+const THEME_COLOR = { light: '#f6f5fa', dark: '#0e0c17' }
 const apply = (p: Prefs) => {
-  const d = document.documentElement.dataset
+  const root = document.documentElement
+  const d = root.dataset
   d.motion = p.motion
   d.dense = String(p.dense)
+  // The mode in force: the chosen one, or the device's. The same logic runs in index.html before first paint.
+  const mode = p.theme === 'system' ? (matchMedia(LIGHT).matches ? 'light' : 'dark') : p.theme
+  d.theme = mode
+  d.appearance = p.theme
+  root.style.colorScheme = mode
+  document.querySelector<HTMLMetaElement>('meta[name=theme-color]')?.setAttribute('content', THEME_COLOR[mode])
 }
 apply(readPrefs())
+// With System chosen, follow the device live.
+matchMedia(LIGHT).addEventListener('change', () => apply(readPrefs()))
 const PREFS_EVT = 'tivan-prefs'
 export function usePrefs() {
   const [p, setP] = useState(readPrefs)
