@@ -1,28 +1,26 @@
-# Tivan brand: Ink and Brass
+# Tivan brand: Forest
 
 Personality: precise, calm, serious, verifiable. A vault and an exchange, not a game store. Trust is the product.
-This file replaced the violet system on 2026-10-08, when the owner asked for a redesign from scratch with full freedom,
+The layout system was rebuilt on 2026-10-08, when the owner asked for a redesign from scratch with full freedom,
 dark-first, in a classic style with no AI look. Tokens live in `web/src/index.css` (`:root`, then
 `:root[data-theme='light']`), and `web/scripts/check-contrast.mjs` measures every text, action and chip pair in both modes.
 
-## Colour
-- Ink, dark and the default: near-black neutral surfaces with no hue. canvas #0A0A0B, surface-1 #111113,
-  surface-2 #18181B, surface-3 #222226, borders #232327 and #34343A, input border #6C6B72.
-- Paper, light: canvas #F7F6F2, surface-1 #FFFFFF, surface-2 #F2F0EA, surface-3 #E9E6DE.
-- Text is warm ivory in dark mode (#F3F1EA, #B3B0A8, #8E8B84) and warm ink in light mode (#141311, #4B4842, #6B675F).
-- The primary action is solid ivory with ink text in dark mode, and solid ink with white text in light mode.
-- Brass is the one signature colour (#C9A86A, text #D6B77C; light #9A7634, text #7C5E25). Use it for the wordmark
-  mark, focus rings, the selected-navigation marker, links, and the "featured" and "yours" marks. Nowhere else.
-- Green and red mean price direction only (#3FCF8E and #FF6B6B; light #0F7A4F and #C0304A). They always sit next to a
-  sign or a word, and on a faint tint when shown as a change chip.
-- Allowed gradients:
-  - the slab stage, a soft radial light behind card art;
-  - the chart fill, which fades to transparent;
-  - the skeleton sheen.
-
-  Nothing else uses a gradient.
-- Allowed shadows: overlays (menus, dialogs, drawers, the phone tab bar) and slabs on a stage. The top bar and the
-  phone tab bar may blur what scrolls beneath them. Nothing glows.
+## Colour: Forest (owner palette, exact)
+- Six colours, used as given: #051F20, #0B2B26, #163832, #235347, #8EB69B, #DAF1DE. Values between two of them are
+  blends of neighbours, only where a step is missing (for example surface-2 #10322C and text-secondary #B4D4BD).
+- Dark (default):
+  - canvas #051F20, panels #0B2B26, raised and selected areas #163832;
+  - borders #163832 and #235347;
+  - text #DAF1DE, then #B4D4BD, then #8EB69B.
+  - Primary buttons are #DAF1DE with #051F20 text. Brand marks, links and focus use #8EB69B.
+- Light:
+  - canvas #EEF8F0, panels white, raised and selected areas #DAF1DE, strong borders #8EB69B;
+  - text #051F20, then #163832, then #235347.
+  - Primary buttons are #163832 with #DAF1DE text. Brand marks, links and focus use #235347.
+- The wordmark tile uses the palette's own gradient (#235347 to #8EB69B dark, #0B2B26 to #235347 light). Nowhere else.
+- Price up uses the brand green with ▲ and a faint tint; price down uses coral (#F08A7E dark, #B3364A light) with ▼.
+- Allowed gradients: the slab stage (a soft #235347 to #0B2B26 light), the chart fill, the skeleton sheen and the
+  wordmark tile. Shadows only on overlays and staged slabs.
 
 ## Type
 - Geist for the interface and headings: page titles 28, section titles 17, body 15, labels 13.
@@ -49,5 +47,5 @@ dark-first, in a classic style with no AI look. Tokens live in `web/src/index.cs
 - On the test network, custody and verification are named as simulated wherever they appear.
 
 ## Never
-Emoji, sparkle icons, violet or neon, glass cards, gradients beyond the three, invented figures or urgency, truncated
+Emoji, sparkle icons, violet, neon glows, glass cards, gradients beyond the four above, invented figures or urgency, truncated
 prices or grades, confetti, auto-rotating carousels, cursor-following effects, a toast for something shown in place.
