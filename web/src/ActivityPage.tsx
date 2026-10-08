@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
+import { PageHead } from './kit'
 import type { LocalAccount } from 'viem'
-import { Breadcrumbs, DataTable, Tabs, TableSkeleton, type Col } from './desk'
+import { DataTable, Tabs, TableSkeleton, type Col } from './desk'
 import { cents, ago, usdC } from './cardParts'
 import { later, Button, Chip } from './controls'
 import { cancelOrder } from './flows'
@@ -92,8 +93,7 @@ export function Activity({ account }: { account: LocalAccount }) {
 
   return (
     <>
-      <Breadcrumbs items={[['Discover', '#/'], ['Activity']]} />
-      <h1 className="page-h">Activity</h1>
+      <PageHead title="Activity" sub="Every order, trade and transfer from this account, with its receipt" />
       <Tabs<'feed' | 'open' | 'watch'> label="Activity" value={tab} onChange={(t) => setQuery({ tab: t === 'feed' ? '' : t })} tabs={[['feed', 'Activity', rows.length], ['open', 'Open orders', port.data ? openRows.length : undefined], ['watch', 'Watchlist', port.data ? watched.length : undefined]]} />
       <div className="tabpanel" role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
         {tab === 'feed' && (

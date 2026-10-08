@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { PageHead } from './kit'
 import type { LocalAccount } from 'viem'
-import { Breadcrumbs } from './desk'
 import { OrderForm, useMarket } from './Card'
 import { Define, SpreadBar, cents, usdC } from './cardParts'
 import { Button } from './controls'
@@ -166,8 +166,15 @@ export function Sell({ account }: { account: LocalAccount }) {
 
   return (
     <div className="sell">
-      <Breadcrumbs items={[['Discover', '#/'], ['Sell your card']]} />
-      <h1 className="page-h">Sell your card</h1>
+      <PageHead title="Sell a card" sub="Check your slab into the vault, then list it on its market. You are paid the moment an order fills." />
+      <ol className="stepper" aria-label="Steps">
+        {(['Find your card', 'Check into the vault', 'Set your price'] as const).map((t, i) => {
+          const at = step === 'price' ? 2 : step === 'vault' ? 1 : 0
+          return <li key={t} className={i < at ? 'done' : i === at ? 'on' : ''} aria-current={i === at ? 'step' : undefined}><span>{i + 1}</span>{t}</li>
+        })}
+      </ol>
+      <div className="sell-grid">
+      <div className="sell-main">
       {step === 'method' && (
         <ul className="methods">
           <li>
@@ -211,6 +218,18 @@ export function Sell({ account }: { account: LocalAccount }) {
       )}
       {step === 'vault' && found?.card && <VaultSteps account={account} cert={cert} found={found} onReady={(s) => (setSku(s), setStep('price'))} />}
       {step === 'price' && sku && <Price sku={sku} account={account} />}
+      </div>
+      <aside className="sell-aside" aria-label="How selling works">
+        <h2>How selling works</h2>
+        <dl>
+          <div><dt>Verification</dt><dd>{net.name === 'testnet' ? 'Simulated check against a demo registry.' : 'Your certificate is matched against the grader’s registry.'}</dd></div>
+          <div><dt>Custody</dt><dd>{net.name === 'testnet' ? 'Simulated: a demo custodian confirms receipt at once.' : 'A vault partner confirms the slab arrived before it can trade.'}</dd></div>
+          <div><dt>Listing</dt><dd>Your ask joins the card’s order book. Cancel it any time before it fills.</dd></div>
+          <div><dt>Fees</dt><dd>Shown on the review screen before you confirm, read from the market.</dd></div>
+        </dl>
+        <a className="u" href="#/help?s=custody">Custody and verification</a>
+      </aside>
+      </div>
     </div>
   )
 }

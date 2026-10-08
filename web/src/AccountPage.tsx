@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { PageHead } from './kit'
 import type { LocalAccount } from 'viem'
 import { askPermission, canNotify, notifyState } from './alerts'
 import { cents } from './cardParts'
@@ -39,7 +40,7 @@ export function AccountPage({ account, onSignOut }: { account: LocalAccount; onS
         <button onClick={onSignOut}>Sign out</button>
       </nav>
       <div className="acct-col">
-        <h1 className="page-h">Account</h1>
+        <PageHead title="Account" sub="Your address, security, alerts and appearance" />
         <Overview account={account} />
         <Security account={account} />
         <section id="acc-deposit" className="acc-sec" aria-labelledby="h-deposit">

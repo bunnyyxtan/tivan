@@ -1,11 +1,13 @@
 import { useMemo } from 'react'
+import { PageHead, Stat } from './kit'
+import { openCash } from './Cash'
 import type { LocalAccount } from 'viem'
 import { cents } from './cardParts'
 import { Checklist } from './Checklist'
 import { reservedUnits } from './Cash'
 import { tradeHistory, type Fill } from './chain'
 import { Seg } from './controls'
-import { Breadcrumbs, Chart, DataTable, StatPill, type Col } from './desk'
+import { Chart, DataTable, type Col } from './desk'
 import { categoryOf } from './config'
 import { centsToUnits, formatBps, formatQty, formatUsd } from './logic/money.ts'
 import { averageBuyUnits, unrealisedPnl } from './logic/orders.ts'
@@ -79,27 +81,25 @@ export function Portfolio({ account }: { account: LocalAccount }) {
   ]
   return (
     <>
-      <Breadcrumbs items={[['Discover', '#/'], ['Portfolio']]} />
-      <h1 className="page-h">Portfolio</h1>
+      <PageHead title="Portfolio" sub={data ? <>Total value, estimated · <b className="fig">{usd(total, 2)}</b></> : 'Reading your account'}>
+        <button className="ghost line md" onClick={openCash}>Add cash</button>
+        <a className="btn md" href="#/browse">Find a card</a>
+      </PageHead>
       {error && !data && <ErrorNote what="Couldn’t load your portfolio." why={error} next="Check your connection, then try again." onRetry={refresh} />}
       {!data && !error && <Skeleton h={240} r={12} />}
       {data && (
         <>
-          <Checklist account={account} />
-          <section className="pf-head" aria-label="Value">
-            <div>
-              <span className="fine">Total value, estimated</span>
-              <div className="pf-total">{usd(total, 2)}</div>
-              <p className="fine pf-parts">
+          <section className="stats4" aria-label="Value">
+            <Stat label="Total value" value={usd(total, 2)} note="Cards, cash and reserved offers" />
+            <Stat label="Cash available" value={usd(available, 2)} note={`${usd(reserved, 2)} reserved in open offers`} />
+            <Stat label="Cards held" value={formatQty(rows.reduce((n, r) => n + r.qty, 0n))} note={`${usd(cards, 2)} at best offers · ${rows.length} market${rows.length === 1 ? '' : 's'}`} />
+            <Stat label="Unrealised P&L" value={known.length ? usd(pnlSum, 2, true) : '—'} tone={known.length ? (pnlSum >= 0n ? 'up' : 'down') : undefined} note={known.length ? `On ${known.length} of ${rows.length} markets, at best offer` : 'Needs a card bought here'} />
+          </section>
+          <p className="fine pf-parts">
                 Cards {usd(cards, 2)} (valued at best offer) + available cash {usd(available, 2)} (confirmed) + {usd(reserved, 2)} reserved in open offers (confirmed).
                 {unmarked ? ` ${unmarked} card${unmarked === 1 ? ' has' : 's have'} no offer, so ${unmarked === 1 ? 'it is' : 'they are'} left out of the cards figure.` : ''}
-              </p>
-            </div>
-            <div className="pf-stats">
-              <StatPill label="Cards held" value={formatQty(rows.reduce((n, r) => n + r.qty, 0n))} note={`${rows.length} market${rows.length === 1 ? '' : 's'}`} />
-              <StatPill label="Unrealised P&L" value={known.length ? usd(pnlSum, 2, true) : '—'} tone={known.length ? (pnlSum >= 0n ? 'up' : 'down') : undefined} note={known.length ? `Valued at best offer against average cost, on ${known.length} of ${rows.length} markets` : 'Needs a card bought on a market here'} />
-            </div>
-          </section>
+          </p>
+          <Checklist account={account} />
 
           <section className="section" aria-label="Value over time">
             <div className="hist-head">
