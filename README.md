@@ -11,7 +11,7 @@ under a second. Holders can redeem the physical slab at any time.
 **Live demo:** https://bunnyyxtan.github.io/tivan/ (Monad testnet; nothing uses real money, vault custody is simulated).
 
 <p>
-  <img src="docs/screenshots/markets-desktop-dark.jpg" alt="Discover, desktop, dark theme" width="49%">
+  <img src="docs/screenshots/markets-desktop-dark.jpg" alt="Markets, desktop, dark theme" width="49%">
   <img src="docs/screenshots/card-desktop-light.jpg" alt="Card page, desktop, light theme" width="49%">
 </p>
 
