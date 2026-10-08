@@ -3,17 +3,18 @@ import { catalogOf, categories, categoryOf, net } from './config'
 import { hasMarket, loadSkus, type Sku } from './chain'
 import { usePortfolio } from './portfolio'
 import type { Acct } from './App'
-import { Breadcrumbs, CompareTray, DataTable, Shelf, TableSkeleton, ago, useCompare, useSales, type Col } from './desk'
-import { SpreadBar, cents, readViewed, usdC } from './cardParts'
+import { Breadcrumbs, CompareTray, DataTable, TableSkeleton, ago, useCompare, useSales, type Col } from './desk'
+import { Delta, Live, MarketTile, PageHead, Spark, Stat, lastSaleAt, pointsFor } from './kit'
+import { cents, usdC } from './cardParts'
 import { spread } from './logic/orders.ts'
 import { centsToUnits, formatBps, formatUsd } from './logic/money.ts'
 import { setQuery, useQuery, useRestoreScroll, useWide } from './route'
 import { Empty, ErrorNote, ItemCardSkeleton, Skeleton } from './States'
-import { ItemCard, askText, gradeOf, lastText, offerText } from './Market'
-import { IconGrid, IconList } from './icons'
+import { askText, gradeOf, lastText, offerText } from './Market'
+import { IconGrid, IconList, IconStar } from './icons'
 import { Chip, Opt, RangeDual, Seg, Select } from './controls'
 import { pct } from './format'
-import { Slab, cardSub, cardTitle, parseName, usePoll, useWatch, usd } from './ui'
+import { Slab, cardTitle, parseName, usePoll, useWatch, usd } from './ui'
 
 // ===================================================================== filters, kept in the URL
 type F = { q: string; cat: string; set: string; gmin?: number; gmax?: number; pmin?: number; pmax?: number; sale: boolean; sort: string; view: 'grid' | 'table' }
@@ -148,6 +149,7 @@ export function Browse({ account }: { account: Acct }) {
   const { data, error, refresh } = usePoll(loadSkus, 8000, [])
   const { data: port } = usePortfolio(account?.address)
   const watch = useWatch()
+  const sales = useSales()
   const cmp = useCompare()
   const [drawer, setDrawer] = useState(false)
   const dlg = useRef<HTMLDialogElement>(null)
@@ -192,6 +194,7 @@ export function Browse({ account }: { account: Acct }) {
     { key: 'bid', label: 'Best offer', right: true, sort: 'bid', cell: (s) => offerText(s, hasMarket(s)) },
     { key: 'spread', label: 'Spread', right: true, sort: 'spread', cell: (s) => { const x = spread(s.ask ? cents(s.ask) : undefined, s.bid ? cents(s.bid) : undefined); return x ? formatBps(x.bps, { digits: 1 }) : <span className="na">—</span> } },
     { key: 'last', label: 'Last trade', right: true, sort: 'last', cell: (s) => lastText(s) },
+    { key: 'chg', label: 'Change', right: true, cell: (s) => <Delta c={sales.change.get(s.sku.toLowerCase())} /> },
     { key: 'vault', label: 'Supply', right: true, sort: 'vault', cell: (s) => s.vaulted },
     {
       key: 'act',
@@ -263,7 +266,7 @@ export function Browse({ account }: { account: Acct }) {
     <div className="item-grid browse-grid">
       {list.map((s) => (
         <div className="item-wrap" key={s.sku} onKeyDown={(e) => toggleCmp(e, s)}>
-          <ItemCard s={s} tag={tag(s)} />
+          <MarketTile s={s} c={sales.change.get(s.sku.toLowerCase())} pts={pointsFor(sales.fills, s.sku)} tag={tag(s)} at={lastSaleAt(sales.fills, s.sku)} />
           <span className="cmp-slot">{cmpBtn(s)}</span>
         </div>
       ))}
@@ -273,8 +276,11 @@ export function Browse({ account }: { account: Acct }) {
   )
   return (
     <>
-      <Breadcrumbs items={[['Discover', '#/'], ['Browse', f.cat ? '#/browse' : undefined], ...(f.cat ? ([[f.cat === 'Watching' ? 'Watchlist' : f.cat]] as [string][]) : [])]} />
-      <h1 className="page-h">{f.cat === 'Watching' ? 'Watchlist' : f.cat || 'Browse'}</h1>
+      <PageHead
+        title={f.cat === 'Watching' ? 'Watchlist' : f.cat || 'Browse'}
+        sub={data ? `${all.length} graded cards, each with its own order book` : 'Reading the catalogue'}
+        crumbs={f.cat ? <Breadcrumbs items={[['Browse', '#/browse'], [f.cat === 'Watching' ? 'Watchlist' : f.cat]]} /> : undefined}
+      />
       <div className="browse">
         {wide && (
           <aside className="rail" aria-label="Filters">
@@ -326,136 +332,196 @@ export function Browse({ account }: { account: Acct }) {
   )
 }
 
-// ===================================================================== discover
+// ===================================================================== markets (the home dashboard)
+type View = 'all' | 'trending' | 'movers' | 'recent' | 'watch'
+const VIEWS: [View, string][] = [['all', 'All'], ['trending', 'Trending'], ['movers', 'Top movers'], ['recent', 'Recently traded'], ['watch', 'Watchlist']]
+
 export function Discover({ account }: { account: Acct }) {
-  const { data, error, refresh, } = usePoll(async () => ({ skus: await loadSkus(), at: Date.now() }), 8000, [])
+  const { data, error, refresh } = usePoll(async () => ({ skus: await loadSkus(), at: Date.now() }), 8000, [])
   const sales = useSales()
   const { data: port } = usePortfolio(account?.address)
   const watch = useWatch()
+  const sp = useQuery()
+  const view = (VIEWS.find((v) => v[0] === sp.get('v'))?.[0] ?? 'all') as View
+  const cat = sp.get('cat') ?? ''
   useRestoreScroll(!!data)
   const all = data?.skus ?? []
-  const tag = (s: Sku) => {
-    const o = port?.holdings.find((h) => h.s.sku === s.sku)
-    return o && o.count > 0 ? `You own ${o.count}` : watch.list.includes(s.sku) ? 'Watching' : ''
-  }
-  const forSale = all.filter((s) => s.ask)
-  const feat = [...forSale].sort((a, b) => b.ask! - a.ask!)[0]
-  const fc = feat && catalogOf(feat.name)
   const fills = sales.fills
-  // Every figure in the ledger is computed from the markets and trades above, with the time it was read.
+  const chg = (s: Sku) => sales.change.get(s.sku.toLowerCase())
+  const owned = (s: Sku) => port?.holdings.find((h) => h.s.sku === s.sku)?.count ?? 0
+  const count = new Map<string, number>()
+  for (const f of fills ?? []) count.set(f.sku.toLowerCase(), (count.get(f.sku.toLowerCase()) ?? 0) + 1)
+  // Every figure is computed from the markets and trades on screen, with the time they were read.
   const spreads = all.map((s) => spread(s.ask ? cents(s.ask) : undefined, s.bid ? cents(s.bid) : undefined)).filter((x): x is NonNullable<typeof x> => !!x).map((x) => x.bps).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
   const median = spreads.length ? (spreads.length % 2 ? spreads[(spreads.length - 1) / 2] : (spreads[spreads.length / 2 - 1] + spreads[spreads.length / 2]) / 2n) : undefined
   const vaultValue = all.reduce((n, s) => (s.bid ? n + centsToUnits(cents(s.bid)) * BigInt(s.vaulted) : n), 0n)
+  const slabs = all.reduce((n, s) => n + s.vaulted, 0)
   const monthAgo = Date.now() / 1000 - 30 * 86_400
   const month = (fills ?? []).filter((x) => x.t >= monthAgo)
+  const monthVol = month.reduce((n, x) => n + cents(x.price), 0n)
   const capped = (fills?.length ?? 0) >= 300
   const lastSale = fills?.[0]
-  const distinct = [...new Map((fills ?? []).map((x) => [x.sku.toLowerCase(), x])).values()].slice(0, 8)
-  const traded = distinct.map((x) => all.find((s) => s.sku.toLowerCase() === x.sku.toLowerCase())).filter((s): s is Sku => !!s)
-  const viewed = readViewed().map((k) => all.find((s) => s.sku === k)).filter((s): s is Sku => !!s)
-  const rows = categories.map((c) => [c, all.filter((s) => categoryOf(s.name) === c)] as const).filter(([, l]) => l.length)
+  const latestPer = (fills ?? []).filter((x, i, a) => a.findIndex((y) => y.sku.toLowerCase() === x.sku.toLowerCase()) === i).slice(0, 6)
+  const movers = all.filter((s) => chg(s)).sort((a, b) => Math.abs(chg(b)!.pct) - Math.abs(chg(a)!.pct)).slice(0, 5)
+  const inCat = all.filter((s) => !cat || categoryOf(s.name) === cat)
+  const rows =
+    view === 'trending' ? [...inCat].sort((a, b) => (count.get(b.sku.toLowerCase()) ?? 0) - (count.get(a.sku.toLowerCase()) ?? 0) || (b.ask ?? 0) - (a.ask ?? 0))
+    : view === 'movers' ? inCat.filter((s) => chg(s)).sort((a, b) => Math.abs(chg(b)!.pct) - Math.abs(chg(a)!.pct))
+    : view === 'recent' ? inCat.filter((s) => lastSaleAt(fills, s.sku)).sort((a, b) => lastSaleAt(fills, b.sku)! - lastSaleAt(fills, a.sku)!)
+    : view === 'watch' ? inCat.filter((s) => watch.list.includes(s.sku))
+    : inCat
+  const cats = categories.map((c) => [c, all.filter((s) => categoryOf(s.name) === c)] as const).filter(([, l]) => l.length)
+  const cols: Col<Sku>[] = [
+    {
+      key: 'w',
+      label: 'Watch',
+      cell: (s, tab) => (
+        <button className={`star ${watch.list.includes(s.sku) ? 'on' : ''}`} tabIndex={tab} aria-pressed={watch.list.includes(s.sku)} aria-label={`Watch ${cardTitle(s.name)}`} onClick={() => watch.toggle(s.sku)}>
+          <IconStar />
+        </button>
+      ),
+    },
+    {
+      key: 'card',
+      label: 'Market',
+      cell: (s, tab) => (
+        <a className="tcard" href={`#/card/${s.sku}`} tabIndex={tab}>
+          <Slab name={s.name} size="xs" />
+          <span>
+            <b>{cardTitle(s.name)}</b>
+            <small>
+              {parseName(s.name).grader} {parseName(s.name).grade} · {catalogOf(s.name)?.set.replace(' · ', ' ')}
+              {owned(s) > 0 ? <em className="own"> · You own {owned(s)}</em> : null}
+            </small>
+          </span>
+        </a>
+      ),
+    },
+    { key: 'ask', label: 'Ask', right: true, cell: (s) => (s.ask ? <b className="fig">{usdC(cents(s.ask))}</b> : <span className="na">No sellers</span>) },
+    { key: 'bid', label: 'Best offer', right: true, cell: (s) => (s.bid ? <span className="fig">{usdC(cents(s.bid))}</span> : <span className="na">No offers</span>) },
+    { key: 'last', label: 'Last sale', right: true, cell: (s) => (s.last ? <span className="fig">{usdC(cents(s.last))}</span> : <span className="na">None yet</span>) },
+    { key: 'chg', label: 'Change', right: true, cell: (s) => <Delta c={chg(s)} /> },
+    { key: 'trend', label: 'Recent sales', right: true, cell: (s) => <Spark pts={pointsFor(fills, s.sku)} tone={chg(s) ? (chg(s)!.pct >= 0 ? 'up' : 'down') : undefined} /> },
+    { key: 'vault', label: 'Vaulted', right: true, cell: (s) => <span className="fig">{s.vaulted}</span> },
+    {
+      key: 'go',
+      label: 'Trade',
+      right: true,
+      cell: (s, tab) => (
+        <a className="btn xs" tabIndex={tab} href={`#/card/${s.sku}`}>
+          {s.ask ? 'Buy' : 'Offer'}
+        </a>
+      ),
+    },
+  ]
   return (
-    <>
-      <header className="mast">
-        {data ? <h1>{all.length} graded {all.length === 1 ? 'card' : 'cards'}, {forSale.length} for sale</h1> : <h1 aria-label="Loading the market"><Skeleton h={34} w={380} r={6} /></h1>}
-        {data && (
-          <>
-            <dl className="ledger">
-              <div><dt>Markets</dt><dd>{all.length}</dd></div>
-              <div><dt>In the vault, at best offers</dt><dd>{formatUsd(vaultValue, { digits: 0 })}</dd></div>
-              <div><dt>Median spread</dt><dd>{median !== undefined ? formatBps(median, { digits: 1 }) : '—'}</dd></div>
-              <div><dt>Sales in 30 days</dt><dd>{fills ? `${capped ? 'At least ' : ''}${month.length}` : '—'}</dd></div>
-              <div><dt>Last sale</dt><dd>{lastSale ? `${formatUsd(centsToUnits(cents(lastSale.price)), { digits: 'auto' })}, ${ago(lastSale.t)}` : '—'}</dd></div>
-            </dl>
-            <p className="fine">As of {new Date(data.at).toLocaleTimeString()}. {fills ? '' : 'Sales figures need the indexer.'}</p>
-          </>
-        )}
-      </header>
+    <div className="dash">
+      <PageHead title="Markets" sub={data ? <>{all.length} markets · {slabs} slabs in the vault · <Live at={data.at} /></> : 'Reading the markets'}>
+        <a className="ghost line md" href="#/browse">Browse all</a>
+        <a className="btn md" href="#/sell">Sell a card</a>
+      </PageHead>
+
       {error && !data && <ErrorNote what="Couldn’t load the markets." why={error} next="Check your connection, then try again." onRetry={refresh} />}
       {!net.vault && <Empty title={`Markets open on ${net.chain.name} soon`} />}
-      {!data && !error && net.vault && (
-        <div className="feature" aria-hidden>
-          <Skeleton h={470} w={340} r={12} />
-          <div><Skeleton h={40} w="60%" r={6} /><div style={{ marginTop: 16 }}><Skeleton h={90} r={6} /></div></div>
-        </div>
-      )}
-      {feat && (
-        <section className="feature" aria-label="Featured market">
-          <a className="feature-art" href={`#/card/${feat.sku}`} aria-label={`${cardTitle(feat.name)}, open card`}>
-            <Slab name={feat.name} size="xl" />
-          </a>
-          <div className="feature-body">
-            <h2>{cardTitle(feat.name)}</h2>
-            <p className="muted">{cardSub(feat.name)}</p>
-            <p className="fine">Highest ask on the market.</p>
-            <dl className="vals">
-              <div><dt>Ask</dt><dd>{usdC(cents(feat.ask!))}</dd></div>
-              <div><dt>Best offer</dt><dd>{feat.bid ? usdC(cents(feat.bid)) : '—'}</dd></div>
-              <div><dt>Last sale</dt><dd>{feat.last ? usdC(cents(feat.last)) : '—'}</dd></div>
-            </dl>
-            <SpreadBar bid={feat.bid ? cents(feat.bid) : undefined} ask={cents(feat.ask!)} last={feat.last ? cents(feat.last) : undefined} />
-            <p className="fine">{feat.vaulted} in the vault.</p>
-            <div className="actions">
-              <a className="btn" href={`#/card/${feat.sku}`}>View market</a>
-              {fc && <a className="ghost line" href={`#/browse?cat=${encodeURIComponent(fc.category)}`}>Browse {fc.category}</a>}
+
+      <section className="stats4" aria-label="Market summary">
+        <Stat label="Vault value" value={data ? formatUsd(vaultValue, { digits: 0 }) : <Skeleton h={28} w={140} r={6} />} note="Each slab at its best offer" />
+        <Stat label="Traded, 30 days" value={fills ? usdC(monthVol) : '—'} note={fills ? `${capped ? 'At least ' : ''}${month.length} sales` : sales.error ? 'Needs the indexer' : ' '} />
+        <Stat label="Median spread" value={median !== undefined ? formatBps(median, { digits: 1 }) : '—'} note="Gap from best offer to ask" />
+        <Stat label="Last sale" value={lastSale ? usdC(cents(lastSale.price)) : '—'} note={lastSale ? `${cardTitle(lastSale.name)}, ${ago(lastSale.t)}` : ' '} />
+      </section>
+
+      <div className="dash-grid">
+        <section className="panel tpanel" aria-labelledby="mk-h">
+          <div className="tpanel-head">
+            <h2 id="mk-h" className="sr">All markets</h2>
+            <div className="pills" role="tablist" aria-label="Show">
+              {VIEWS.map(([v, l]) => (
+                <button key={v} role="tab" aria-selected={view === v} onClick={() => setQuery({ v: v === 'all' ? '' : v })}>
+                  {l}
+                  {v === 'watch' && watch.list.length > 0 && <span className="count">{watch.list.length}</span>}
+                </button>
+              ))}
             </div>
+            <Select label="Category" value={cat} onChange={(v) => setQuery({ cat: v })} options={[{ value: '', label: 'All categories' }, ...categories.map((c) => ({ value: c, label: c }))]} />
           </div>
+          {!data ? (
+            <TableSkeleton cols={cols} rows={10} />
+          ) : !rows.length ? (
+            <Empty title={view === 'watch' ? 'Your watchlist is empty' : view === 'movers' ? 'No moves yet' : 'Nothing here yet'} detail={view === 'watch' ? 'Tap the star on any market to follow it here.' : 'Moves appear once a market has traded twice.'} />
+          ) : (
+            <div className="tscroll">
+              <DataTable cols={cols} rows={rows} rowKey={(s) => s.sku} label="Markets" onOpen={(s) => (location.hash = `#/card/${s.sku}`)} />
+            </div>
+          )}
         </section>
-      )}
-      {data && (
-        <>
-          <section className="shelf-sec" aria-label="Latest trades">
-            <div className="shelf-head"><h2>Latest trades</h2><a href="#/browse?sort=-last">View all</a></div>
+
+        <aside className="dash-rail">
+          <section className="panel" aria-labelledby="ls-h">
+            <div className="panel-head"><h2 id="ls-h">Latest sales</h2><Live label="Live" /></div>
             {!fills ? (
-              sales.error ? <p className="fine">Latest trades could not be loaded. They return on the next refresh.</p> : <Skeleton h={160} r={12} />
-            ) : !distinct.length ? (
-              <Empty title="No trades recorded yet" detail="Trades appear here once cards trade and the indexer has read them." />
+              sales.error ? <p className="fine">Sales could not be loaded. They return on the next refresh.</p> : <Skeleton h={220} r={8} />
+            ) : !latestPer.length ? (
+              <p className="fine">No sales yet. They appear here the moment a card trades.</p>
             ) : (
-              <table className="booktable" aria-label="Latest trade in each market">
-                <thead><tr><th scope="col">Market</th><th scope="col">Grade</th><th scope="col" className="num">Price</th><th scope="col" className="num">When</th></tr></thead>
-                <tbody>
-                  {distinct.map((x) => (
-                    <tr key={x.sku}>
-                      <td><a className="u" href={`#/card/${x.sku}`}>{cardTitle(x.name)}</a></td>
-                      <td>{parseName(x.name).grader} {parseName(x.name).grade}</td>
-                      <td className="num">{usdC(cents(x.price))}</td>
-                      <td className="num">{ago(x.t)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </section>
-          <section className="shelf-sec" aria-label="Categories">
-            <div className="shelf-head"><h2>Categories</h2><a href="#/browse">View all</a></div>
-            <ul className="cats">
-              {rows.map(([c, l]) => {
-                const asks = l.filter((s) => s.ask).map((s) => s.ask!)
-                return (
-                  <li key={c}>
-                    <a href={`#/browse?cat=${encodeURIComponent(c)}`}>
-                      <span className="fan" aria-hidden>{l.slice(0, 3).map((s) => <Slab key={s.sku} name={s.name} size="sm" />)}</span>
-                      <span className="cat-name"><b>{c}</b><small>{l.length} market{l.length === 1 ? '' : 's'}</small></span>
-                      <span className="cat-range">{asks.length ? `Asks ${usdC(cents(Math.min(...asks)))} to ${usdC(cents(Math.max(...asks)))}` : 'No asks'}</span>
+              <ol className="feed">
+                {latestPer.map((x) => (
+                  <li key={`${x.sku}-${x.t}`}>
+                    <a href={`#/card/${all.find((s) => s.sku.toLowerCase() === x.sku.toLowerCase())?.sku ?? x.sku}`}>
+                      <Slab name={x.name} size="xs" />
+                      <span className="feed-t"><b>{cardTitle(x.name)}</b><small>{parseName(x.name).grader} {parseName(x.name).grade} · {ago(x.t)}</small></span>
+                      <span className="fig">{usdC(cents(x.price))}</span>
                     </a>
                   </li>
-                )
-              })}
-            </ul>
+                ))}
+              </ol>
+            )}
           </section>
-          {traded.length >= 4 && (
-            <Shelf title="Recently traded" href="#/browse?sort=-last">
-              {traded.map((s) => <ItemCard key={s.sku} s={s} tag={tag(s)} vt={false} />)}
-            </Shelf>
-          )}
-          {viewed.length > 0 && (
-            <Shelf title="Recently viewed" href="#/browse">
-              {viewed.map((s) => <ItemCard key={s.sku} s={s} tag={tag(s)} vt={false} />)}
-            </Shelf>
-          )}
-        </>
+          <section className="panel" aria-labelledby="mv-h">
+            <div className="panel-head"><h2 id="mv-h">Biggest moves</h2><span className="fine">Last two sales</span></div>
+            {!movers.length ? (
+              <p className="fine">Moves appear once a market has traded twice.</p>
+            ) : (
+              <ol className="feed">
+                {movers.map((s) => (
+                  <li key={s.sku}>
+                    <a href={`#/card/${s.sku}`}>
+                      <Slab name={s.name} size="xs" />
+                      <span className="feed-t"><b>{cardTitle(s.name)}</b><small>{usdC(cents(chg(s)!.prev))} to {usdC(cents(chg(s)!.last))}</small></span>
+                      <Delta c={chg(s)} />
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+        </aside>
+      </div>
+
+      {data && (
+        <section className="block" aria-labelledby="cat-h">
+          <div className="block-head"><h2 id="cat-h">Categories</h2><a href="#/browse">Browse all</a></div>
+          <ul className="cats">
+            {cats.map(([c, l]) => {
+              const value = l.reduce((n, s) => (s.bid ? n + centsToUnits(cents(s.bid)) * BigInt(s.vaulted) : n), 0n)
+              const last = (fills ?? []).find((f) => l.some((s) => s.sku.toLowerCase() === f.sku.toLowerCase()))
+              return (
+                <li key={c}>
+                  <a href={`#/browse?cat=${encodeURIComponent(c)}`}>
+                    <span className="fan" aria-hidden>{l.slice(0, 3).map((s) => <Slab key={s.sku} name={s.name} size="sm" />)}</span>
+                    <span className="cat-name"><b>{c}</b><small>{l.length} market{l.length === 1 ? '' : 's'}</small></span>
+                    <span className="cat-figs">
+                      <span><small>Vault value</small><b className="fig">{formatUsd(value, { digits: 0 })}</b></span>
+                      <span><small>Last sale</small><b className="fig">{last ? usdC(cents(last.price)) : '—'}</b></span>
+                    </span>
+                  </a>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
       )}
-    </>
+    </div>
   )
 }
 
@@ -490,8 +556,7 @@ export function Compare() {
   const shown = diff ? rows.filter(([, v]) => new Set(cards.map(v)).size > 1) : rows
   return (
     <>
-      <Breadcrumbs items={[['Discover', '#/'], ['Browse', '#/browse'], ['Compare']]} />
-      <h1 className="page-h">Compare</h1>
+      <PageHead title="Compare" sub="Up to four markets side by side" crumbs={<Breadcrumbs items={[['Browse', '#/browse'], ['Compare']]} />} />
       {error && !data && <ErrorNote what="Couldn’t load the cards." why={error} next="Try again." onRetry={refresh} />}
       {!data && !error && <Skeleton h={320} r={12} />}
       {data && cards.length < 2 && (
