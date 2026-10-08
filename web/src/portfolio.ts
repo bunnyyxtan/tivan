@@ -45,12 +45,21 @@ const shared = (me: Address) => {
   return cached.p
 }
 
-/** Balances for `me`. Open orders cost a log scan per market, so only pages that list them ask for them. */
+// Open orders are a scan of every market's book, so every component that shows them shares one scan per few seconds.
+let cachedOrders: { me: Address; t: number; p: Promise<Record<string, Order[]>> } | undefined
+const sharedOrders = (me: Address) => {
+  if (!cachedOrders || cachedOrders.me !== me || Date.now() - cachedOrders.t > 8000)
+    cachedOrders = { me, t: Date.now(), p: loadSkus().then(async (skus) => Object.fromEntries(await Promise.all(skus.map(async (s) => [s.sku, await openOrders(s.market, me)] as const))) as Record<string, Order[]>) }
+  cachedOrders.p.catch(() => (cachedOrders = undefined))
+  return cachedOrders.p
+}
+
+/** Balances for `me`. Open orders cost a scan per market, so only pages that list them ask for them. */
 export function usePortfolio(me: Address | undefined, withOrders = false) {
   const p = usePoll(async () => (me ? shared(me) : undefined), 6000, [me])
   // Resting orders lock cards and cash outside both balances; a separate, slower poll because the first scan is slow.
   const o = usePoll(
-    async () => (me && withOrders ? (Object.fromEntries(await Promise.all((await loadSkus()).map(async (s) => [s.sku, await openOrders(s.market, me)] as const))) as Record<string, Order[]>) : undefined),
+    async () => (me && withOrders ? sharedOrders(me) : undefined),
     10000,
     [me, withOrders],
   )
@@ -70,6 +79,6 @@ export function usePortfolio(me: Address | undefined, withOrders = false) {
     /** Everything spendable or locked in bids. */
     totalCash: p.data ? p.data.cash + p.data.exCash + bidCash : undefined,
     error: p.error,
-    refresh: () => ((cached = undefined), p.refresh(), o.refresh()),
+    refresh: () => ((cached = undefined), (cachedOrders = undefined), p.refresh(), o.refresh()),
   }
 }

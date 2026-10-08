@@ -7,6 +7,7 @@ import { catalogOf, house, indexerUrl, net } from './config'
 // endpoint removes the need.
 const sent = new Map<string, { t: number; n: number }[]>()
 const sleep = (ms: number) => new Promise((ok) => setTimeout(ok, ms))
+const RESERVE = 4
 const room = (e: { url: string; limit: number }, n: number) => {
   const now = Date.now()
   const live = (sent.get(e.url) ?? []).filter((x) => now - x.t < 1000)
@@ -17,15 +18,17 @@ async function limitedFetch(_input: string | URL | Request, init?: RequestInit):
   const body = typeof init?.body === 'string' ? JSON.parse(init.body) : undefined
   const calls: { method?: string }[] = Array.isArray(body) ? body : body ? [body] : []
   const n = calls.length || 1
-  const write = calls.some((c) => /^eth_(send|getTransaction|estimateGas)/.test(c.method ?? ''))
+  const write = calls.some((c) => /^eth_(send|getTransaction|estimateGas|getTransactionCount|chainId|maxPriorityFeePerGas|gasPrice)/.test(c.method ?? ''))
   // Free-tier endpoints cap eth_getLogs at a few blocks, so log queries only go to endpoints that serve real ranges.
   const pool = calls.some((c) => c.method === 'eth_getLogs') ? net.rpcs.filter((x) => x.logs !== false) : net.rpcs
   for (let attempt = 0; ; attempt++) {
     let e = net.rpcs[0]
+    // Reads leave a reserve on every endpoint, so a transaction never queues behind background polling.
+    const reserve = write ? 0 : RESERVE
     for (;;) {
       if (!write) e = pool.reduce((best, x) => (room(x, n) > room(best, n) ? x : best))
-      if (room(e, n) >= 0) break
-      await sleep(120)
+      if (room(e, n) >= reserve) break
+      await sleep(write ? 40 : 120)
     }
     sent.get(e.url)!.push({ t: Date.now(), n })
     const res = await fetch(e.url, init)
@@ -41,7 +44,11 @@ const transport = http(undefined, {
   fetchFn: limitedFetch,
 })
 export const pub = createPublicClient({ chain: net.chain, transport })
-export const walletFor = (account: Account) => createWalletClient({ account, chain: net.chain, transport })
+// Transactions skip the shared queue: simulate, send and wait on the first endpoint directly, so a purchase never waits
+// behind background polling. It is a handful of calls per action, well inside any endpoint's limit.
+const direct = http(net.rpcs[0].url, { retryCount: 3 })
+const fast = createPublicClient({ chain: net.chain, transport: direct })
+export const walletFor = (account: Account) => createWalletClient({ account, chain: net.chain, transport: direct })
 
 export const vaultAbi = parseAbi([
   'function skuOf(uint256 specId, uint8 grade) pure returns (bytes32)',
@@ -416,9 +423,9 @@ export async function send(
     args?: readonly unknown[]
   },
 ) {
-  const { request } = await pub.simulateContract({ account, ...req } as never)
+  const { request } = await fast.simulateContract({ account, ...req } as never)
   const hash = await walletFor(account).writeContract(request as never)
-  const receipt = await pub.waitForTransactionReceipt({ hash })
+  const receipt = await fast.waitForTransactionReceipt({ hash, pollingInterval: 250 })
   if (receipt.status !== 'success') throw new Error(`Transaction reverted (${hash.slice(0, 10)}…)`)
   return receipt
 }
@@ -470,10 +477,10 @@ export async function sendTx(
   req: { address: Address; abi: readonly unknown[]; functionName: string; args?: readonly unknown[] },
   hooks: { onSent?: (hash: Hex, at: number) => void } = {},
 ) {
-  const { request } = await pub.simulateContract({ account, ...req } as never)
+  const { request } = await fast.simulateContract({ account, ...req } as never)
   const hash = await walletFor(account).writeContract(request as never)
   hooks.onSent?.(hash, Date.now())
-  const receipt = await pub.waitForTransactionReceipt({ hash, timeout: 90_000 })
+  const receipt = await fast.waitForTransactionReceipt({ hash, timeout: 90_000, pollingInterval: 250 })
   if (receipt.status !== 'success') throw Object.assign(new Error('Transaction reverted'), { mined: true, hash })
   return receipt
 }
