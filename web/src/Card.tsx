@@ -14,8 +14,9 @@ import { usePortfolio } from './portfolio'
 import { ErrorNote, Skeleton } from './States'
 import { useTx } from './tx'
 import { cardSub, cardTitle, parseName, usePoll, useWatch } from './ui'
-import { ItemCard, Viewer, gradeOf } from './Market'
+import { Viewer, gradeOf } from './Market'
 import { IconActivity, IconCheck, IconShare, IconStar, IconVault } from './icons'
+import { MarketTile } from './kit'
 
 const PriceChart = lazy(() => import('./PriceChart'))
 const Inspector = lazy(() => import('./Inspector'))
@@ -172,7 +173,12 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
   const buttons = live && (
     <div className="buy-actions" ref={actions}>
       {askC !== undefined ? (
-        <Button size={48} onClick={() => (setMode('buy'), setPrefill({}))}>Buy now · {usdC(askC)}</Button>
+        <Button size={48} onClick={() => {
+          // One card at the ask goes straight to review; anything that needs a choice opens the form.
+          const b = ctx ? buyNow(ctx, book.asks, 1n) : undefined
+          if (b?.spec) tx.open(b.spec)
+          else (setMode('buy'), setPrefill({}))
+        }}>Buy now · {usdC(askC)}</Button>
       ) : (
         <Button size={48} onClick={() => (setMode('offer'), setPrefill({}))}>Make an offer</Button>
       )}
@@ -244,7 +250,7 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
               {buttons}
               {owned > 0n && bidC !== undefined && (
                 <p className="fine sell-line">
-                  You hold {formatQty(owned)}. <button className="linkbtn" onClick={() => (setMode('sell'), setPrefill({ sellMode: 'now' }))}>Sell now for {usdC(bidC)}</button> or <button className="linkbtn" onClick={() => (setMode('sell'), setPrefill({ sellMode: 'list' }))}>list it higher</button>.
+                  You hold {formatQty(owned)}. <button className="linkbtn" onClick={() => { const b = ctx ? sellNow(ctx, book.bids, 1n) : undefined; if (b?.spec) tx.open(b.spec); else (setMode('sell'), setPrefill({ sellMode: 'now' })) }}>Sell one now for {usdC(bidC)}</button> or <button className="linkbtn" onClick={() => (setMode('sell'), setPrefill({ sellMode: 'list' }))}>list it higher</button>.
                 </p>
               )}
               <p className="fine ctx" role="status">
@@ -287,105 +293,122 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
             ))}
           </nav>
 
-          <section id="history" className="card-sec" aria-labelledby="h-history">
-            <h2 id="h-history">Price history</h2>
-            {h.error && !h.data ? <ErrorNote what="Couldn’t load the trades." why={h.error} next="Try again in a moment." onRetry={h.refresh} /> : !h.data ? <Skeleton h={300} r={12} /> : (
-              <Suspense fallback={<Skeleton h={300} r={12} />}>
-                <PriceChart trades={trades} askCents={askC} bidCents={bidC} updatedAt={d.at} />
-              </Suspense>
-            )}
-            <p className="source">{h.data?.source === 'envio' ? 'Source: on-chain trades indexed by Envio.' : 'Source: Monad RPC logs, which reach back about 20 minutes. Older trades need the indexer.'}</p>
-          </section>
-
-          <section id="book" className="card-sec" aria-labelledby="h-book">
-            <div className="sec-head"><h2 id="h-book">Order book</h2><Updated at={d.at} /></div>
-            <OrderBook asks={asksAgg} bids={bidsAgg} mine={mine} spread={spreadInfo} onPick={pick} />
-          </section>
-
-          <section id="trades" className="card-sec" aria-labelledby="h-trades">
-            <h2 id="h-trades">Trades</h2>
-            {fills.length === 0 ? <p className="fine">No trades yet at this grade. They appear here the moment one happens.</p> : (
-              <table className="booktable" aria-label="Recent trades">
-                <thead><tr><th scope="col">Time</th><th scope="col" className="num">Price</th><th scope="col" className="num">Cards</th><th scope="col">Transaction</th></tr></thead>
-                <tbody>
-                  {[...fills].reverse().slice(0, 50).map((f, i) => (
-                    <tr key={i}>
-                      <td title={when(f.t)}>{when(f.t)} <span className="muted">· {ago(f.t * 1000, now)}</span></td>
-                      <td className="num">{usdC(cents(f.price))}</td>
-                      <td className="num">{formatQty(BigInt(f.size))}</td>
-                      <td>{f.hash ? <a className="u" href={`${net.chain.blockExplorers?.default.url}/tx/${f.hash}`} target="_blank" rel="noreferrer">View</a> : <span className="na">Not recorded</span>}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </section>
-
-          {c?.about && (
-            <section id="about" className="card-sec" aria-labelledby="h-about">
-              <h2 id="h-about">About this card</h2>
-              <p className="about-text">{c.about.text}</p>
-              <p className="source">Source: {c.about.source}</p>
+          <div className="pdp-grid">
+            <section id="history" className="pnl pnl-wide" aria-labelledby="h-history">
+              <header className="pnl-h">
+                <h2 id="h-history">Price history</h2>
+                <span className="pnl-meta">{h.data?.source === 'envio' ? 'On-chain trades, indexed by Envio' : 'Monad RPC logs, about the last 20 minutes'}</span>
+              </header>
+              {h.error && !h.data ? <ErrorNote what="Couldn’t load the trades." why={h.error} next="Try again in a moment." onRetry={h.refresh} /> : !h.data ? <Skeleton h={300} r={12} /> : (
+                <Suspense fallback={<Skeleton h={300} r={12} />}>
+                  <PriceChart trades={trades} askCents={askC} bidCents={bidC} updatedAt={d.at} />
+                </Suspense>
+              )}
             </section>
-          )}
 
-          <section id="grades" className="card-sec" aria-labelledby="h-grades">
-            <h2 id="h-grades">All grades</h2>
-            <table className="booktable" aria-label="Every grade of this card">
-              <thead><tr><th scope="col">Grade</th><th scope="col" className="num">Ask</th><th scope="col" className="num">Best offer</th><th scope="col" className="num">Last sale</th><th scope="col" className="num">Supply</th></tr></thead>
-              <tbody>
-                {sibs.map((x) => (
-                  <tr key={x.sku} aria-current={x.sku === sku ? 'true' : undefined}>
-                    <td><a className="u" href={`#/card/${x.sku}`}>{parseName(x.name).grader} {parseName(x.name).grade}</a></td>
-                    <td className="num">{x.ask ? usdC(cents(x.ask)) : <span className="na">No ask</span>}</td>
-                    <td className="num">{x.bid ? usdC(cents(x.bid)) : <span className="na">No offers</span>}</td>
-                    <td className="num">{x.last ? usdC(cents(x.last)) : <span className="na">No sales</span>}</td>
-                    <td className="num">{x.vaulted} <Define term="supply">How many slabs sit in the vault behind this market. Each one backs one token.</Define></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
+            <section id="book" className="pnl" aria-labelledby="h-book">
+              <header className="pnl-h"><h2 id="h-book">Order book</h2><Updated at={d.at} /></header>
+              <OrderBook asks={asksAgg} bids={bidsAgg} mine={mine} spread={spreadInfo} onPick={pick} />
+              <p className="fine pnl-foot">Select a price to fill the order form with it.</p>
+            </section>
 
-          <section id="vault" className="card-sec" aria-labelledby="h-vault">
-            <h2 id="h-vault">Vault and verification</h2>
-            <VaultInfo s={s} certs={certs.data} />
-          </section>
-
-          {(owned > 0n || mine.length > 0) && (
-            <section id="position" className="card-sec" aria-labelledby="h-position">
-              <h2 id="h-position">Your position</h2>
-              <dl className="vals">
-                <div><dt>Holdings</dt><dd>{formatQty(owned)}</dd><small>{listed > 0n ? `${formatQty(listed)} listed for sale` : 'In your account'}</small></div>
-                <div><dt>Average cost</dt><dd>{avg ? usdU(avg.avgUnits, 2) : '—'}</dd><small>{avg ? `Average price of ${formatQty(avg.qty)} purchase${avg.qty === 1n ? '' : 's'} on this market` : 'Needs a card bought on this market'}</small></div>
-                <div><dt>Unrealised P&amp;L</dt><dd>{avg && bidC !== undefined ? usdU(unrealisedPnl(owned, avg.avgUnits, centsToUnits(bidC)), 2) .replace(/^(?=\$)/, '') : '—'}</dd><small>{avg && bidC !== undefined ? 'Valued at the best offer, against your average cost' : 'Needs a cost and an offer to value against'}</small></div>
-              </dl>
-              {mine.length > 0 && (
-                <>
-                  <h3>Open orders</h3>
-                  <table className="booktable" aria-label="Your open orders">
-                    <thead><tr><th scope="col">Side</th><th scope="col" className="num">Price</th><th scope="col" className="num">Cards</th><th scope="col"><span className="sr">Actions</span></th></tr></thead>
+            <section id="trades" className="pnl pnl-wide" aria-labelledby="h-trades">
+              <header className="pnl-h"><h2 id="h-trades">Trades</h2><span className="pnl-meta">{fills.length ? `${fills.length} recorded` : 'None yet'}</span></header>
+              {fills.length === 0 ? (
+                <div className="pnl-empty">
+                  <IconActivity />
+                  <b>No trades at this grade yet</b>
+                  <p className="fine">The first one shows here the moment it settles on {net.chain.name}.</p>
+                  {askC !== undefined && <Button variant="secondary" size={40} onClick={() => (setMode('offer'), setPrefill({}), window.scrollTo({ top: 0, behavior: 'smooth' }))}>Make the first offer</Button>}
+                </div>
+              ) : (
+                <div className="pnl-table">
+                  <table className="booktable" aria-label="Recent trades">
+                    <thead><tr><th scope="col">Time</th><th scope="col" className="num">Price</th><th scope="col" className="num">Cards</th><th scope="col" className="num">Transaction</th></tr></thead>
                     <tbody>
-                      {mine.map((o) => (
-                        <tr key={o.id}>
-                          <td>{o.isBuy ? 'Offer' : 'Ask'}</td>
-                          <td className="num">{usdC(o.priceCents)}</td>
-                          <td className="num">{formatQty(o.size)}</td>
-                          <td className="num">{ctx && <Button variant="secondary" size={32} onClick={() => tx.open(cancelOrder(ctx, o))}>Cancel</Button>}</td>
+                      {[...fills].reverse().slice(0, 50).map((f, i) => (
+                        <tr key={i}>
+                          <td title={when(f.t)}>{when(f.t)} <span className="muted">· {ago(f.t * 1000, now)}</span></td>
+                          <td className="num"><b>{usdC(cents(f.price))}</b></td>
+                          <td className="num">{formatQty(BigInt(f.size))}</td>
+                          <td className="num">{f.hash ? <a className="linkbtn" href={`${net.chain.blockExplorers?.default.url}/tx/${f.hash}`} target="_blank" rel="noreferrer">View</a> : <span className="na">Not recorded</span>}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                </>
+                </div>
               )}
             </section>
-          )}
 
-          {sibs.length > 0 && (
-            <section className="card-sec" aria-labelledby="h-related">
-              <h2 id="h-related">Related cards</h2>
-              <div className="shelf" tabIndex={0} role="group" aria-label="Related cards. Scroll sideways">
-                {all.filter((x) => x.sku !== sku && catalogOf(x.name)?.set === c?.set).slice(0, 10).map((x) => <ItemCard key={x.sku} s={x} tag="" vt={false} />)}
+            <section id="grades" className="pnl" aria-labelledby="h-grades">
+              <header className="pnl-h"><h2 id="h-grades">All grades</h2><span className="pnl-meta">{sibs.length} market{sibs.length === 1 ? '' : 's'}</span></header>
+              <ul className="grade-list">
+                {sibs.map((x) => (
+                  <li key={x.sku}>
+                    <a href={`#/card/${x.sku}`} aria-current={x.sku === sku ? 'page' : undefined}>
+                      <span className="gl-grade"><small>{parseName(x.name).grader}</small><b>{parseName(x.name).grade}</b></span>
+                      <span className="gl-figs">
+                        <span><small>Ask</small><b>{x.ask ? usdC(cents(x.ask)) : '—'}</b></span>
+                        <span><small>Offer</small><b>{x.bid ? usdC(cents(x.bid)) : '—'}</b></span>
+                        <span><small>Vaulted</small><b>{x.vaulted}</b></span>
+                      </span>
+                      {x.sku === sku && <em className="gl-here">Viewing</em>}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+              {sibs.length > 1 && <a className="linkbtn" href={`#/compare?ids=${sibs.map((x) => x.sku).join(',')}`}>Compare grades side by side</a>}
+            </section>
+
+            {c?.about && (
+              <section id="about" className="pnl pnl-full" aria-labelledby="h-about">
+                <header className="pnl-h"><h2 id="h-about">About this card</h2><span className="pnl-meta">Source: {c.about.source}</span></header>
+                <p className="about-text">{c.about.text}</p>
+              </section>
+            )}
+
+            {(owned > 0n || mine.length > 0) && (
+              <section id="position" className="pnl pnl-full" aria-labelledby="h-position">
+                <header className="pnl-h"><h2 id="h-position">Your position</h2></header>
+                <dl className="vals">
+                  <div><dt>Holdings</dt><dd>{formatQty(owned)}</dd><small>{listed > 0n ? `${formatQty(listed)} listed for sale` : 'In your account'}</small></div>
+                  <div><dt>Average cost</dt><dd>{avg ? usdU(avg.avgUnits, 2) : '—'}</dd><small>{avg ? `Average price of ${formatQty(avg.qty)} purchase${avg.qty === 1n ? '' : 's'} on this market` : 'Needs a card bought on this market'}</small></div>
+                  <div><dt>Unrealised P&amp;L</dt><dd>{avg && bidC !== undefined ? usdU(unrealisedPnl(owned, avg.avgUnits, centsToUnits(bidC)), 2) : '—'}</dd><small>{avg && bidC !== undefined ? 'Valued at the best offer, against your average cost' : 'Needs a cost and an offer to value against'}</small></div>
+                </dl>
+                {mine.length > 0 && (
+                  <div className="pnl-table">
+                    <table className="booktable" aria-label="Your open orders">
+                      <thead><tr><th scope="col">Side</th><th scope="col" className="num">Price</th><th scope="col" className="num">Cards</th><th scope="col"><span className="sr">Actions</span></th></tr></thead>
+                      <tbody>
+                        {mine.map((o) => (
+                          <tr key={o.id}>
+                            <td>{o.isBuy ? 'Offer' : 'Ask'}</td>
+                            <td className="num">{usdC(o.priceCents)}</td>
+                            <td className="num">{formatQty(o.size)}</td>
+                            <td className="num">{ctx && <Button variant="secondary" size={32} onClick={() => tx.open(cancelOrder(ctx, o))}>Cancel</Button>}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+            )}
+
+            <section id="vault" className="pnl pnl-full" aria-labelledby="h-vault">
+              <header className="pnl-h">
+                <h2 id="h-vault">Vault and verification</h2>
+                <span className="pnl-meta">{s.vaulted === 0 ? 'No slabs in the vault' : `${s.vaulted} slab${s.vaulted === 1 ? '' : 's'} back this market`}</span>
+              </header>
+              <VaultInfo s={s} certs={certs.data} />
+            </section>
+          </div>
+
+          {sibs.length > 0 && all.some((x) => x.sku !== sku && catalogOf(x.name)?.set === c?.set) && (
+            <section className="related" aria-labelledby="h-related">
+              <div className="block-head"><h2 id="h-related">More from {c?.set ?? 'this set'}</h2><a href="#/browse">Browse all</a></div>
+              <div className="related-grid">
+                {all.filter((x) => x.sku !== sku && catalogOf(x.name)?.set === c?.set).slice(0, 5).map((x) => <MarketTile key={x.sku} s={x} pts={[]} />)}
               </div>
             </section>
           )}
@@ -480,26 +503,36 @@ function OrderBook({ asks, bids, mine, spread: sp, onPick }: { asks: ReturnType<
 // ---------------------------------------------------------------- vault and verification
 function VaultInfo({ s, certs }: { s: Sku; certs?: CertRow[] }) {
   const test = net.name === 'testnet'
+  const status = (x: string) => (x === 'VAULTED' ? 'Vaulted' : x === 'REDEEMED' ? 'Redeemed' : x === 'ATTESTED' ? 'Attested' : x)
   return (
-    <div className="vault-info">
-      <p>{s.vaulted === 0 ? 'No slabs are in the vault for this market right now.' : `${s.vaulted} slab${s.vaulted === 1 ? '' : 's'} in the vault back this market. Many slabs back one market, so each token stands for any one of them.`}</p>
-      {certs === undefined ? <p className="fine">Certificate numbers appear here once the indexer is connected.</p> : certs.length === 0 ? <p className="fine">No certificates recorded for this market yet.</p> : (
-        <table className="booktable" aria-label="Slabs backing this market">
-          <thead><tr><th scope="col">Certificate</th><th scope="col">Status</th><th scope="col">Recorded</th></tr></thead>
-          <tbody>{certs.map((x) => <tr key={x.id}><td><Copyable value={x.id} label="certificate number" /></td><td>{x.status === 'VAULTED' ? 'Vaulted' : x.status === 'REDEEMED' ? 'Redeemed' : x.status === 'ATTESTED' ? 'Attested' : x.status}</td><td>{when(x.updatedAt)}</td></tr>)}</tbody>
-        </table>
-      )}
-      <dl className="tx-rows">
-        <div><dt>Registry check</dt><dd>{test ? 'Simulated check against a demo registry' : 'Checked by the attestor before a slab can be vaulted'}</dd></div>
-        <div><dt>Custody</dt><dd>{test ? 'Simulated: a demo custodian confirms receipt at once' : 'A vault partner checks the slab in before it can trade'}</dd></div>
-        <div><dt>Token contract</dt><dd><a className="u" href={explorerAddress(s.token)} target="_blank" rel="noreferrer">View on the explorer</a></dd></div>
-        <div><dt>Order book contract</dt><dd><a className="u" href={explorerAddress(s.market)} target="_blank" rel="noreferrer">View on the explorer</a></dd></div>
-      </dl>
-      <h3>On Monad and off it</h3>
-      <ul className="plain">
-        <li>On Monad: who owns each token, every order, and every trade. Each links to the explorer.</li>
-        <li>Off Monad: the physical slab in the vault, and the check of its certificate.</li>
-      </ul>
+    <div className="vault-grid">
+      <div className="vault-certs">
+        <h3 className="lbl-caps">Certificates</h3>
+        {certs === undefined ? <p className="fine">Certificate numbers appear here once the indexer is connected.</p> : certs.length === 0 ? <p className="fine">No certificates recorded for this market yet.</p> : (
+          <ul className="cert-list">
+            {certs.map((x) => (
+              <li key={x.id}>
+                <span className="cert-id"><small>PSA</small><Copyable value={x.id} label="certificate number" /></span>
+                <span className={`pill-s ${x.status === 'VAULTED' ? 'ok' : ''}`}>{status(x.status)}</span>
+                <span className="fine">{when(x.updatedAt)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="fine">Many slabs back one market, so each token stands for any one of them.</p>
+      </div>
+      <div className="vault-facts">
+        <dl className="fact-tiles">
+          <div><dt>Registry check</dt><dd>{test ? 'Simulated against a demo registry' : 'Checked by the attestor before vaulting'}</dd></div>
+          <div><dt>Custody</dt><dd>{test ? 'Simulated: a demo custodian confirms receipt at once' : 'A vault partner checks each slab in'}</dd></div>
+          <div><dt>Token contract</dt><dd><a className="linkbtn" href={explorerAddress(s.token)} target="_blank" rel="noreferrer">View on the explorer</a></dd></div>
+          <div><dt>Order book contract</dt><dd><a className="linkbtn" href={explorerAddress(s.market)} target="_blank" rel="noreferrer">View on the explorer</a></dd></div>
+        </dl>
+        <div className="chain-split">
+          <div><b>On {net.chain.name}</b><p className="fine">Who owns each token, every order and every trade. Each links to the explorer.</p></div>
+          <div><b>Off chain</b><p className="fine">The physical slab in the vault, and the check of its certificate.</p></div>
+        </div>
+      </div>
     </div>
   )
 }

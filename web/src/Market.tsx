@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { catalogOf } from './config'
-import { hasMarket, type Sku } from './chain'
+import type { Sku } from './chain'
 import { CardImage } from './fx'
-import { Slab, cardSub, cardTitle, parseName, usd } from './ui'
+import { Slab, cardSub, cardTitle, parseName } from './ui'
 import { cents, usdC } from './cardParts'
 
 export const gradeOf = (s: Sku) => Number(parseName(s.name).grade)
@@ -10,36 +10,6 @@ export const gradeOf = (s: Sku) => Number(parseName(s.name).grade)
 export const askText = (s: Sku, live: boolean) => (!live ? 'Opening soon' : s.ask ? usdC(cents(s.ask)) : 'No sellers')
 export const offerText = (s: Sku, live: boolean) => (!live ? '—' : s.bid ? usdC(cents(s.bid)) : 'No offers')
 export const lastText = (s: Sku) => (s.last ? usdC(cents(s.last)) : '—')
-
-/** The card anatomy used everywhere: media, title, grade line, then three labelled figures in fixed positions. */
-export function ItemCard({ s, tag, vt = true }: { s: Sku; tag: string; vt?: boolean }) {
-  const { demo } = parseName(s.name)
-  const live = hasMarket(s)
-  return (
-    <a className="item-card" href={`#/card/${s.sku}`}>
-      {tag && <span className="item-badge">{tag}</span>}
-      <div className="item-media">
-        <Slab name={s.name} size="md" vt={vt ? `card-${s.sku}` : undefined} />
-      </div>
-      <div className="item-body">
-        <div className="item-title">{cardTitle(s.name)}</div>
-        <div className="item-sub">
-          {demo ? 'DEMO · ' : ''}
-          {cardSub(s.name)}
-        </div>
-        <dl className="figs">
-          <div className="fig"><dt>Ask</dt><dd>{askText(s, live)}</dd></div>
-          <div className="fig"><dt>Offer</dt><dd className="dim">{offerText(s, live)}</dd></div>
-          <div className="fig"><dt>Last sale</dt><dd className="dim">{lastText(s)}</dd></div>
-        </dl>
-        <div className="price-q">
-          <b>{askText(s, live)}</b>
-          <small>{s.bid ? `Best offer ${usd(s.bid)}` : 'No offers'}</small>
-        </div>
-      </div>
-    </a>
-  )
-}
 
 /** Front and slab views of one card. Zoom follows the pointer, or the arrow keys once switched on with Z or the button. */
 export function Viewer({ s, onInspect }: { s: { name: string; sku: string }; onInspect?: () => void }) {
