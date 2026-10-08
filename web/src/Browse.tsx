@@ -7,8 +7,8 @@ import { Breadcrumbs, ChangeText, CompareTray, DataTable, PriceBlock, Shelf, Tab
 import { setQuery, useQuery, useRestoreScroll, useWide } from './route'
 import { Empty, ErrorNote, ItemCardSkeleton, Skeleton } from './States'
 import { ItemCard, askText, gradeOf, lastText, offerText } from './Market'
-import { IconClose, IconGrid, IconList } from './icons'
-import { Opt, RangeDual, Seg, Select } from './controls'
+import { IconGrid, IconList } from './icons'
+import { Chip, Opt, RangeDual, Seg, Select } from './controls'
 import { pct } from './format'
 import { Slab, cardSub, cardTitle, parseName, usePoll, useWatch, usd } from './ui'
 
@@ -285,10 +285,9 @@ export function Browse({ account }: { account: Acct }) {
             <div className="chips active" role="group" aria-label="Active filters">
               <span className="chips-label">Filtered by</span>
               {active.map((a) => (
-                <button key={a.k} className="x" onClick={() => setQuery(a.off)} aria-label={`Remove filter ${a.label}`}>
+                <Chip key={a.k} label={a.label} onRemove={() => setQuery(a.off)}>
                   {a.label}
-                  <IconClose />
-                </button>
+                </Chip>
               ))}
               <button className="ghost" onClick={() => setQuery(RESET)}>
                 Clear all

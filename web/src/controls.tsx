@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
-import { IconChevron } from './icons'
+import { IconChevron, IconClose } from './icons'
 
 // One place for every control: option lists, select, dual range, segmented control and the scroll-edge cue.
 // Each is keyboard operable, shows the focus ring from the base styles, and uses the native picker on touch screens.
@@ -203,4 +203,54 @@ export function useEdgeCue<T extends HTMLElement>() {
     return () => (el.removeEventListener('scroll', mark), ro.disconnect())
   })
   return ref
+}
+
+// ===================================================================== button, chip, copy
+type Variant = 'primary' | 'secondary' | 'tertiary' | 'danger'
+const variantClass: Record<Variant, string> = { primary: 'btn', secondary: 'ghost line', tertiary: 'ghost', danger: 'btn danger' }
+
+/** Primary (one per view), secondary, tertiary and destructive, at 32, 40 or 48px. A pending button keeps its width and label,
+ *  shows a small indicator beside the label, and ignores a second press. */
+export function Button({ variant = 'primary', size = 48, pending = false, onClick, children, ...rest }: { variant?: Variant; size?: 32 | 40 | 48; pending?: boolean } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button {...rest} className={`${variantClass[variant]} ${size === 32 ? 's32' : size === 40 ? 's40' : ''} ${pending ? 'pending' : ''}`} aria-busy={pending || undefined} onClick={(e) => !pending && onClick?.(e)}>
+      {pending && <span className="spin btn-spin" aria-hidden />}
+      {children}
+    </button>
+  )
+}
+
+/** A filter chip: toggles when selected is given, removes when onRemove is given. */
+export function Chip({ selected, onClick, onRemove, label, children }: { selected?: boolean; onClick?: () => void; onRemove?: () => void; label?: string; children: ReactNode }) {
+  return (
+    <button type="button" className="chip-b" aria-pressed={selected} aria-label={onRemove ? `Remove ${label ?? 'filter'}` : undefined} onClick={onRemove ?? onClick}>
+      {children}
+      {onRemove && <IconClose />}
+    </button>
+  )
+}
+
+/** Monospace text with a copy control, for addresses, hashes, cert numbers and block numbers. */
+export function Copyable({ value, label }: { value: string; label: string }) {
+  const [state, setState] = useState<'idle' | 'done' | 'failed'>('idle')
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value)
+      setState('done')
+    } catch {
+      setState('failed')
+    }
+    setTimeout(() => setState('idle'), 2200)
+  }
+  return (
+    <span className="copyable">
+      <span className="mono">{value}</span>
+      <button type="button" className="ghost s32" aria-label={`Copy ${label}`} onClick={copy}>
+        {state === 'done' ? 'Copied' : state === 'failed' ? 'Copy failed' : 'Copy'}
+      </button>
+      <span className="sr" role="status">
+        {state === 'done' ? `${label} copied` : state === 'failed' ? `Could not copy ${label}. Select it and copy by hand.` : ''}
+      </span>
+    </span>
+  )
 }
