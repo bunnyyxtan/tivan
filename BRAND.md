@@ -47,5 +47,14 @@ dark-first, in a classic style with no AI look. Tokens live in `web/src/index.cs
 - On the test network, custody and verification are named as simulated wherever they appear.
 
 ## Never
-Emoji, sparkle icons, violet, neon glows, glass cards, gradients beyond the four above, invented figures or urgency, truncated
-prices or grades, confetti, auto-rotating carousels, cursor-following effects, a toast for something shown in place.
+Emoji, sparkle icons, violet, neon glows, glass cards, gradients beyond the ones above, invented figures or urgency, truncated
+prices or grades, auto-rotating carousels, cursor-following effects, a toast for something shown in place.
+
+## Moments
+- Every action runs in one centred trade window (a bottom sheet on phones), never a side drawer:
+  - review: the slab, the total and the rows;
+  - in flight: a turning ring, a live clock and each step;
+  - done: a drawn check, the card rising in, the settle time and the block.
+- A completed action earns a short confetti burst, and the first time, a badge (First card, Bidder, First sale, Market
+  maker, Funded, Self-custody, Sub-second). Badges are stored in this browser.
+- Reduced motion turns off the confetti and the movement; the words and the badge still carry the moment.

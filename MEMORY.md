@@ -38,6 +38,9 @@ bunnyyxtan/tivan (public), branch `main` only.
 - 3D view is always labelled "Rendered view, not a photograph". Cert checks on testnet are labelled "Simulated check".
 - Never write "audited". Redemption of the physical slab is not real; copy must not promise it.
 - Network fees are not sponsored on mainnet. On testnet the app tops MON up from the faucet automatically.
+- Trading happens in a centred trade window with a celebration on success (confetti, a first-time badge). Buy now and
+  "Sell one now" go straight to review for one card; offers and listings use the form on the card page.
+- Dark mode was lifted for legibility on 2026-10-08: canvas #0B2B26, panels #123630 and #163832, text #EAF8EC, #C3DFCA, #A3C6AE.
 
 ## How it works (short)
 - Accounts: the WebAuthn PRF output is the secp256k1 private key of a plain EOA (`web/src/account.ts`). On testnet a
@@ -60,6 +63,11 @@ bunnyyxtan/tivan (public), branch `main` only.
   `.mtile-art .slab-wrap`). Without it the slab collapses to a sliver.
 - Card page: the sticky image column (`.cx-media`) must stay inside `.cx` with only the buy box. The sections below
   (`.cx-rest`) sit outside `.cx`, or the sticky image slides over them while scrolling.
+- Transactions use a direct RPC client (`fast` and `walletFor` in `chain.ts`), not the shared rate-limited queue; before
+  this, background polling made a purchase wait 15 s or more before it was sent. Open-order scans are shared across
+  components (`sharedOrders` in `portfolio.ts`) for the same reason.
+- The faucet allows 30 drips an hour in total (`DRIPS_PER_HOUR` on Render). Many fresh test accounts in a short time
+  exhaust it; raise it before demos and judging.
 - Phone top bar: the search box needs `min-width: 0`, or the bar makes every page scroll sideways.
 - Windows: Git Bash rewrites arguments that start with `/` or `#/`; set `MSYS_NO_PATHCONV=1`. Python text-mode writes
   turn LF files into CRLF; write bytes. Large bash heredocs fail; write scripts to files instead.
