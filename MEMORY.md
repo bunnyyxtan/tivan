@@ -58,6 +58,8 @@ bunnyyxtan/tivan (public), branch `main` only.
 - The Envio indexer is often slow or blocked from localhost in development. Empty sales figures locally are usually that.
 - CSS: a slab is a size container, so its wrapper needs a definite width wherever it is centred (`.stage .slab-wrap`,
   `.mtile-art .slab-wrap`). Without it the slab collapses to a sliver.
+- Card page: the sticky image column (`.cx-media`) must stay inside `.cx` with only the buy box. The sections below
+  (`.cx-rest`) sit outside `.cx`, or the sticky image slides over them while scrolling.
 - Phone top bar: the search box needs `min-width: 0`, or the bar makes every page scroll sideways.
 - Windows: Git Bash rewrites arguments that start with `/` or `#/`; set `MSYS_NO_PATHCONV=1`. Python text-mode writes
   turn LF files into CRLF; write bytes. Large bash heredocs fail; write scripts to files instead.
