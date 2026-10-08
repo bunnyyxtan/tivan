@@ -140,8 +140,12 @@ export function CashSheet({ account }: { account: LocalAccount }) {
     setMonMsg(undefined)
     try {
       const r = await drip(account.address)
-      setMonMsg(r.txHash ? 'Test MON is on its way. Your network fee balance updates when it arrives.' : 'The faucet answered, but sent nothing.')
-      setTimeout(p.refresh, 3000)
+      if (r.txHash) {
+        setMonMsg('Test MON is on its way.')
+        await pub.waitForTransactionReceipt({ hash: r.txHash as `0x${string}`, timeout: 30_000 }).catch(() => {})
+        await p.refresh()
+        setMonMsg('Test MON arrived. You can pay network fees now.')
+      } else setMonMsg('The faucet answered, but sent nothing.')
     } catch (e) {
       const m = (e as Error).message
       setMonMsg(/10 minutes/.test(m) ? 'You already topped up in the last 10 minutes. Try again shortly.' : /still has enough/.test(m) ? 'This address still has enough MON for network fees.' : /busy|low/.test(m) ? 'The test faucet is busy or low right now. Try again later, or use faucet.monad.xyz.' : 'The faucet could not be reached. Try again in a moment.')
@@ -159,14 +163,14 @@ export function CashSheet({ account }: { account: LocalAccount }) {
           {net.mintableQuote && (
             <>
               <h3 className="cash-h">Test cash</h3>
-              <p className="fine">Free test dollars on this test network, 10,000 each time. They have no value. If you have no MON for the network fee, get test MON first.</p>
+              <p className="fine">Free test dollars on this test network, 10,000 each time. They have no value. If you are short of MON for the network fee, it is topped up from the test faucet first.</p>
               <Button variant="secondary" size={40} onClick={mint}>Add $10,000 test dollars</Button>
             </>
           )}
           <h3 className="cash-h">Network fees</h3>
           {net.name === 'testnet' ? (
             <>
-              <p className="fine">Network fees are paid in MON, not in dollars. Test MON comes from our faucet: 0.2 MON when you are low, once every 10 minutes, while the faucet has some left.</p>
+              <p className="fine">Network fees are paid in MON, not in dollars. Test MON comes from our faucet: 0.2 MON when you are low, at most once every 10 minutes, while it has some left. Any action tops it up for you first; you can also ask here.</p>
               <Button variant="secondary" size={40} pending={busy} onClick={getMon}>Get test MON</Button>
               {monMsg && <p className="fine" role="status">{monMsg}</p>}
             </>

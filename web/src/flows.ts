@@ -6,19 +6,21 @@ import { net } from './config'
 import { centsToUnits, formatBps, formatQty, formatUsd } from './logic/money.ts'
 import { buyTotal, feeUnits, sellProceeds, validateOrder, walkAsks, walkBids, type Level, type Problem } from './logic/orders.ts'
 import type { ReviewRow, StepSpec, TxSpec } from './tx'
+import { MON_PER_TX } from './attestor'
 
 /** What the account holds, in base units, read from chain data. */
 export type Funds = { ma: Address; cashRaw: bigint; exCashRaw: bigint; wallet: bigint; onBook: bigint; gas: bigint }
 export type Ctx = { account: LocalAccount; s: Sku; label: string; rules: MarketRules; funds: Funds; reconcile: () => Promise<void> }
 
 const usd = (u: bigint, digits: 'auto' | 2 = 'auto') => formatUsd(u, { digits })
-const MON_PER_TX = 2n * 10n ** 16n // Monad charges the gas limit: about 0.02 MON each; a stated estimate, not a promise
+// On the test network the panel tops up MON from the faucet before sending, so the form does not block on it.
+const gasNeed = (steps: number) => (net.name === 'testnet' ? undefined : MON_PER_TX * BigInt(steps))
 const mon = (wei: bigint) => `${(Number(wei) / 1e18).toFixed(2)} MON`
 const fees = (rules: MarketRules, amount: bigint, kind: 'taker' | 'maker'): ReviewRow => {
   const bps = kind === 'taker' ? rules.takerBps : rules.makerBps
   return { label: kind === 'taker' ? 'Platform fee' : 'Platform fee when it fills', value: usd(feeUnits(amount, bps), 2), note: `Currently ${formatBps(bps, { digits: 2 })}, read from the market` }
 }
-const networkFee = (steps: number): ReviewRow => ({ label: 'Network fee', value: `about ${mon(MON_PER_TX * BigInt(steps))}`, note: 'An estimate, paid in MON. Not part of the order total.' })
+const networkFee = (steps: number): ReviewRow => ({ label: 'Network fee', value: `about ${mon(MON_PER_TX * BigInt(steps))}`, note: net.name === 'testnet' ? 'An estimate, paid in MON. Topped up from the test faucet first if you are short.' : 'An estimate, paid in MON. Not part of the order total.' })
 const problems = (p: Problem[]) => p.map((x) => x.message)
 
 const approve = (c: Ctx, token: Address, spender: Address, amount: bigint, label: string): StepSpec => ({
@@ -37,7 +39,7 @@ export function buyNow(c: Ctx, asks: Level[], qty: bigint): Built {
   const cash = c.funds.cashRaw + c.funds.exCashRaw
   const fromExchange = total > c.funds.cashRaw ? total - c.funds.cashRaw : 0n
   const stepCount = (fromExchange > 0n ? 1 : 0) + 2
-  const p = problems(validateOrder({ side: 'buy', kind: 'market', priceCents: w.limitCents, size: qty, rules: c.rules, cashUnits: cash, cards: 0n, gasWei: c.funds.gas, gasNeededWei: MON_PER_TX * BigInt(stepCount) }))
+  const p = problems(validateOrder({ side: 'buy', kind: 'market', priceCents: w.limitCents, size: qty, rules: c.rules, cashUnits: cash, cards: 0n, gasWei: c.funds.gas, gasNeededWei: gasNeed(stepCount) }))
   if (p.length) return { problems: p }
   const steps: StepSpec[] = []
   if (fromExchange > 0n) steps.push({ id: 'withdraw-cash', label: `Move ${usd(fromExchange)} of your exchange cash to your wallet`, run: (h) => sendTx(c.account, { address: c.funds.ma, abi: marginAbi, functionName: 'withdraw', args: [fromExchange, net.quote] }, h) })
@@ -78,7 +80,7 @@ export function makeOffer(c: Ctx, priceCents: bigint, qty: bigint, askCents?: bi
   const have = c.funds.exCashRaw
   const topUp = need > have ? need - have : 0n
   const stepCount = (topUp > 0n ? 2 : 0) + 1
-  const p = problems(validateOrder({ side: 'buy', kind: 'limit', priceCents, size: qty, rules: c.rules, cashUnits: c.funds.cashRaw + c.funds.exCashRaw, cards: 0n, gasWei: c.funds.gas, gasNeededWei: MON_PER_TX * BigInt(stepCount) }))
+  const p = problems(validateOrder({ side: 'buy', kind: 'limit', priceCents, size: qty, rules: c.rules, cashUnits: c.funds.cashRaw + c.funds.exCashRaw, cards: 0n, gasWei: c.funds.gas, gasNeededWei: gasNeed(stepCount) }))
   if (askCents !== undefined && priceCents >= askCents) p.push('That price is at or above the ask. Use Buy now to take it.')
   if (p.length) return { problems: p }
   const steps: StepSpec[] = []
@@ -114,7 +116,7 @@ export function sellNow(c: Ctx, bids: Level[], qty: bigint): Built {
   const held = c.funds.wallet + c.funds.onBook
   const fromExchange = c.funds.wallet < qty ? qty - c.funds.wallet : 0n
   const stepCount = (fromExchange > 0n ? 1 : 0) + 2
-  const p = problems(validateOrder({ side: 'sell', kind: 'market', priceCents: w.limitCents, size: qty, rules: c.rules, cashUnits: 0n, cards: held, gasWei: c.funds.gas, gasNeededWei: MON_PER_TX * BigInt(stepCount) }))
+  const p = problems(validateOrder({ side: 'sell', kind: 'market', priceCents: w.limitCents, size: qty, rules: c.rules, cashUnits: 0n, cards: held, gasWei: c.funds.gas, gasNeededWei: gasNeed(stepCount) }))
   if (p.length) return { problems: p }
   const steps: StepSpec[] = []
   if (fromExchange > 0n) steps.push({ id: 'withdraw-cards', label: `Bring ${formatQty(fromExchange)} from the exchange to your wallet`, run: (h) => sendTx(c.account, { address: c.funds.ma, abi: marginAbi, functionName: 'withdraw', args: [fromExchange, c.s.token] }, h) })
@@ -146,7 +148,7 @@ export function listAsk(c: Ctx, priceCents: bigint, qty: bigint, bidCents?: bigi
   const have = c.funds.onBook
   const move = qty > have ? qty - have : 0n
   const stepCount = (move > 0n ? 2 : 0) + 1
-  const p = problems(validateOrder({ side: 'sell', kind: 'limit', priceCents, size: qty, rules: c.rules, cashUnits: 0n, cards: c.funds.wallet + c.funds.onBook, gasWei: c.funds.gas, gasNeededWei: MON_PER_TX * BigInt(stepCount) }))
+  const p = problems(validateOrder({ side: 'sell', kind: 'limit', priceCents, size: qty, rules: c.rules, cashUnits: 0n, cards: c.funds.wallet + c.funds.onBook, gasWei: c.funds.gas, gasNeededWei: gasNeed(stepCount) }))
   if (bidCents !== undefined && priceCents <= bidCents) p.push('That price is at or below the best offer. Use Sell now to take it.')
   if (p.length) return { problems: p }
   const steps: StepSpec[] = []

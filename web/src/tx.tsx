@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useReducer, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import type { Hex, LocalAccount, TransactionReceipt } from 'viem'
 import { confirmPasskey } from './account'
+import { ensureGas } from './attestor'
 import { explorerTx, pub } from './chain'
 import { later, Button } from './controls'
 import { buzz } from './fx'
@@ -170,6 +171,10 @@ export function TxProvider({ children }: { children: ReactNode }) {
         // The passkey prompt is the device's own; the review text explained it first.
         if (reviewed.account.source === 'mera') await confirmPasskey(reviewed.account.address)
         dispatch({ type: 'passkey-ok' })
+        // On the test network, network fees are topped up from the faucet first, so nobody stalls for want of MON.
+        setNote('Checking your network fee balance.')
+        if (!(await ensureGas(reviewed.account.address, reviewed.steps.length))) setNote('The test faucet could not top up your MON just now. The network may refuse the fee.')
+        else setNote(undefined)
         const pre = await reviewed.precheck?.()
         if (pre && pre.reviewedCents !== pre.currentCents) return void fail(decodeError(new Error('price moved'), pre))
       } catch (e) {
