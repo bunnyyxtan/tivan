@@ -3,12 +3,13 @@ import { getAddress, isAddress, parseUnits, type LocalAccount } from 'viem'
 import { later, Button, Copyable, Opt, useOnClose } from './controls'
 import { erc20Abi, explorerAddress, marginAbi, pub, sendTx } from './chain'
 import { net } from './config'
-import { centsToUnits, formatBps, formatUsd, parseAmount, toDecimal } from './logic/money.ts'
+import { centsToUnits, formatUsd, parseAmount, toDecimal } from './logic/money.ts'
 import { usePortfolio } from './portfolio'
 import { cents } from './cardParts'
 import { useTx, useTxLog, writeLog, type StepSpec, type TxSpec } from './tx'
 import { usePoll } from './ui'
 import { drip } from './attestor'
+import { IconClose } from './icons'
 
 export const openCash = () => dispatchEvent(new Event('tivan-cash'))
 const usd = (u: bigint, digits: 'auto' | 2 = 'auto') => formatUsd(u, { digits })
@@ -87,26 +88,18 @@ export function DepositAddress({ account }: { account: LocalAccount }) {
   )
 }
 
-function Balances({ account }: { account: LocalAccount }) {
-  const p = usePortfolio(account.address, true)
-  const d = p.data
-  const available = d ? d.cashRaw + d.exCashRaw : undefined
-  const reserved = p.orders ? reservedUnits(p.orders) : undefined
-  return (
-    <dl className="tx-rows" aria-label="Your cash">
-      <div><dt>Available</dt><dd>{available === undefined ? 'Checking…' : usd(available, 2)}</dd></div>
-      <div><dt>Reserved in open offers</dt><dd>{reserved === undefined ? 'Checking…' : usd(reserved, 2)}<small>Returns to available if you cancel</small></dd></div>
-      <div className="total"><dt>Total</dt><dd>{available === undefined || reserved === undefined ? '—' : usd(available + reserved, 2)}</dd></div>
-      <div><dt>Network fee balance</dt><dd>{d ? mon(d.gas) : 'Checking…'}</dd></div>
-    </dl>
-  )
-}
+type CashTab = 'test' | 'deposit' | 'withdraw' | 'fees'
 
 export function CashSheet({ account }: { account: LocalAccount }) {
   const dlg = useRef<HTMLDialogElement>(null)
   const [openIt, setOpenIt] = useState(false)
+  const tabs: [CashTab, string][] = [...(net.mintableQuote ? [['test', 'Test dollars'] as [CashTab, string]] : []), ['deposit', 'Deposit'], ['withdraw', 'Withdraw'], ['fees', 'Network fees']]
+  const [tab, setTab] = useState<CashTab>(tabs[0][0])
   const tx = useTx()
-  const p = usePortfolio(account.address)
+  const p = usePortfolio(account.address, true)
+  const d = p.data
+  const available = d ? d.cashRaw + d.exCashRaw : undefined
+  const reserved = p.orders ? reservedUnits(p.orders) : undefined
   const [monMsg, setMonMsg] = useState<string>()
   const [busy, setBusy] = useState(false)
   useEffect(() => {
@@ -124,7 +117,7 @@ export function CashSheet({ account }: { account: LocalAccount }) {
       account,
       title: 'Add test dollars',
       summary: ['You receive 10,000 test dollars. They are free, have no value, and exist only on this test network.'],
-      rows: [{ label: 'You receive', value: usd(units) }, { label: 'Platform fee', value: '$0', note: 'No fee on test dollars' }, { label: 'Network fee', value: 'about 0.02 MON', note: 'An estimate, paid in MON' }],
+      rows: [{ label: 'You receive', value: usd(units) }, { label: 'Platform fee', value: '$0', note: 'No fee on test dollars' }, { label: 'Network fee', value: 'about 0.02 MON', note: 'An estimate, paid in MON. Topped up from the test faucet first if you are short.' }],
       total: { label: 'You receive', value: usd(units) },
       confirmLabel: 'Add $10,000',
       steps: [{ id: 'mint', label: 'Mint 10,000 test dollars', run: (h) => sendTx(account, { address: net.quote, abi: erc20Abi, functionName: 'mint', args: [account.address, units] }, h) }],
@@ -153,33 +146,66 @@ export function CashSheet({ account }: { account: LocalAccount }) {
     setBusy(false)
   }
   return (
-    <dialog ref={dlg} className="tx-dialog" aria-labelledby="cash-title" onClick={(e) => e.target === dlg.current && close()}>
-      <div className="tx-head"><h2 id="cash-title">Cash</h2><button className="ghost line s32" autoFocus onClick={close}>Close</button></div>
+    <dialog ref={dlg} className="cash-modal" aria-labelledby="cash-title" onClick={(e) => e.target === dlg.current && close()}>
       {openIt && (
         <>
-          <Balances account={account} />
-          <h3 className="cash-h">Transfer USDC from another wallet</h3>
-          <DepositAddress account={account} />
-          {net.mintableQuote && (
-            <>
-              <h3 className="cash-h">Test cash</h3>
-              <p className="fine">Free test dollars on this test network, 10,000 each time. They have no value. If you are short of MON for the network fee, it is topped up from the test faucet first.</p>
-              <Button variant="secondary" size={40} onClick={mint}>Add $10,000 test dollars</Button>
-            </>
-          )}
-          <h3 className="cash-h">Network fees</h3>
-          {net.name === 'testnet' ? (
-            <>
-              <p className="fine">Network fees are paid in MON, not in dollars. Test MON comes from our faucet: 0.2 MON when you are low, at most once every 10 minutes, while it has some left. Any action tops it up for you first; you can also ask here.</p>
-              <Button variant="secondary" size={40} pending={busy} onClick={getMon}>Get test MON</Button>
-              {monMsg && <p className="fine" role="status">{monMsg}</p>}
-            </>
-          ) : (
-            <p className="fine">Network fees are paid in MON. Send a little MON to your address above. It is not covered for you.</p>
-          )}
-          <h3 className="cash-h">Move to wallet</h3>
-          <Withdraw account={account} onDone={close} />
-          <p className="fine cash-foot">Card and bank deposits are not offered: no payment provider is connected.</p>
+          <header className="cash-top">
+            <div>
+              <h2 id="cash-title">Cash</h2>
+              <p className="fine">{net.mintableQuote ? 'Test dollars' : 'USDC'} on {net.chain.name}. Every price and order settles in it.</p>
+            </div>
+            <button className="icon-btn" autoFocus onClick={close} aria-label="Close"><IconClose /></button>
+          </header>
+          <section className="cash-sum" aria-label="Your cash">
+            <div className="cash-main">
+              <span className="lbl-caps">Available to trade</span>
+              <b className="cash-big">{available === undefined ? '…' : usd(available, 2)}</b>
+            </div>
+            <dl className="cash-figs">
+              <div><dt>Reserved in offers</dt><dd>{reserved === undefined ? '…' : usd(reserved, 2)}</dd></div>
+              <div><dt>Total</dt><dd>{available === undefined || reserved === undefined ? '…' : usd(available + reserved, 2)}</dd></div>
+              <div><dt>Network fee balance</dt><dd>{d ? mon(d.gas) : '…'}</dd></div>
+            </dl>
+          </section>
+          <div className="pills cash-tabs" role="tablist" aria-label="Cash actions">
+            {tabs.map(([k, l]) => (
+              <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{l}</button>
+            ))}
+          </div>
+          <div className="cash-body" role="tabpanel">
+            {tab === 'test' && (
+              <div className="cash-offer">
+                <div>
+                  <span className="lbl-caps">Free on the test network</span>
+                  <b className="cash-big sm">$10,000</b>
+                  <p className="fine">Test dollars have no value and exist only on {net.chain.name}. Add them as often as you like. If you are short of MON for the network fee, it is topped up from the test faucet first.</p>
+                </div>
+                <Button size={48} onClick={mint}>Add $10,000 test dollars</Button>
+              </div>
+            )}
+            {tab === 'deposit' && (
+              <>
+                <p className="fine">Send {net.mintableQuote ? 'test dollars' : 'USDC'} from any wallet on {net.chain.name} to your own address. Card and bank deposits are not offered: no payment provider is connected.</p>
+                <DepositAddress account={account} />
+              </>
+            )}
+            {tab === 'withdraw' && <Withdraw account={account} onDone={close} />}
+            {tab === 'fees' && (
+              <div className="cash-offer">
+                <div>
+                  <span className="lbl-caps">Paid in MON, not dollars</span>
+                  <b className="cash-big sm">{d ? mon(d.gas) : '…'}</b>
+                  <p className="fine">
+                    {net.name === 'testnet'
+                      ? 'Every action is a Monad transaction, about 0.02 MON each. The test faucet sends 0.2 MON when you are low, at most once every 10 minutes, and any action tops you up first.'
+                      : 'Every action is a Monad transaction, paid in MON. Send a little MON to your address under Deposit. It is not covered for you.'}
+                  </p>
+                  {monMsg && <p className="fine" role="status">{monMsg}</p>}
+                </div>
+                {net.name === 'testnet' && <Button variant="secondary" size={48} pending={busy} onClick={getMon}>Get test MON</Button>}
+              </div>
+            )}
+          </div>
         </>
       )}
     </dialog>
@@ -205,7 +231,7 @@ function Withdraw({ account, onDone }: { account: LocalAccount; onDone: () => vo
     if (units === undefined || units <= 0n) e.push('Enter an amount with at most six decimals.')
     else if (units > available) e.push(`You have ${usd(available, 2)} available.`)
     if (fresh && !ack) e.push('Confirm that you checked this address. Cash sent to a wrong address cannot be recovered.')
-    if (d && d.gas < 2n * 10n ** 16n) e.push('You need MON for the network fee. Get some under Network fees.')
+    if (d && d.gas < 2n * 10n ** 16n && net.name !== 'testnet') e.push('You need MON for the network fee. Send some to your address under Deposit.')
     setErrs(e)
     if (e.length || !d || units === undefined) return
     const dest = getAddress(to)
@@ -248,8 +274,7 @@ function Withdraw({ account, onDone }: { account: LocalAccount; onDone: () => vo
       <p className="fine">Available {d ? usd(available, 2) : '…'}. Tivan charges no fee to move cash out; the network fee is paid in MON.</p>
       {fresh && <Opt type="checkbox" checked={ack} onChange={setAck} label="I checked this new address" />}
       {errs.length > 0 && <ul className="problems" role="alert">{errs.map((x) => <li key={x}>{x}</li>)}</ul>}
-      <Button variant="secondary" size={40} onClick={review}>Review transfer</Button>
-      <p className="fine">Platform fee on trades is currently {formatBps(0n, { digits: 0 })}, read from each market.</p>
+      <Button size={48} onClick={review}>Review transfer</Button>
     </div>
   )
 }

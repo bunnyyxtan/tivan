@@ -364,7 +364,7 @@ label.lab, .lab { display: flex; flex-direction: column; gap: 8px; font: var(--f
 .search-pop [role='option'] { display: flex; flex-direction: column; gap: 1px; padding: 8px 10px; border-radius: 6px; font-size: 14px; cursor: pointer; }
 .search-pop [role='option'].on, .search-pop [role='option']:hover { background: var(--surface-3); }
 .search-pop small { font-size: 12px; color: var(--ink-2); }
-@media (max-width: 1023px) { .search { flex-basis: 0; } .search-field kbd { display: none; } }
+@media (max-width: 1023px) { .search { flex-basis: 0; min-width: 0; } .search-field { min-width: 0; } .search-field kbd { display: none; } }
 
 /* account menu */
 .acct-menu { position: relative; }
@@ -797,8 +797,6 @@ label.lab, .lab { display: flex; flex-direction: column; gap: 8px; font: var(--f
 .kv > :last-child { text-align: right; font-family: var(--font-mono); }
 .rows { display: flex; flex-direction: column; }
 .rows > * + * { border-top: 1px solid var(--line); }
-.cash-h { margin: 24px 0 8px; font: var(--f-item); }
-.cash-foot { margin-top: 20px; }
 .deposit { display: grid; gap: 10px; }
 .deposit-row { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
 .deposit-text { display: grid; gap: 8px; flex: 1; min-width: 200px; }
@@ -1040,3 +1038,32 @@ label.lab, .lab { display: flex; flex-direction: column; gap: 8px; font: var(--f
 @media (max-width: 1023px) { .results { overflow-x: auto; } .results .dtable th { position: static; } }
 .results > .dtable { border: 1px solid var(--line); border-radius: var(--r3); background: var(--surface-1); }
 .results > .dtable th:first-child { border-top-left-radius: var(--r3); } .results > .dtable th:last-child { border-top-right-radius: var(--r3); }
+/* cash: a centred modal, the balance first, one action at a time */
+.cash-modal { width: min(720px, calc(100% - 32px)); max-height: calc(100dvh - 48px); padding: 0; overflow-y: auto; color: var(--ink); background: var(--surface-1); border: 1px solid var(--line-strong); border-radius: 20px; box-shadow: var(--shadow-overlay); animation: rise 0.22s var(--ease) both; }
+.cash-modal::backdrop { background: var(--scrim); animation: fade-in 0.2s both; }
+.cash-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 22px 24px 0; }
+.cash-top h2 { font-size: 20px; margin-bottom: 4px; }
+.cash-sum { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 20px; align-items: end; margin: 20px 24px 0; padding: 20px 22px; border: 1px solid var(--line); border-radius: var(--r3); background: var(--stage); }
+.cash-main { display: grid; gap: 8px; }
+.cash-big { font: 500 40px/1 var(--font-mono); letter-spacing: -0.04em; }
+.cash-big.sm { font-size: 30px; }
+.cash-figs { display: grid; margin: 0; }
+.cash-figs > div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; font-size: 13px; }
+.cash-figs > div + div { border-top: 1px solid var(--line); }
+.cash-figs dt { color: var(--ink-2); }
+.cash-figs dd { margin: 0; font-family: var(--font-mono); }
+.cash-tabs { margin: 18px 24px 0; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.cash-body { display: grid; gap: 14px; padding: 20px 24px 24px; min-height: 260px; align-content: start; }
+.cash-offer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: end; padding: 20px 22px; border: 1px solid var(--line); border-radius: var(--r3); background: var(--surface-2); }
+.cash-offer > div { display: grid; gap: 8px; }
+.cash-offer .fine { max-width: 52ch; }
+.cash-modal .deposit-row { gap: 20px; padding: 16px; border: 1px solid var(--line); border-radius: var(--r3); background: var(--surface-2); }
+.cash-modal .withdraw { max-width: 520px; }
+@media (max-width: 640px) {
+  .cash-modal { width: auto; max-width: none; inset-inline: 0; max-height: 92dvh; margin: auto 0 0; border-radius: 20px 20px 0 0; animation: sheet-up 0.24s var(--ease) both; }
+  .cash-sum { grid-template-columns: 1fr; margin: 16px 16px 0; }
+  .cash-top, .cash-body { padding-inline: 16px; }
+  .cash-tabs { margin-inline: 16px; }
+  .cash-offer { grid-template-columns: 1fr; }
+  .cash-big { font-size: 32px; }
+}
