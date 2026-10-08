@@ -125,9 +125,9 @@ export function Onboard({ onReady, onGuest }: { onReady: (a: LocalAccount) => vo
             <h1>
               Own the card.
               <br />
-              Trade it in a second.
+              Trade it any time.
             </h1>
-            <p className="lead">Real graded cards, kept in a vault. Buy and sell them like stocks. Ask for the slab whenever you want it.</p>
+            <p className="lead">Graded cards held in a vault, each with its own live order book. Buy and sell whenever you like, and request the physical slab when you want it.</p>
             <div className="onb-actions">
               <button className="btn" aria-busy={st.k === 'waiting'} onClick={returning ? () => login() : create}>
                 {st.k === 'waiting' ? <span className="spin" aria-hidden /> : null}
@@ -145,7 +145,7 @@ export function Onboard({ onReady, onGuest }: { onReady: (a: LocalAccount) => vo
             <div className="onb-status" role="status" aria-live="polite">
               {message()}
             </div>
-            <p className="fine onb-fine">Sign in with your device’s fingerprint, face recognition, or screen lock. No seed phrase, nothing to install.</p>
+            <p className="fine onb-fine">Sign in with your device’s fingerprint, face recognition, or screen lock. No seed phrase needed to start, nothing to install.</p>
           </section>
           <section className="onb-hero" aria-label="Example card">
             <div className="onb-art">
@@ -171,8 +171,8 @@ export function Onboard({ onReady, onGuest }: { onReady: (a: LocalAccount) => vo
         <h2 id="how">How it works</h2>
         <ol>
           <li>Choose a card and a grade. Each one has its own order book, priced in dollars.</li>
-          <li>Buy at the lowest ask or make an offer. Trades settle on Monad in under a second.</li>
-          <li>Your card stays in the vault. Ask for the physical slab whenever you want it.</li>
+          <li>Buy at the lowest ask or make an offer. Every trade settles on Monad and links to the explorer.</li>
+          <li>Your card stays in the vault. You can request the physical slab; on the test network that is a record only, and nothing ships.</li>
         </ol>
       </section>
       <footer className="onb-foot">
