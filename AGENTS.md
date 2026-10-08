@@ -10,7 +10,7 @@ before any UI work. `CLAUDE.md` covers the graphify knowledge graph.
 
 ## Layout
 - `web/`: the app. React 19, Vite, TypeScript and viem.
-  - `src/App.tsx`: the shell and routes. Routes use the hash: `#/`, `#/browse`, `#/card/:sku`, `#/collection`,
+  - `src/App.tsx`: the shell and routes. Routes use the hash: `#/` (landing for visitors, `Landing.tsx`), `#/markets`, `#/browse`, `#/card/:sku`, `#/collection`,
     `#/activity`, `#/sell`, `#/you`, `#/help`.
   - `src/kit.tsx`: shared page pieces (`PageHead`, `Stat`, `Delta`, `Spark`, `MarketTile`).
   - `src/controls.tsx`: buttons, selects, chips, segmented controls.

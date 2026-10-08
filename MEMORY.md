@@ -29,6 +29,8 @@ bunnyyxtan/tivan (public), branch `main` only.
   (#051F20, #0B2B26, #163832, #235347, #8EB69B, #DAF1DE), with no spring green. Mint buttons in dark mode, forest buttons in light.
 - The app is an app, not a website: sidebar, top bar, status bar. No sign-in wall, no landing hero, no site footer.
   Pages use the full width; nothing sits in a narrow left column with empty space on the right.
+- The site root shows the public landing page to visitors (owner's Fankado-style reference); the app's home is
+  `#/markets`. Signed-in people at `#/` see Markets.
 - Cash opens as a centred modal (a bottom sheet on phones) with tabs: Test dollars, Deposit, Withdraw, Network fees.
   Not a side drawer.
 - Key export only behind a fresh passkey check plus press-and-hold. Never say "seed phrase". No backup passkey: each

@@ -58,3 +58,11 @@ prices or grades, auto-rotating carousels, cursor-following effects, a toast for
 - A completed action earns a short confetti burst, and the first time, a badge (First card, Bidder, First sale, Market
   maker, Funded, Self-custody, Sub-second). Badges are stored in this browser.
 - Reduced motion turns off the confetti and the movement; the words and the badge still carry the moment.
+
+## Landing page (public front page)
+- Shown at the site root to visitors (`Landing.tsx`); signed-in people get Markets. The app lives at `#/markets`.
+- Built to the owner's reference poster style: Anton condensed uppercase headlines (landing only), a dark hero with a
+  fanned slab stack and arrows, a "Popular markets" carousel with the centre card lifted, crossing marquee ribbons, a
+  "Popular cards" grid, a call-to-action band and a dark footer. The landing page may use exclamation marks, a sparkle
+  and the spring green #3FE59B; the app does not.
+- Everything on it is live data. No packs, newsletter or social accounts that do not exist.
