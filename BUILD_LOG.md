@@ -46,3 +46,12 @@ Welcome, Get started checklist, tour (<=5 steps), Help/FAQ, footer, demo notice.
 
 ## Phase 10 - quality pass (partial)
 Error boundary per route, offline bar, tables scroll under 900px. tsc, contrast, tests (26/26) and build pass. NOT done: CSP under vite preview, DOM a11y audit, LCP/CLS, paging for big lists, flows builder tests, 390/1920 visual review.
+
+## Redesign - Ink and Brass (2026-10-08)
+Owner asked for a from-scratch redesign, dark-first, classic, no AI look. Researched Courtyard, StockX, Coinbase Explore, Alt and OpenSea.
+New shell: sidebar (collapsible), top bar, status bar, phone tab bar; no sign-in wall, no landing hero, no site footer.
+New index.css written from scratch (ink surfaces, ivory primary, brass accent, Geist Mono figures); BRAND.md rewritten.
+Markets is now a dashboard (figures, filterable market table with change and recent-sales lines, latest sales, moves, categories).
+Card page: lit stage plus sticky buy box (grade picker, ask/offer, buy/offer, market figures, trust notes). Shared kit.tsx.
+USD now formatted en-US everywhere. Removed Onboard, MarketList, Feed, activity.ts, share.ts, StatPill, PriceBlock, SiteFooter.
+Checks: tsc, 26 tests, contrast (both modes), build. Screens reviewed at 390, 1280, 1440, 1920 in both modes.
