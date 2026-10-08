@@ -57,6 +57,7 @@ export const erc20Abi = parseAbi([
   'function name() view returns (string)',
   'function balanceOf(address) view returns (uint256)',
   'function approve(address, uint256) returns (bool)',
+  'function transfer(address, uint256) returns (bool)',
   'function mint(address, uint256)',
 ])
 export const bookAbi = parseAbi([
@@ -110,7 +111,7 @@ let scanning: Promise<Listed[]> | undefined
 const listedSkus = () => (scanning ??= (indexerUrl ? indexedSkus().catch((e) => (console.warn('indexer down, scanning RPC', e), scan())) : scan()).finally(() => (scanning = undefined)))
 
 /** POST a query to the Envio indexer's GraphQL endpoint. */
-async function gql<T>(query: string, variables: object = {}): Promise<T> {
+export async function gql<T>(query: string, variables: object = {}): Promise<T> {
   const res = await fetch(indexerUrl!, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -233,15 +234,15 @@ async function lastSales(): Promise<Map<string, number>> {
 }
 
 const tradeEvent = parseAbiItem('event Trade(uint40 orderId, address makerAddress, bool isBuy, uint256 price, uint96 updatedSize, address takerAddress, address txOrigin, uint96 filledSize)')
-export type Fill = { t: number; price: number; size: number; maker: string; taker: string; takerBuy: boolean }
+export type Fill = { t: number; price: number; size: number; maker: string; taker: string; takerBuy: boolean; hash?: string }
 /** Fills on one card's Kuru market, oldest first: Envio when configured, else the last ~3k blocks of RPC logs. */
 export async function tradeHistory(market: Address): Promise<{ fills: Fill[]; source: 'envio' | 'rpc' }> {
   if (market === ZERO) return { fills: [], source: 'rpc' }
   if (indexerUrl) {
     try {
       const { Trade } = await gql<{
-        Trade: { priceCents: string; sizeCards: string; timestamp: number; maker: string; taker: string; takerBuy: boolean }[]
-      }>('query($m: String!) { Trade(where: { market_id: { _eq: $m } }, order_by: [{ timestamp: asc }, { id: asc }]) { priceCents sizeCards timestamp maker taker takerBuy } }', {
+        Trade: { priceCents: string; sizeCards: string; timestamp: number; maker: string; taker: string; takerBuy: boolean; txHash?: string }[]
+      }>('query($m: String!) { Trade(where: { market_id: { _eq: $m } }, order_by: [{ timestamp: asc }, { id: asc }]) { priceCents sizeCards timestamp maker taker takerBuy txHash } }', {
         m: getAddress(market),
       })
       return {
@@ -252,6 +253,7 @@ export async function tradeHistory(market: Address): Promise<{ fills: Fill[]; so
           maker: x.maker.toLowerCase(),
           taker: x.taker.toLowerCase(),
           takerBuy: x.takerBuy,
+          hash: x.txHash,
         })),
         source: 'envio',
       }
@@ -283,6 +285,7 @@ export async function tradeHistory(market: Address): Promise<{ fills: Fill[]; so
       maker: l.args.makerAddress!.toLowerCase(),
       taker: l.args.takerAddress!.toLowerCase(),
       takerBuy: l.args.isBuy!,
+      hash: l.transactionHash,
     })),
     source: 'rpc',
   }
@@ -443,9 +446,77 @@ export async function send(
 }
 
 export const explorerTx = (hash: string) => `${net.chain.blockExplorers?.default.url}/tx/${hash}`
+export const explorerAddress = (a: string) => `${net.chain.blockExplorers?.default.url}/address/${a}`
 
 /** What `me` last paid for one card on this market, from its fills (taker buy, or a filled bid). */
 export const lastPaid = (fills: Fill[], me: string) => {
   const m = me.toLowerCase()
   return fills.filter((f) => (f.taker === m && f.takerBuy) || (f.maker === m && !f.takerBuy)).at(-1)?.price
+}
+
+// ===================================================================== phase 2: rules, exact book, timed sends
+const rulesAbi = parseAbi(['function verifiedMarket(address) view returns (uint32 pricePrecision, uint96 sizePrecision, address base, uint256 baseDecimals, address quote, uint256 quoteDecimals, uint32 tickSize, uint96 minSize, uint96 maxSize, uint256 takerFeeBps, uint256 makerFeeBps)'])
+const rulesCache = new Map<string, Promise<MarketRules>>()
+export type MarketRules = { tickCents: bigint; minSize: bigint; maxSize: bigint; takerBps: bigint; makerBps: bigint }
+/** The order book's own rules (tick, min and max size, fees), read from the Kuru router. Never assumed. Verified live on testnet:
+ *  price precision 100 (cents), size precision 1 (whole cards), tick 1, min 1, max 1000, fees 0 bps. */
+export function marketRules(market: Address): Promise<MarketRules> {
+  const k = market.toLowerCase()
+  if (!rulesCache.has(k))
+    rulesCache.set(
+      k,
+      pub.readContract({ address: net.kuruRouter, abi: rulesAbi, functionName: 'verifiedMarket', args: [market] }).then((r) => ({ tickCents: BigInt(r[6]), minSize: r[7], maxSize: r[8], takerBps: r[9], makerBps: r[10] })),
+    )
+  return rulesCache.get(k)!
+}
+
+export type BookLevel = { price: bigint; size: bigint }
+/** The same getL2Book decoding as decodeL2, but exact: prices in whole cents and sizes in whole cards as bigint, no floats. */
+export function decodeBook(data: Hex): { bids: BookLevel[]; asks: BookLevel[] } {
+  const words = (data.slice(2).match(/.{64}/g) ?? []).slice(1).map((w) => BigInt('0x' + w))
+  const sides: BookLevel[][] = [[], []]
+  let side = 0
+  for (let i = 0; i < words.length && side < 2; ) {
+    if (words[i] === 0n) {
+      side++
+      i++
+      continue
+    }
+    sides[side].push({ price: words[i], size: words[i + 1] })
+    i += 2
+  }
+  return { bids: sides[0], asks: sides[1] }
+}
+export async function readBook(market: Address) {
+  return decodeBook(await pub.readContract({ address: market, abi: bookAbi, functionName: 'getL2Book' }))
+}
+
+/** One transaction: simulate (readable revert reasons), send, wait. Reports the hash and its send time the moment they exist, so the
+ *  panel can show them and measure send-to-confirmation. A mined revert is thrown with mined: true (a fee was spent). */
+export async function sendTx(
+  account: Account,
+  req: { address: Address; abi: readonly unknown[]; functionName: string; args?: readonly unknown[] },
+  hooks: { onSent?: (hash: Hex, at: number) => void } = {},
+) {
+  const { request } = await pub.simulateContract({ account, ...req } as never)
+  const hash = await walletFor(account).writeContract(request as never)
+  hooks.onSent?.(hash, Date.now())
+  const receipt = await pub.waitForTransactionReceipt({ hash, timeout: 90_000 })
+  if (receipt.status !== 'success') throw Object.assign(new Error('Transaction reverted'), { mined: true, hash })
+  return receipt
+}
+
+export type MyTrade = { hash: string; t: number; priceCents: bigint; size: bigint; side: 'buy' | 'sell'; sku: string; name: string }
+/** Every trade this account took part in, across all markets, from the indexer. Undefined when there is no indexer to ask. */
+export async function myTrades(me: string): Promise<MyTrade[] | undefined> {
+  if (!indexerUrl) return undefined
+  try {
+    const { Trade } = await gql<{ Trade: { priceCents: string; sizeCards: string; timestamp: number; takerBuy: boolean; maker: string; taker: string; txHash: string; market: { sku: string; name: string } }[] }>(
+      'query($a: String!) { Trade(where: { _or: [{ maker: { _eq: $a } }, { taker: { _eq: $a } }] }, order_by: { timestamp: desc }, limit: 200) { priceCents sizeCards timestamp takerBuy maker taker txHash market { sku name } } }',
+      { a: me.toLowerCase() },
+    )
+    return Trade.map((x) => ({ hash: x.txHash, t: x.timestamp, priceCents: BigInt(x.priceCents), size: BigInt(x.sizeCards), side: (x.taker.toLowerCase() === me.toLowerCase() ? x.takerBuy : !x.takerBuy) ? ('buy' as const) : ('sell' as const), sku: x.market.sku, name: x.market.name }))
+  } catch {
+    return undefined
+  }
 }
