@@ -274,8 +274,9 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
           {account && s.ask && <AlertRow s={s} />}
           <FirstHint />
         </aside>
+      </div>
 
-        <div className="cx-rest">
+      <div className="cx-rest">
       {live && (
         <>
           <nav className="section-nav" aria-label="On this page">
@@ -390,7 +391,6 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
           )}
         </>
       )}
-        </div>
       </div>
 
       {live && barOn && (
