@@ -10,6 +10,7 @@ import type { Ctx, Funds } from './flows'
 import { aggregate } from './logic/orders.ts'
 import { usePortfolio } from './portfolio'
 import { Slab, cardSub, cardTitle } from './ui'
+import { IconCamera, IconKeyboard, IconVault } from './icons'
 import { post } from './attestor'
 import { writeLog } from './tx'
 
@@ -167,33 +168,50 @@ export function Sell({ account }: { account: LocalAccount }) {
   return (
     <div className="sell">
       <PageHead title="Sell a card" sub="Check your slab into the vault, then list it on its market. You are paid the moment an order fills." />
-      <ol className="stepper" aria-label="Steps">
-        {(['Find your card', 'Check into the vault', 'Set your price'] as const).map((t, i) => {
+      <ol className="sell-steps" aria-label="Steps">
+        {([['Find your card', 'Scan the label or type its certificate number'], ['Check into the vault', 'The certificate is verified and the slab is received'], ['Set your price', 'Sell at the best offer, or list it at your own ask']] as const).map(([t, d], i) => {
           const at = step === 'price' ? 2 : step === 'vault' ? 1 : 0
-          return <li key={t} className={i < at ? 'done' : i === at ? 'on' : ''} aria-current={i === at ? 'step' : undefined}><span>{i + 1}</span>{t}</li>
+          return (
+            <li key={t} className={i < at ? 'done' : i === at ? 'on' : ''} aria-current={i === at ? 'step' : undefined}>
+              <span className="ss-num" aria-hidden>{i < at ? '✓' : i + 1}</span>
+              <span className="ss-text"><b>{t}</b><small>{d}</small></span>
+            </li>
+          )
         })}
       </ol>
       <div className="sell-grid">
       <div className="sell-main">
       {step === 'method' && (
-        <ul className="methods">
-          <li>
-            <h2>Scan the slab</h2>
-            <p className="fine">Point your camera at the barcode on the label.</p>
-            {canScan() ? <Button size={40} onClick={() => setStep('scan')}>Scan the label</Button> : <p className="fine">Scanning is not available in this browser: it needs camera access and barcode reading. Type the number instead.</p>}
-          </li>
-          <li>
-            <h2>Enter the certificate number</h2>
-            <p className="fine">The number printed on the slab’s label.</p>
-            <Button variant="secondary" size={40} onClick={() => setStep('cert')}>Enter the number</Button>
-          </li>
-          <li>
-            <h2>Sell a card already in the vault</h2>
+        <div className="method-grid">
+          <button className="method" disabled={!canScan()} onClick={() => setStep('scan')}>
+            <span className="method-ico" aria-hidden><IconCamera /></span>
+            <b>Scan the label</b>
+            <small>{canScan() ? 'Point your camera at the barcode on the slab.' : 'Not available in this browser: it needs camera access and barcode reading.'}</small>
+            <span className="method-go" aria-hidden>{canScan() ? 'Open the camera' : 'Unavailable'}</span>
+          </button>
+          <button className="method" onClick={() => setStep('cert')}>
+            <span className="method-ico" aria-hidden><IconKeyboard /></span>
+            <b>Type the certificate number</b>
+            <small>The eight to ten digits printed on the slab’s label.</small>
+            <span className="method-go" aria-hidden>Enter the number</span>
+          </button>
+          <div className="method method-vault">
+            <span className="method-ico" aria-hidden><IconVault /></span>
+            <b>Sell a card already in the vault</b>
             {port.data ? mine.length ? (
-              <ul className="plain">{mine.map((h) => <li key={h.s.sku}><button className="linkbtn" onClick={() => (setSku(h.s.sku), setStep('price'))}>{cardTitle(h.s.name)}, {cardSub(h.s.name).split(' · ')[0]}</button> ({h.count} held)</li>)}</ul>
-            ) : <p className="fine">You hold no cards yet.</p> : <p className="fine">Checking your cards…</p>}
-          </li>
-        </ul>
+              <ul className="method-list">
+                {mine.map((h) => (
+                  <li key={h.s.sku}>
+                    <button onClick={() => (setSku(h.s.sku), setStep('price'))}>
+                      <Slab name={h.s.name} size="xs" />
+                      <span><b>{cardTitle(h.s.name)}</b><small>{cardSub(h.s.name).split(' · ')[0]} · {h.count} held</small></span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : <small>You hold no vaulted cards yet. Buy one, or check a slab in with one of the other two ways.</small> : <small>Checking your cards</small>}
+          </div>
+        </div>
       )}
       {step === 'scan' && <Scanner onFound={(c) => (setCert(c), setStep('cert'))} onManual={() => setStep('cert')} />}
       {step === 'cert' && (

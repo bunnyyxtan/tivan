@@ -11,7 +11,7 @@ import { centsToUnits, formatBps, formatUsd } from './logic/money.ts'
 import { setQuery, useQuery, useRestoreScroll, useWide } from './route'
 import { Empty, ErrorNote, ItemCardSkeleton, Skeleton } from './States'
 import { askText, gradeOf, lastText, offerText } from './Market'
-import { IconGrid, IconList, IconStar } from './icons'
+import { IconGrid, IconList, IconSearch, IconStar } from './icons'
 import { Chip, Opt, RangeDual, Seg, Select } from './controls'
 import { pct } from './format'
 import { Slab, cardTitle, parseName, usePoll, useWatch, usd } from './ui'
@@ -84,24 +84,46 @@ function chips(f: F) {
   ].filter(Boolean) as unknown as { k: string; label: string; off: Record<string, string> }[]
 }
 
+// ===================================================================== category bar
+/** Category cards that filter what is below them: a fan of slabs, the count and the vault value. */
+function CatBar({ all, value, onPick, watch }: { all: Sku[]; value: string; onPick: (k: string) => void; watch?: string[] }) {
+  const groups: [string, string, Sku[]][] = [
+    ['', 'All markets', all],
+    ...(watch ? ([['Watching', 'Watchlist', all.filter((s) => watch.includes(s.sku))]] as [string, string, Sku[]][]) : []),
+    ...categories.map((c) => [c, c, all.filter((s) => categoryOf(s.name) === c)] as [string, string, Sku[]]).filter(([, , l]) => l.length),
+  ]
+  return (
+    <nav className="catbar" aria-label="Filter by category">
+      {groups.map(([k, label, l]) => {
+        const v = l.reduce((n, s) => (s.bid ? n + centsToUnits(cents(s.bid)) * BigInt(s.vaulted) : n), 0n)
+        return (
+          <button key={k || 'all'} className="catcard" aria-pressed={value === k} onClick={() => onPick(k)}>
+            <span className="catcard-fan" aria-hidden>{l.length ? l.slice(0, 3).map((s) => <Slab key={s.sku} name={s.name} size="xs" />) : <span className="catcard-star"><IconStar /></span>}</span>
+            <span className="catcard-text">
+              <b>{label}</b>
+              <small>{l.length} market{l.length === 1 ? '' : 's'}</small>
+              <span className="catcard-v">{l.length ? formatUsd(v, { digits: 0 }) : 'Star a market'}</span>
+            </span>
+          </button>
+        )
+      })}
+    </nav>
+  )
+}
+
 // ===================================================================== filter rail
-function Rail({ all, f, sp, watch }: { all: Sku[]; f: F; sp: URLSearchParams; watch: string[] }) {
+function Rail({ all, f, sp }: { all: Sku[]; f: F; sp: URLSearchParams }) {
   const prices = all.map(price).filter((p): p is number => !!p)
   const lo = prices.length ? Math.floor(Math.min(...prices)) : 0
   const hi = prices.length ? Math.ceil(Math.max(...prices)) : 0
   const step = Math.max(1, Math.round((hi - lo) / 200))
   const sets = [...new Set(all.map((s) => catalogOf(s.name)?.set).filter(Boolean) as string[])]
-  const cats: [string, string, number | undefined][] = [['', 'All categories', all.length], ['Watching', 'Watchlist', all.filter((s) => watch.includes(s.sku)).length], ...categories.map((c) => [c, c, all.filter((s) => categoryOf(s.name) === c).length] as [string, string, number])]
   const grades = Array.from({ length: 10 }, (_, i) => String(10 - i))
   const radio = (name: 'cat' | 'set', value: string, label: string, n?: number) => (
     <Opt key={value} type="radio" name={name} checked={(name === 'cat' ? f.cat : f.set) === value} onChange={() => setQuery({ [name]: value })} label={label} count={n} />
   )
   return (
     <div className="rail-body">
-      <fieldset>
-        <legend>Category</legend>
-        {cats.map(([v, l, n]) => radio('cat', v, l, n))}
-      </fieldset>
       <fieldset>
         <legend>Grade, PSA</legend>
         <div className="pair">
@@ -212,6 +234,10 @@ export function Browse({ account }: { account: Acct }) {
   ]
   const toolbar = (
     <div className="toolbar">
+      <label className="field toolbar-q">
+        <IconSearch />
+        <input value={f.q} onChange={(e) => setQuery({ q: e.target.value })} placeholder="Filter by card or set" aria-label="Filter by card or set" />
+      </label>
       <span role="status" className="count-line">
         {data ? `${list.length} of ${all.length} ${all.length === 1 ? 'card' : 'cards'}` : 'Loading cards'}
       </span>
@@ -281,10 +307,11 @@ export function Browse({ account }: { account: Acct }) {
         sub={data ? `${all.length} graded cards, each with its own order book` : 'Reading the catalogue'}
         crumbs={f.cat ? <Breadcrumbs items={[['Browse', '#/browse'], [f.cat === 'Watching' ? 'Watchlist' : f.cat]]} /> : undefined}
       />
+      {data && <CatBar all={all} value={f.cat} watch={watch.list} onPick={(k) => setQuery({ cat: k })} />}
       <div className="browse">
         {wide && (
           <aside className="rail" aria-label="Filters">
-            <Rail all={all} f={f} sp={sp} watch={watch.list} />
+            <Rail all={all} f={f} sp={sp} />
           </aside>
         )}
         <section className="results" aria-label="Results">
@@ -322,7 +349,7 @@ export function Browse({ account }: { account: Acct }) {
                   Show {list.length} {list.length === 1 ? 'card' : 'cards'}
                 </button>
               </div>
-              <Rail all={all} f={f} sp={sp} watch={watch.list} />
+              <Rail all={all} f={f} sp={sp} />
             </>
           )}
         </dialog>
@@ -370,7 +397,6 @@ export function Discover({ account }: { account: Acct }) {
     : view === 'recent' ? inCat.filter((s) => lastSaleAt(fills, s.sku)).sort((a, b) => lastSaleAt(fills, b.sku)! - lastSaleAt(fills, a.sku)!)
     : view === 'watch' ? inCat.filter((s) => watch.list.includes(s.sku))
     : inCat
-  const cats = categories.map((c) => [c, all.filter((s) => categoryOf(s.name) === c)] as const).filter(([, l]) => l.length)
   const cols: Col<Sku>[] = [
     {
       key: 'w',
@@ -431,6 +457,10 @@ export function Discover({ account }: { account: Acct }) {
         <Stat label="Last sale" value={lastSale ? usdC(cents(lastSale.price)) : '—'} note={lastSale ? `${cardTitle(lastSale.name)}, ${ago(lastSale.t)}` : ' '} />
       </section>
 
+      {data && (
+        <CatBar all={all} value={cat} onPick={(k) => setQuery({ cat: k })} />
+      )}
+
       <div className="dash-grid">
         <section className="panel tpanel" aria-labelledby="mk-h">
           <div className="tpanel-head">
@@ -443,7 +473,6 @@ export function Discover({ account }: { account: Acct }) {
                 </button>
               ))}
             </div>
-            <Select label="Category" value={cat} onChange={(v) => setQuery({ cat: v })} options={[{ value: '', label: 'All categories' }, ...categories.map((c) => ({ value: c, label: c }))]} />
           </div>
           {!data ? (
             <TableSkeleton cols={cols} rows={10} />
@@ -498,29 +527,6 @@ export function Discover({ account }: { account: Acct }) {
         </aside>
       </div>
 
-      {data && (
-        <section className="block" aria-labelledby="cat-h">
-          <div className="block-head"><h2 id="cat-h">Categories</h2><a href="#/browse">Browse all</a></div>
-          <ul className="cats">
-            {cats.map(([c, l]) => {
-              const value = l.reduce((n, s) => (s.bid ? n + centsToUnits(cents(s.bid)) * BigInt(s.vaulted) : n), 0n)
-              const last = (fills ?? []).find((f) => l.some((s) => s.sku.toLowerCase() === f.sku.toLowerCase()))
-              return (
-                <li key={c}>
-                  <a href={`#/browse?cat=${encodeURIComponent(c)}`}>
-                    <span className="fan" aria-hidden>{l.slice(0, 3).map((s) => <Slab key={s.sku} name={s.name} size="sm" />)}</span>
-                    <span className="cat-name"><b>{c}</b><small>{l.length} market{l.length === 1 ? '' : 's'}</small></span>
-                    <span className="cat-figs">
-                      <span><small>Vault value</small><b className="fig">{formatUsd(value, { digits: 0 })}</b></span>
-                      <span><small>Last sale</small><b className="fig">{last ? usdC(cents(last.price)) : '—'}</b></span>
-                    </span>
-                  </a>
-                </li>
-              )
-            })}
-          </ul>
-        </section>
-      )}
     </div>
   )
 }

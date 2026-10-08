@@ -115,3 +115,25 @@ export const IconCheck = ({ size }: { size?: number }) => (
     <path d="m9 12 2.2 2.2L15.5 10" />
   </Icon>
 )
+export const IconIn = ({ size }: { size?: number }) => (
+  <Icon size={size}>
+    <path d="M17 7 7 17M7 9v8h8" />
+  </Icon>
+)
+export const IconOut = ({ size }: { size?: number }) => (
+  <Icon size={size}>
+    <path d="M7 17 17 7M9 7h8v8" />
+  </Icon>
+)
+export const IconCamera = ({ size }: { size?: number }) => (
+  <Icon size={size}>
+    <path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.5-2h6l1.5 2h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5v-9Z" />
+    <circle cx="12" cy="13" r="3.5" />
+  </Icon>
+)
+export const IconKeyboard = ({ size }: { size?: number }) => (
+  <Icon size={size}>
+    <rect x="3" y="6.5" width="18" height="11" rx="2" />
+    <path d="M7 10h.01M10 10h.01M13 10h.01M16 10h.01M7 13.5h.01M17 13.5h.01M10 13.5h4" />
+  </Icon>
+)

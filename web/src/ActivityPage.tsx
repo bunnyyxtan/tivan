@@ -1,9 +1,10 @@
 import { useMemo, useRef, useState } from 'react'
-import { PageHead } from './kit'
+import { PageHead, Stat } from './kit'
+import { IconActivity, IconIn, IconOut, IconTag, IconVault } from './icons'
 import type { LocalAccount } from 'viem'
 import { DataTable, Tabs, TableSkeleton, type Col } from './desk'
-import { cents, ago, usdC } from './cardParts'
-import { later, Button, Chip } from './controls'
+import { cents, usdC } from './cardParts'
+import { later, Button } from './controls'
 import { cancelOrder } from './flows'
 import { explorerTx, hasMarket, marketRules, myTrades, type Sku } from './chain'
 import { indexerUrl } from './config'
@@ -90,44 +91,72 @@ export function Activity({ account }: { account: LocalAccount }) {
   ]
   const show = (r: Row) => (setOpen(r), later(() => dlg.current?.showModal()))
   const amount = (r: Row) => (r.amountUnits === undefined ? '' : formatUsd(BigInt(r.amountUnits), { digits: 'auto', sign: 'always' }))
+  const confirmed = rows.filter((r) => r.status === 'Confirmed')
+  const sum = (g: Group, sign: 1 | -1) => confirmed.filter((r) => r.group === g && r.amountUnits !== undefined && BigInt(r.amountUnits) * BigInt(sign) > 0n).reduce((n, r) => n + BigInt(r.amountUnits!) * BigInt(sign), 0n)
+  const tradeVol = confirmed.filter((r) => r.group === 'trades' && r.amountUnits !== undefined).reduce((n, r) => n + (BigInt(r.amountUnits!) < 0n ? -BigInt(r.amountUnits!) : BigInt(r.amountUnits!)), 0n)
+  const icon = (r: Row) => (r.group === 'offers' ? <IconTag /> : r.group === 'vault' ? <IconVault /> : r.group === 'deposits' ? <IconIn /> : r.group === 'withdrawals' ? <IconOut /> : r.kind === 'sell' ? <IconOut /> : <IconIn />)
+  const tone = (r: Row) => (r.amountUnits === undefined ? '' : BigInt(r.amountUnits) > 0n ? 'up' : BigInt(r.amountUnits) < 0n ? 'out' : '')
 
   return (
     <>
-      <PageHead title="Activity" sub="Every order, trade and transfer from this account, with its receipt" />
-      <Tabs<'feed' | 'open' | 'watch'> label="Activity" value={tab} onChange={(t) => setQuery({ tab: t === 'feed' ? '' : t })} tabs={[['feed', 'Activity', rows.length], ['open', 'Open orders', port.data ? openRows.length : undefined], ['watch', 'Watchlist', port.data ? watched.length : undefined]]} />
-      <div className="tabpanel" role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
-        {tab === 'feed' && (
-          <>
-            <div className="chips" role="group" aria-label="Filter activity" style={{ margin: '12px 0 4px' }}>
-              {GROUPS.map(([k, l]) => <Chip key={k} selected={group === k} onClick={() => setQuery({ f: k === 'all' ? '' : k })}>{l}</Chip>)}
+      <PageHead title="Activity" sub="Every order, trade and transfer from this account, each with its receipt" />
+      <section className="stats4" aria-label="Summary">
+        <Stat label="Confirmed" value={String(confirmed.length)} note={`${rows.length - confirmed.length} pending or failed`} />
+        <Stat label="Traded" value={formatUsd(tradeVol, { digits: 'auto' })} note={`${confirmed.filter((r) => r.group === 'trades').length} trades`} />
+        <Stat label="Cash added" value={formatUsd(sum('deposits', 1), { digits: 'auto' })} note="Deposits and test dollars" />
+        <Stat label="Open orders" value={port.data ? String(openRows.length) : '—'} note={port.data ? `${watched.length} on your watchlist` : 'Reading the books'} />
+      </section>
+
+      <section className="pnl act-pnl" aria-label="Activity">
+        <header className="pnl-h act-h">
+          <Tabs<'feed' | 'open' | 'watch'> label="Activity" value={tab} onChange={(t) => setQuery({ tab: t === 'feed' ? '' : t })} tabs={[['feed', 'History', rows.length], ['open', 'Open orders', port.data ? openRows.length : undefined], ['watch', 'Watchlist', port.data ? watched.length : undefined]]} />
+          {tab === 'feed' && (
+            <div className="pills" role="group" aria-label="Filter activity">
+              {GROUPS.map(([k, l]) => <button key={k} aria-selected={group === k} onClick={() => setQuery({ f: k === 'all' ? '' : k })}>{l}</button>)}
             </div>
-            {!indexerUrl && <p className="fine">Showing what you did in this browser. Trades from other devices need the indexer.</p>}
-            {chain.error && <p className="fine">Trades from the chain could not be loaded just now. Showing your own receipts.</p>}
-            {shown.length === 0 ? (
-              <Empty title={group === 'all' ? 'Nothing here yet' : `No ${GROUPS.find((g) => g[0] === group)![1].toLowerCase()} yet`} detail="Everything you buy, sell, offer, add or move shows up here with its receipt." action={<a className="btn md" href="#/browse">Find a card</a>} />
-            ) : (
-              days.map((d) => (
-                <section key={d} className="feed-day" aria-label={d}>
-                  <h2 className="feed-h">{d}</h2>
-                  <ul className="feed2">
-                    {shown.filter((r) => day(r.t) === d).map((r) => (
-                      <li key={r.id + r.source}>
-                        <button onClick={() => show(r)}>
-                          <span className="fs-main"><b>{r.sentence.replace(/\.$/, '')}</b><small>{clock(r.t)} · {ago(r.t)}</small></span>
-                          <span className="fs-amt">{amount(r)}</span>
-                          <span className={`fs-status ${r.status.toLowerCase()}`}>{r.status}</span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              ))
-            )}
-          </>
-        )}
-        {tab === 'open' && (port.error && !port.data ? <ErrorNote what="Couldn’t load your orders." why={port.error} next="Try again in a moment." onRetry={port.refresh} /> : !port.data ? <TableSkeleton cols={openCols} rows={3} /> : openRows.length ? <DataTable cols={openCols} rows={openRows} rowKey={(r) => r.key} label="Open orders" /> : <Empty title="No open orders" detail="An offer or a listing waits here until it fills or you cancel it." action={<a className="btn md" href="#/browse">Find a card</a>} />)}
-        {tab === 'watch' && (!port.data ? <TableSkeleton cols={watchCols} rows={3} /> : watched.length ? <DataTable cols={watchCols} rows={watched} rowKey={(s) => s.sku} label="Watchlist" onOpen={(s) => (location.hash = `#/card/${s.sku}`)} /> : <Empty title="Nothing on your watchlist" detail="Use Watch on a card and it appears here." action={<a className="btn md" href="#/browse">Find a card</a>} />)}
-      </div>
+          )}
+        </header>
+        <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
+          {tab === 'feed' && (
+            <>
+              {!indexerUrl && <p className="fine">Showing what you did in this browser. Trades from other devices need the indexer.</p>}
+              {chain.error && <p className="fine">Trades from the chain could not be loaded just now. Showing your own receipts.</p>}
+              {shown.length === 0 ? (
+                <div className="act-empty">
+                  <b>{group === 'all' ? 'Nothing here yet' : `No ${GROUPS.find((g) => g[0] === group)![1].toLowerCase()} yet`}</b>
+                  <p className="fine">Everything you do on Tivan lands here with a receipt you can check on the explorer.</p>
+                  <ol className="act-steps">
+                    <li><span><IconIn /></span><b>Add cash</b><small>Test dollars are free on this network</small></li>
+                    <li><span><IconTag /></span><b>Buy or make an offer</b><small>Each one is an order on the card’s book</small></li>
+                    <li><span><IconActivity /></span><b>See it here</b><small>Status, amount, block and transaction</small></li>
+                  </ol>
+                  <a className="btn md" href="#/browse">Find a card</a>
+                </div>
+              ) : (
+                days.map((d) => (
+                  <section key={d} className="tl-day" aria-label={d}>
+                    <h3 className="tl-h">{d}</h3>
+                    <ul className="tl">
+                      {shown.filter((r) => day(r.t) === d).map((r) => (
+                        <li key={r.id + r.source}>
+                          <button onClick={() => show(r)}>
+                            <span className={`tl-ico ${r.group}`} aria-hidden>{icon(r)}</span>
+                            <span className="tl-main"><b>{r.title}</b><small>{r.sentence.replace(/\.$/, '')} · {clock(r.t)}</small></span>
+                            <span className={`tl-amt ${tone(r)}`}>{amount(r)}</span>
+                            <span className={`pill-s ${r.status === 'Confirmed' ? 'ok' : r.status === 'Failed' ? 'bad' : ''}`}>{r.status}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ))
+              )}
+            </>
+          )}
+          {tab === 'open' && (port.error && !port.data ? <ErrorNote what="Couldn’t load your orders." why={port.error} next="Try again in a moment." onRetry={port.refresh} /> : !port.data ? <TableSkeleton cols={openCols} rows={3} /> : openRows.length ? <div className="pnl-table"><DataTable cols={openCols} rows={openRows} rowKey={(r) => r.key} label="Open orders" /></div> : <Empty title="No open orders" detail="An offer or a listing waits here until it fills or you cancel it." action={<a className="btn md" href="#/browse">Find a card</a>} />)}
+          {tab === 'watch' && (!port.data ? <TableSkeleton cols={watchCols} rows={3} /> : watched.length ? <div className="pnl-table"><DataTable cols={watchCols} rows={watched} rowKey={(s) => s.sku} label="Watchlist" onOpen={(s) => (location.hash = `#/card/${s.sku}`)} /></div> : <Empty title="Nothing on your watchlist" detail="Tap the star on any market and it appears here." action={<a className="btn md" href="#/">Open Markets</a>} />)}
+        </div>
+      </section>
       <dialog ref={dlg} className="tx-dialog" aria-labelledby="rc-title" onClick={(e) => e.target === dlg.current && dlg.current?.close()}>
         {open && (
           <>
