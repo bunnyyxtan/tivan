@@ -9,6 +9,8 @@ import { openSettings } from './fx'
 type Item = { label: string; sub?: string; run: () => void }
 type Group = { title: string; items: Item[] }
 const RK = 'tivan.recent'
+const OPEN = 'tivan-palette'
+export const openPalette = () => dispatchEvent(new Event(OPEN))
 const recent = (): string[] => {
   try {
     return JSON.parse(localStorage.getItem(RK) ?? '[]')
@@ -75,8 +77,10 @@ export function Palette({ signedIn }: { signedIn: boolean }) {
         }, 0)
       }
     }
+    const show = () => key(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))
     addEventListener('keydown', key)
-    return () => removeEventListener('keydown', key)
+    addEventListener(OPEN, show)
+    return () => (removeEventListener('keydown', key), removeEventListener(OPEN, show))
   }, [])
   const run = (it: Item) => {
     if (q.trim()) {

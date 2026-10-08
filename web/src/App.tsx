@@ -23,6 +23,7 @@ import { Palette } from './Palette'
 import { HelpPage } from './Help'
 import { Boundary, OfflineBar } from './Boundary'
 import { Tour } from './Tour'
+import { Landing } from './Landing'
 import { Welcome } from './Welcome'
 import { BalancePill, CashSheet } from './Cash'
 import { StatusBar } from './StatusBar'
@@ -93,8 +94,17 @@ export default function App() {
     : route === 'you' ? need((a) => <AccountPage account={a} onSignOut={out} />)
     : route === 'help' ? <HelpPage />
     : <Discover account={account} />
+  // Visitors land on the public front page; signed-in people go straight to the app.
+  if (route === '' && !account)
+    return (
+      <>
+        <SettingsSheet />
+        <Palette signedIn={false} />
+        <Landing />
+      </>
+    )
   const nav = [
-    ['markets', '#/', 'Markets', <IconMarkets />],
+    ['markets', '#/markets', 'Markets', <IconMarkets />],
     ['browse', '#/browse', 'Browse', <IconCompass />],
     ['collection', '#/collection', 'Portfolio', <IconCollection />],
     ['activity', '#/activity', 'Activity', <IconActivity />],
@@ -112,7 +122,7 @@ export default function App() {
       <div className="shell" data-rail={rail ? 'mini' : undefined}>
         <aside className="side" aria-label="Sidebar">
           <div className="side-top">
-            <a className="brand side-brand" href="#/" aria-label={`${brand}, markets`}>
+            <a className="brand side-brand" href="#/markets" aria-label={`${brand}, markets`}>
               <span className="brand-mark" aria-hidden>T</span>
               <span className="brand-word">{brand}</span>
             </a>
@@ -138,7 +148,7 @@ export default function App() {
         </aside>
         <div className="mainc">
           <header className="top">
-            <a className="brand top-brand" href="#/" aria-label={`${brand}, markets`}>
+            <a className="brand top-brand" href="#/markets" aria-label={`${brand}, markets`}>
               <span className="brand-mark" aria-hidden>T</span>
             </a>
             <SearchBox />
