@@ -3,9 +3,9 @@ import { IconSettings } from './icons'
 
 // ---- preferences: saved in this browser, applied as <html> attributes
 export type Theme = 'system' | 'light' | 'dark'
-export type Prefs = { motion: 'full' | 'off'; dense: boolean; view: 'list' | 'grid'; theme: Theme }
+export type Prefs = { motion: 'full' | 'off'; dense: boolean; view: 'list' | 'grid'; theme: Theme; haptics: boolean }
 const KEY = 'tivan.prefs'
-const defaults = (): Prefs => ({ motion: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'off' : 'full', dense: false, view: 'grid', theme: 'system' })
+const defaults = (): Prefs => ({ motion: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'off' : 'full', dense: false, view: 'grid', theme: 'system', haptics: false })
 export const defaultPrefs = defaults
 
 export const readPrefs = (): Prefs => {
@@ -17,6 +17,7 @@ export const readPrefs = (): Prefs => {
       dense: typeof s.dense === 'boolean' ? s.dense : d.dense,
       view: s.view === 'list' ? 'list' : s.view === 'grid' ? 'grid' : d.view,
       theme: s.theme === 'light' || s.theme === 'dark' ? s.theme : 'system',
+      haptics: s.haptics === true,
     }
   } catch {
     return defaults()
@@ -97,4 +98,10 @@ export function CardImage({ src, alt, label }: { src?: string; alt: string; labe
       )}
     </span>
   )
+}
+
+/** A short buzz when an on-chain action finishes, only on phones that can, and only if the person turned it on. */
+export const canBuzz = () => typeof navigator !== 'undefined' && 'vibrate' in navigator
+export const buzz = () => {
+  if (canBuzz() && readPrefs().haptics) navigator.vibrate(12)
 }

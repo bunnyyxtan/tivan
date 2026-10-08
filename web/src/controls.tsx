@@ -254,3 +254,19 @@ export function Copyable({ value, label }: { value: string; label: string }) {
     </span>
   )
 }
+
+/** Run after the current render, without depending on animation frames (which do not run in a hidden tab). */
+export const later = (fn: () => void) => void setTimeout(fn, 0)
+
+/** Calls fn when a native dialog closes, however it closed (Escape, a button, a backdrop click, or a script). */
+export function useOnClose(ref: React.RefObject<HTMLDialogElement | null>, fn: () => void) {
+  const last = useRef(fn)
+  last.current = fn
+  useEffect(() => {
+    const d = ref.current
+    if (!d) return
+    const h = () => last.current()
+    d.addEventListener('close', h)
+    return () => d.removeEventListener('close', h)
+  }, [ref])
+}

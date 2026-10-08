@@ -19,6 +19,7 @@ export const openShortcuts = () => dispatchEvent(new Event(KEYS_EVT))
 
 const shortcuts: [string, string][] = [
   ['/', 'Focus search'],
+  ['Ctrl K', 'Open the command palette (Cmd K on a Mac)'],
   ['Esc', 'Close search or a dialog'],
   ['?', 'Show this list'],
   ['↑ ↓', 'Move between table rows'],
@@ -132,7 +133,7 @@ export function SearchBox() {
     }
   }
   return (
-    <div className="search" onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && setOpen(false)}>
+    <div className="search" data-tour="search" onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && setOpen(false)}>
       <label className="field search-field">
         <IconSearch size={18} />
         <input
@@ -512,7 +513,7 @@ export function AccountMenu({ address, onSignOut, initial = 'C' }: { address: st
   }
   return (
     <div className="acct-menu" onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && setOpen(false)}>
-      <button ref={btn} className="acct-btn" aria-label="Account menu" title={short(address)} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
+      <button ref={btn} className="acct-btn" data-tour="account" aria-label="Account menu" title={short(address)} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
         {initial}
       </button>
       {open && (
@@ -543,7 +544,7 @@ export function DemoStrip() {
   return (
     <>
       <div className="strip">
-        <span>Sample market on a test network. Prices are quoted by an automated market maker. Custody and cash are simulated.</span>
+        <span>Test network. Prices come from an automated market maker. Custody and cash are simulated.</span>
         <button className="linkbtn" onClick={() => ref.current?.showModal()}>
           Details
         </button>

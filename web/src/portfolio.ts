@@ -8,6 +8,7 @@ export type Portfolio = {
   ma: Address
   gas: bigint
   cash: number // dollars in the wallet
+  cashRaw: bigint // the same, in base units
   exCash: number // dollars free on the Kuru margin account
   exCashRaw: bigint
   holdings: Holding[] // every SKU, owned or not
@@ -33,7 +34,7 @@ async function load(me: Address): Promise<Portfolio> {
       return { s, wallet, onBook, listed: 0, count: Number(wallet + onBook) }
     }),
   )
-  return { ma, gas, cash: dollars(cash), exCash: dollars(mCash), exCashRaw: mCash, holdings }
+  return { ma, gas, cash: dollars(cash), cashRaw: cash, exCash: dollars(mCash), exCashRaw: mCash, holdings }
 }
 
 // Several components show balances at once (cash pill, page); they share one read per few seconds.

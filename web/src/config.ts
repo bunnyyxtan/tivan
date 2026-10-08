@@ -106,7 +106,9 @@ export type ImageKind = 'reference' | 'photograph'
 /** Cards the demo grader registry knows (cre/fixtures/psa-certs.json). Shown as presets in "Vault a card".
  * imageKind says what the picture is: 'reference' is a picture of the card, not of the exact slab; 'photograph' is the slab itself. None is a photograph of its slab. */
 const BASE = import.meta.env.BASE_URL // '/' in dev, '/<repo>/' on GitHub Pages
-export const catalog = [
+/** `about` is an optional description with its source. It is shown only when it exists and is never generated. */
+export type CatalogCard = { specId: bigint; title: string; set: string; short: string; category: string; imageKind: ImageKind; imageUrl: string; about?: { text: string; source: string } }
+export const catalog: CatalogCard[] = [
   { specId: 4n, title: 'Base Set Charizard Holo', set: 'Base Set · 1999', short: 'CHZ', category: 'Pokémon', imageKind: 'reference' as ImageKind, imageUrl: BASE + 'cards/charizard.webp' },
   { specId: 58n, title: 'Base Set Pikachu Red Cheeks', set: 'Promo · 1999', short: 'PIKA', category: 'Pokémon', imageKind: 'reference' as ImageKind, imageUrl: BASE + 'cards/pikachu.webp' },
   { specId: 1993232n, title: 'Alpha Black Lotus', set: 'Alpha · 1993', short: 'LOTUS', category: 'Magic', imageKind: 'reference' as ImageKind, imageUrl: BASE + 'cards/lotus.webp' },
