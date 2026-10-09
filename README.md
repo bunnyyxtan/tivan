@@ -10,9 +10,18 @@ under a second. Holders can redeem the physical slab at any time.
 
 **Live demo:** https://bunnyyxtan.github.io/tivan/ (Monad testnet; nothing uses real money, vault custody is simulated).
 
-<p>
+<p align="center">
+  <img src="docs/screenshots/landing-desktop-dark.jpg" alt="The front page: live markets, the vault and the latest block" width="100%">
+</p>
+
+<p align="center">
   <img src="docs/screenshots/markets-desktop-dark.jpg" alt="Markets, desktop, dark theme" width="49%">
   <img src="docs/screenshots/card-desktop-light.jpg" alt="Card page, desktop, light theme" width="49%">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/browse-desktop-dark.jpg" alt="Browse, with grade, price and set filters" width="63%">
+  <img src="docs/screenshots/markets-mobile.jpg" alt="Markets on a phone" width="17%">
 </p>
 
 Built for [Monad Metropolis](https://hackathon.monad.xyz). Running on Monad testnet; the mainnet vault is deployed with
@@ -58,6 +67,7 @@ flowchart LR
 - **Addresses.** Monad testnet (10143): vault `0x998a3116dc9AaDb98AF27B31BeC93441E1991a12`. Monad mainnet (143): vault `0x5ad7d5e06df36415c6f3fA48299Bf92ed921859a`. Transaction hashes for the vaulting, listing, trading and redeeming runs are in [docs/DEPLOYMENTS.md](docs/DEPLOYMENTS.md).
 - **Verify it yourself.** Every receipt in the app links to the transaction on the Monad explorer.
 - **Kuru.** How Tivan brings graded cards to Kuru as a new asset class, with issuance, redemption, custody, liquidity and the roadmap: [docs/kuru-bounties.md](docs/kuru-bounties.md).
+- **Agents.** [`plugins/tivan`](plugins/tivan) is a MetaMask Agent Wallet plugin: `mm tivan markets` reads every Kuru book over a public RPC with no capability at all, and `mm tivan buy CHZ10 --price 4800` rests a bid through the Agent Wallet executor, so its signing, policy and MFA apply unchanged. The plugin holds no keys.
 - **Chainlink CRE, Mera and Envio.** How each is used, with measured runs: [docs/sponsor-bounties.md](docs/sponsor-bounties.md).
 
 ## Architecture
@@ -100,6 +110,7 @@ attestor/    Node relay: attest, custody, testnet gas drip, cert lookup
 cre/         Chainlink CRE workflow and demo registry fixtures
 indexer/     Envio indexer: SKUs, trades, orders
 web/         React app (markets, trading, collection, vault, league)
+plugins/     MetaMask Agent Wallet plugin: read every book, rest a bid
 scripts/     Testnet market maker
 docs/        Deployments and mainnet market parameters
 brand/       Logo assets
@@ -153,6 +164,16 @@ cd web && npm install && npm run dev        # http://localhost:5173
 ```sh
 cd indexer && npm install && npm run dev
 ```
+
+**Agent Wallet plugin**
+
+```sh
+cd plugins/tivan && npm install && npm run build
+mm plugins install "file:$PWD" --accept-permissions   # then: mm tivan markets
+```
+
+Plugins are beta, so `mm config set experimentalPlugins true` first; the full set-up is in
+[plugins/tivan/README.md](plugins/tivan/README.md).
 
 **Market maker** (quotes a bid and ask on cards that have none, using the maker account's own funds)
 
