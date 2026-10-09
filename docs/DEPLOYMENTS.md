@@ -96,8 +96,10 @@ attestor:
 | Landing page to a confirmed Monad transaction (new visitor, $10,000 test dollars) | 4 taps, 1 passkey ceremony, about 6 s in total, 0.8 s to settle |
 | Buy for $475.16 inside the session | 0 passkey prompts, settled in 0.7 s, matched on the Kuru book |
 | Buy for $1,545 (over the $1,000 session limit) | 1 passkey prompt, settled in 0.9 s |
-| Private vault: seal a shipping name and notes | 225 bytes of ciphertext written to SealedBox by the relay, with no MON in the account |
+| Private vault: seal the watchlist, alerts and notes | 225 bytes of ciphertext written to SealedBox by the relay, with no MON in the account |
 | Stateless test: wipe all site storage, sign in with the same passkey | same address; the vault reopens and decrypts the same data from chain |
+| Buy, list at $9,999, move the ask to $8,888, sell the listed card | each step reviewed and settled; the card page's orders panel updated at once |
+| Price chart | tooltip on all 6 hover positions, no flicker; a pinned tooltip opens the trade on the explorer |
 
 ## Monad mainnet (chain 143)
 

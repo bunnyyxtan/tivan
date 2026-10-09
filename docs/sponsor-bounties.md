@@ -94,9 +94,11 @@ from chain. Nothing on our side is needed to rebuild an account.
 
 ## Monad: Mera, One Passkey, Many Keys
 
-**A non-account use of Mera: the private vault.** Collectors keep a shipping address and private notes (what they paid
-elsewhere, where a card came from) in a vault that only their passkey can open, on any of their devices
-([`web/src/vault.ts`](../web/src/vault.ts)).
+**A non-account use of Mera: the private vault.** A collector's watchlist, price alerts and private card notes (what
+they paid elsewhere, where a card came from) normally live in one browser and are lost on another device. Tivan seals
+them with the passkey instead, so they follow the person anywhere they sign in, and nobody else can read them
+([`web/src/vault.ts`](../web/src/vault.ts)). No wallet work is involved: none of it is an account, a balance or a
+signature for a trade.
 
 - **Its own namespace.** Unlocking asks the same passkey again with a different salt, `sha256("tivan.private-vault.v1")`,
   through `getPasskeyPrfOutput({ prfSalt })`. That output is unrelated to the account key, so the trading session cannot
@@ -116,8 +118,8 @@ elsewhere, where a card came from) in a vault that only their passkey can open, 
   - Our relay submits the write and pays the gas, so the vault works even for an account with no MON. It can never
     forge a write.
 - **The cross-device test.** The same passkey on a second device, or a fresh browser profile, derives the same locator
-  and keys, reads the box from chain and decrypts it. We ran it with all site storage wiped: the vault reopened with the
-  same name and notes.
+  and keys, reads the box from chain and decrypts it. We ran it with all of the site's storage wiped: the account
+  rebuilt itself from the passkey and the vault reopened with the same list and notes.
 
 ---
 
