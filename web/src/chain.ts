@@ -362,11 +362,7 @@ export type Order = { id: number; price: number; size: number; isBuy: boolean }
 async function orderIds(market: Address, owner: Address): Promise<bigint[]> {
   if (indexerUrl) {
     try {
-      const { Order } = await gql<{ Order: { orderId: string }[] }>('query($m: String!, $o: String!) { Order(where: { market: { _eq: $m }, owner: { _eq: $o } }) { orderId } }', {
-        m: getAddress(market),
-        o: owner.toLowerCase(),
-      })
-      return Order.map((o) => BigInt(o.orderId))
+      return (await ordersByMarket(owner)).get(market.toLowerCase()) ?? []
     } catch (e) {
       console.warn('indexer down, reading order slots over RPC', e)
     }
@@ -390,6 +386,24 @@ async function orderIds(market: Address, owner: Address): Promise<bigint[]> {
   return [...s.owner].filter(([, o]) => o === owner.toLowerCase()).map(([id]) => BigInt(id))
 }
 const slots = new Map<string, { owner: Map<number, string>; tail: number }>()
+
+// One indexer query per owner instead of one per market: a page reads about 19 markets at once, and Envio's development
+// endpoint throttles bursts (a throttled reply has no CORS header, so it shows as a failed fetch). Callers within a few
+// seconds share one request.
+const ownerOrders = new Map<string, { at: number; p: Promise<Map<string, bigint[]>> }>()
+function ordersByMarket(owner: Address): Promise<Map<string, bigint[]>> {
+  const k = owner.toLowerCase()
+  const hit = ownerOrders.get(k)
+  if (hit && Date.now() - hit.at < 3000) return hit.p
+  const p = gql<{ Order: { market: string; orderId: string }[] }>('query($o: String!) { Order(where: { owner: { _eq: $o } }, limit: 5000) { market orderId } }', { o: k }).then(({ Order }) => {
+    const by = new Map<string, bigint[]>()
+    for (const x of Order) by.set(x.market.toLowerCase(), [...(by.get(x.market.toLowerCase()) ?? []), BigInt(x.orderId)])
+    return by
+  })
+  p.catch(() => ownerOrders.delete(k))
+  ownerOrders.set(k, { at: Date.now(), p })
+  return p
+}
 
 /** This account's resting orders on one market; the chain (s_orders) decides what is still open. */
 export async function openOrders(market: Address, owner: Address): Promise<Order[]> {
