@@ -5,6 +5,7 @@ import { createPublicClient, createWalletClient, formatEther, http, isAddress, g
 import { privateKeyToAccount } from 'viem/accounts'
 import { network, deployerKey, port, custodyToken } from './config.ts'
 import { demoRegistryRecord, verifyCert } from './psa.ts'
+import { cap, HttpError } from './cap.ts'
 
 const oracleAbi = parseAbi(['function grades(uint256) view returns (uint256 specId, uint8 grade, address holder, uint64 at)'])
 const vaultAbi = parseAbi([
@@ -40,12 +41,6 @@ function load(): Record<string, number> {
     return Array.isArray(j) ? Object.fromEntries(j.map((a: string) => [a, 0])) : j // older ledgers were a plain address list
   } catch {
     return {}
-  }
-}
-
-class HttpError extends Error {
-  constructor(public status: number, message: string) {
-    super(message)
   }
 }
 
@@ -99,8 +94,7 @@ async function sendNow(functionName: 'attest' | 'confirmCustody', args: readonly
 }
 
 const boxAbi = parseAbi(['function put(bytes32 locator, bytes box, uint256 nonce, bytes sig)'])
-// Sponsored vault writes are cheap but free to the caller, so cap them like drips: per box and in total, per hour.
-const boxWrites: { t: number; locator: string }[] = []
+
 const hex = (v: unknown, field: string, minBytes: number, maxBytes: number): `0x${string}` => {
   if (typeof v !== 'string' || !/^0x([0-9a-fA-F]{2})*$/.test(v) || (v.length - 2) / 2 < minBytes || (v.length - 2) / 2 > maxBytes) throw new HttpError(400, `${field}: hex, ${minBytes}-${maxBytes} bytes`)
   return v as `0x${string}`
@@ -115,10 +109,7 @@ const routes: Record<string, (b: Record<string, unknown>, req: IncomingMessage) 
     const box = hex(b.box, 'box', 1, 4096)
     const nonce = uint(b.nonce, 'nonce', 2n ** 64n)
     const sig = hex(b.sig, 'sig', 65, 65)
-    const now = Date.now()
-    while (boxWrites.length && now - boxWrites[0].t > 3600_000) boxWrites.shift()
-    if (boxWrites.length >= 120 || boxWrites.filter((w) => w.locator === locator).length >= 12) throw new HttpError(429, 'too many vault saves this hour, try again later')
-    boxWrites.push({ t: now, locator })
+    cap('too many vault saves this hour, try again later', [`box:${locator}`, 12], ['box', 120])
     const hash = await serial(async () => {
       const { request } = await pub.simulateContract({ account, address: network.sealedBox!, abi: boxAbi, functionName: 'put', args: [locator, box, nonce, sig] })
       const h = await wallet.writeContract(request)
@@ -130,6 +121,9 @@ const routes: Record<string, (b: Record<string, unknown>, req: IncomingMessage) 
   },
 
   async '/attest'(b) {
+    // An attest deploys a token and a market on a new SKU: the most expensive thing this signer pays for.
+    // A revert costs nothing (simulateContract catches it first), but every valid cert does, so cap the rate.
+    cap('too many attestations this hour, try again later', ['attest', 40])
     const certId = uint(b.certId, 'certId', U256)
     const specId = uint(b.specId, 'specId', U256)
     const grade = Number(uint(b.grade, 'grade', 10n))
@@ -163,7 +157,7 @@ const routes: Record<string, (b: Record<string, unknown>, req: IncomingMessage) 
       const got = Buffer.from(String(req.headers['x-custody-token'] ?? ''))
       const want = Buffer.from(custodyToken)
       if (got.length !== want.length || !timingSafeEqual(got, want)) throw new HttpError(403, 'custodian only')
-    }
+    } else cap('too many custody confirmations this hour, try again later', ['custody', 60])
     const certId = uint(b.certId, 'certId', U256)
     return { txHash: await send('confirmCustody', [certId]) }
   },
