@@ -90,12 +90,18 @@ export function Activity({ account }: { account: LocalAccount }) {
     { key: 'act', label: 'Actions', right: true, cell: (s, t) => <span className="row-actions"><Button variant="tertiary" size={32} tabIndex={t} onClick={() => watch.toggle(s.sku)}>Stop watching</Button></span> },
   ]
   const show = (r: Row) => (setOpen(r), later(() => dlg.current?.showModal()))
-  const amount = (r: Row) => (r.amountUnits === undefined ? '' : formatUsd(BigInt(r.amountUnits), { digits: 'auto', sign: 'always' }))
+  // Listings and offers move no money until they fill, so they show their price, not a signed amount.
+  const resting = (r: Row) => r.kind === 'list' || r.kind === 'offer'
+  const amount = (r: Row) => {
+    if (r.amountUnits === undefined || r.kind === 'cancel') return ''
+    const u = BigInt(r.amountUnits)
+    return resting(r) ? `${r.kind === 'list' ? 'Ask' : 'Offer'} ${formatUsd(u < 0n ? -u : u, { digits: 'auto' })}` : formatUsd(u, { digits: 'auto', sign: 'always' })
+  }
   const confirmed = rows.filter((r) => r.status === 'Confirmed')
   const sum = (g: Group, sign: 1 | -1) => confirmed.filter((r) => r.group === g && r.amountUnits !== undefined && BigInt(r.amountUnits) * BigInt(sign) > 0n).reduce((n, r) => n + BigInt(r.amountUnits!) * BigInt(sign), 0n)
   const tradeVol = confirmed.filter((r) => r.group === 'trades' && r.amountUnits !== undefined).reduce((n, r) => n + (BigInt(r.amountUnits!) < 0n ? -BigInt(r.amountUnits!) : BigInt(r.amountUnits!)), 0n)
   const icon = (r: Row) => (r.group === 'offers' ? <IconTag /> : r.group === 'vault' ? <IconVault /> : r.group === 'deposits' ? <IconIn /> : r.group === 'withdrawals' ? <IconOut /> : r.kind === 'sell' ? <IconOut /> : <IconIn />)
-  const tone = (r: Row) => (r.amountUnits === undefined ? '' : BigInt(r.amountUnits) > 0n ? 'up' : BigInt(r.amountUnits) < 0n ? 'out' : '')
+  const tone = (r: Row) => (r.amountUnits === undefined || resting(r) ? '' : BigInt(r.amountUnits) > 0n ? 'up' : BigInt(r.amountUnits) < 0n ? 'out' : '')
 
   return (
     <>

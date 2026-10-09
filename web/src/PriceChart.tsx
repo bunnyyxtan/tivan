@@ -395,6 +395,8 @@ export default function PriceChart({ trades, askCents, bidCents, updatedAt }: { 
   }
 
   const idx = selItem
+  // A hovered tooltip ignores the mouse, so it never steals the hover and flickers. A pinned one takes clicks for its link.
+  const pinnedHere = pinned !== undefined && vis[pinned] === idx
   // The tooltip sits above the point, or below it when the point is near the top, and never past the sides.
   const tip = idx && (() => {
     const py = geo.y(Number(idx.price))
@@ -492,7 +494,7 @@ export default function PriceChart({ trades, askCents, bidCents, updatedAt }: { 
             }}
           />
           {idx && tip && (
-            <div className={`pchart-tip ${tip.below ? 'below' : ''}`} style={{ left: tip.left, top: tip.top }}>
+            <div className={`pchart-tip ${tip.below ? 'below' : ''} ${pinnedHere ? 'pinned' : ''}`} style={{ left: tip.left, top: tip.top }}>
               {idx.ohlc ? (
                 <dl className="pc-ohlc">
                   <div><dt>Open</dt><dd>{usdC(idx.ohlc.open, 2)}</dd></div>
@@ -506,10 +508,14 @@ export default function PriceChart({ trades, askCents, bidCents, updatedAt }: { 
               <span>
                 {formatQty(idx.size)} {idx.ohlc ? `cards in ${idx.ohlc.n} trades` : idx.size === 1n ? 'card' : 'cards'} · {when(idx.t)}
               </span>
-              {idx.hash && (
-                <a className="u" href={explorerTx(idx.hash)} target="_blank" rel="noreferrer">
-                  View trade on the explorer
-                </a>
+              {pinnedHere ? (
+                idx.hash && (
+                  <a className="u" href={explorerTx(idx.hash)} target="_blank" rel="noreferrer">
+                    View this trade on the explorer
+                  </a>
+                )
+              ) : (
+                <small className="pc-hint">Click to pin{idx.hash ? ' and open the transaction' : ''}</small>
               )}
             </div>
           )}

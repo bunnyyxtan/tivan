@@ -127,7 +127,7 @@ export function Portfolio({ account }: { account: LocalAccount }) {
                     {sample.length > 0 && <span className="catcard-fan pf-fan" aria-hidden>{sample.map((n) => <Slab key={n} name={n} size="sm" />)}</span>}
                     <b>No cards in your portfolio yet</b>
                     <p className="fine">Buy one at the ask, make an offer below it, or check in a slab you own.</p>
-                    <span className="pf-empty-act"><a className="btn md" href="#/browse">Browse markets</a><a className="ghost line md" href="#/sell">Sell a card</a></span>
+                    <span className="pf-empty-act"><a className="btn md" href="#/browse">Browse markets</a><a className="ghost line md" href="#/vault">Vault a card</a></span>
                   </div>
                 ) : (
                   <>

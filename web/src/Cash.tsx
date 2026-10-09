@@ -65,7 +65,10 @@ export function DepositAddress({ account }: { account: LocalAccount }) {
         const diff = b - base.current
         base.current = b
         setGot(diff)
-        writeLog((l) => [{ id: `dep-${Date.now()}`, t: Date.now(), kind: 'deposit', title: 'Deposit', sentence: `Received ${usd(diff, 2)} ${net.quoteSymbol === 'USD' ? 'USDC' : net.quoteSymbol} from another wallet.`, amountUnits: diff.toString(), status: 'Confirmed', feeSpent: false }, ...l])
+        // A rise can also be this account's own action (test dollars, a withdrawal from the exchange), whose receipt is
+        // written a moment after the balance moves. Wait, then record it only if no receipt explains it.
+        const at = Date.now()
+        setTimeout(() => writeLog((l) => (l.some((x) => x.amountUnits === diff.toString() && Math.abs(x.t - at) < 120_000) ? l : [{ id: `dep-${at}`, t: at, kind: 'deposit', title: 'Deposit', sentence: `Received ${usd(diff, 2)} ${net.quoteSymbol === 'USD' ? 'USDC' : net.quoteSymbol} from another wallet.`, amountUnits: diff.toString(), status: 'Confirmed', feeSpent: false }, ...l])), 20_000)
       }
       return b
     },
