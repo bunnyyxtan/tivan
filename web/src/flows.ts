@@ -1,7 +1,7 @@
 // Builds the review for every trading action and the on-chain steps behind it. All amounts are bigint base units and
 // come from logic/orders.ts, so the review, the receipt, Activity and Portfolio reconcile to the same numbers.
 import type { Address, LocalAccount } from 'viem'
-import { bookAbi, erc20Abi, marginAbi, readBook, sendTx, type MarketRules, type Sku } from './chain'
+import { bookAbi, erc20Abi, marginAbi, markOrdersStale, readBook, sendTx, type MarketRules, type Sku } from './chain'
 import { net } from './config'
 import { centsToUnits, formatBps, formatQty, formatUsd } from './logic/money.ts'
 import { buyTotal, feeUnits, sellProceeds, validateOrder, walkAsks, walkBids, type Level, type Problem } from './logic/orders.ts'
@@ -22,6 +22,8 @@ const fees = (rules: MarketRules, amount: bigint, kind: 'taker' | 'maker'): Revi
 }
 const networkFee = (steps: number): ReviewRow => ({ label: 'Network fee', value: `about ${mon(MON_PER_TX * BigInt(steps))}`, note: net.name === 'testnet' ? 'An estimate, paid in MON. Topped up from the test faucet first if you are short.' : 'An estimate, paid in MON. Not part of the order total.' })
 const problems = (p: Problem[]) => p.map((x) => x.message)
+/** Reconcile after an order changes: read that market's orders from the chain for a while, since the indexer lags. */
+const afterOrder = (c: Ctx) => async () => (markOrdersStale(c.s.market), await c.reconcile())
 
 const approve = (c: Ctx, token: Address, spender: Address, amount: bigint, label: string): StepSpec => ({
   id: `approve-${token}`,
@@ -66,7 +68,7 @@ export function buyNow(c: Ctx, asks: Level[], qty: bigint): Built {
       confirmLabel: `Buy for ${usd(total)}`,
       steps,
       precheck: async () => ({ reviewedCents: w.limitCents, currentCents: walkAsks((await readBook(c.s.market)).asks, qty).qty === qty ? walkAsks((await readBook(c.s.market)).asks, qty).limitCents : 0n }),
-      reconcile: c.reconcile,
+      reconcile: afterOrder(c),
       receiptSentence: `Bought ${formatQty(qty)} ${c.label} for ${usd(total, 2)}.`,
       amountUnits: -total,
       sku: c.s.sku,
@@ -101,7 +103,7 @@ export function makeOffer(c: Ctx, priceCents: bigint, qty: bigint, askCents?: bi
       total: { label: 'Cash reserved', value: usd(need, 2) },
       confirmLabel: `Offer ${usd(centsToUnits(priceCents))}`,
       steps,
-      reconcile: c.reconcile,
+      reconcile: afterOrder(c),
       receiptSentence: `Offered ${usd(centsToUnits(priceCents), 2)} for ${formatQty(qty)} ${c.label}. ${usd(need, 2)} is reserved until it fills or you cancel.`,
       amountUnits: -need,
       sku: c.s.sku,
@@ -137,7 +139,7 @@ export function sellNow(c: Ctx, bids: Level[], qty: bigint): Built {
       confirmLabel: `Sell for ${usd(proceeds)}`,
       steps,
       precheck: async () => ({ reviewedCents: w.limitCents, currentCents: walkBids((await readBook(c.s.market)).bids, qty).qty === qty ? walkBids((await readBook(c.s.market)).bids, qty).limitCents : 0n }),
-      reconcile: c.reconcile,
+      reconcile: afterOrder(c),
       receiptSentence: `Sold ${formatQty(qty)} ${c.label} for ${usd(proceeds, 2)}.`,
       amountUnits: proceeds,
       sku: c.s.sku,
@@ -172,7 +174,7 @@ export function listAsk(c: Ctx, priceCents: bigint, qty: bigint, bidCents?: bigi
       total: { label: 'You receive if it fills', value: usd(gross - feeUnits(gross, c.rules.makerBps), 2) },
       confirmLabel: `List at ${usd(centsToUnits(priceCents))}`,
       steps,
-      reconcile: c.reconcile,
+      reconcile: afterOrder(c),
       receiptSentence: `Listed ${formatQty(qty)} ${c.label} at ${usd(centsToUnits(priceCents), 2)}. It waits on the order book until it sells or you cancel.`,
       amountUnits: gross,
       sku: c.s.sku,
@@ -192,9 +194,45 @@ export function cancelOrder(c: Ctx, o: { id: number; priceCents: bigint; size: b
     rows: [{ label: o.isBuy ? 'Offer price' : 'Ask price', value: usd(centsToUnits(o.priceCents), 2) }, { label: 'Quantity', value: formatQty(o.size) }, networkFee(1)],
     confirmLabel: 'Cancel order',
     steps: [{ id: 'cancel', label: 'Cancel the order', run: (h) => sendTx(c.account, { address: c.s.market, abi: bookAbi, functionName: 'batchCancelOrders', args: [[o.id]] }, h) }],
-    reconcile: c.reconcile,
+    reconcile: afterOrder(c),
     receiptSentence: `Cancelled your ${o.isBuy ? 'offer' : 'listing'} of ${usd(centsToUnits(o.priceCents), 2)} on ${c.label}.`,
     sku: c.s.sku,
     art: c.s.name,
   }
+}
+
+type MyOrder = { id: number; priceCents: bigint; size: bigint; isBuy: boolean }
+/** The same account with a listed card freed, as it is right after its ask is cancelled (the card returns to the exchange). */
+const freed = (c: Ctx, o: MyOrder): Ctx => ({ ...c, funds: { ...c.funds, onBook: c.funds.onBook + o.size } })
+const withCancel = (c: Ctx, o: MyOrder, spec: TxSpec): TxSpec => {
+  const steps = [...cancelOrder(c, o).steps, ...spec.steps]
+  return { ...spec, steps, rows: spec.rows.map((r) => (r.label === 'Network fee' ? networkFee(steps.length) : r)) }
+}
+
+/** Change a listing's price: cancel the ask and list again at the new price, in one review. */
+export function repriceAsk(c: Ctx, o: MyOrder, priceCents: bigint, bidCents?: bigint): Built {
+  if (priceCents === o.priceCents) return { problems: ['That is already your price.'] }
+  const b = listAsk(freed(c, o), priceCents, o.size, bidCents)
+  if (!b.spec) return b
+  const spec = withCancel(c, o, b.spec)
+  return {
+    problems: [],
+    spec: {
+      ...spec,
+      title: `Change your ask on ${c.label}`,
+      summary: [`Your ask moves from ${usd(centsToUnits(o.priceCents), 2)} to ${usd(centsToUnits(priceCents), 2)}. The old one is cancelled and the new one waits on the order book.`],
+      rows: [{ label: 'Old ask', value: usd(centsToUnits(o.priceCents), 2) }, ...spec.rows.map((r) => (r.label === 'Ask price' ? { ...r, label: 'New ask' } : r))],
+      headline: 'Ask moved',
+      confirmLabel: `Move my ask to ${usd(centsToUnits(priceCents))}`,
+      receiptSentence: `Moved your ask on ${c.label} from ${usd(centsToUnits(o.priceCents), 2)} to ${usd(centsToUnits(priceCents), 2)}.`,
+    },
+  }
+}
+
+/** Sell a listed card right now: cancel the ask, then sell to the best offer, in one review. */
+export function sellListedNow(c: Ctx, o: MyOrder, bids: Level[]): Built {
+  const b = sellNow(freed(c, o), bids, o.size)
+  if (!b.spec) return b
+  const spec = withCancel(c, o, b.spec)
+  return { problems: [], spec: { ...spec, title: `Sell ${c.label} now`, summary: [`Your ask of ${usd(centsToUnits(o.priceCents), 2)} is cancelled and the card sells to the best offer instead.`, ...spec.summary] } }
 }

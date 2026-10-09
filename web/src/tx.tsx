@@ -6,6 +6,7 @@ import { explorerTx, pub } from './chain'
 import { later, Button } from './controls'
 import { buzz } from './fx'
 import { confetti, earn, type Badge } from './celebrate'
+import { Medal } from './emblems'
 import { IconCheck, IconClose } from './icons'
 import { Slab } from './ui'
 import { decodeError, initialTx, stepSeconds, txReducer, type Failure } from './logic/txMachine.ts'
@@ -41,6 +42,8 @@ export type TxSpec = {
   sku?: string
   /** The card being traded, drawn as a slab at the top of the panel. */
   art?: string
+  /** Overrides the done headline, for actions a kind alone does not describe (moving an ask, say). */
+  headline?: string
 }
 
 // ---------------------------------------------------------------- what the user did, kept in this browser
@@ -352,7 +355,7 @@ export function TxProvider({ children }: { children: ReactNode }) {
                   <svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24" /><path d="M15 27l7 7 15-15" /></svg>
                 </span>
                 {spec.art && <span className="done-art"><Slab name={spec.art} size="md" /></span>}
-                <h2 id="tx-title" className="done-h">{headline[spec.kind]}</h2>
+                <h2 id="tx-title" className="done-h">{spec.headline ?? headline[spec.kind]}</h2>
                 <p className="done-sum">{sentenceOf(spec)}</p>
                 <div className="done-chips">
                   {secs !== undefined && <span className="done-chip"><b>{secs.toFixed(1)} s</b> to settle</span>}
@@ -362,7 +365,7 @@ export function TxProvider({ children }: { children: ReactNode }) {
                 </div>
                 {badges.map((b) => (
                   <div key={b.id} className="badge-card" role="status">
-                    <span className="badge-medal" aria-hidden>{b.title.slice(0, 1)}</span>
+                    <Medal id={b.id} />
                     <span><small>Badge unlocked</small><b>{b.title}</b><span>{b.text}</span></span>
                   </div>
                 ))}

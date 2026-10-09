@@ -360,7 +360,7 @@ export async function leaderboard(): Promise<Trader[]> {
 export type Order = { id: number; price: number; size: number; isBuy: boolean }
 /** Order ids this owner placed on a market: Envio's Order index, or a walk over the book's order slots. */
 async function orderIds(market: Address, owner: Address): Promise<bigint[]> {
-  if (indexerUrl) {
+  if (indexerUrl && !isStale(market)) {
     try {
       return (await ordersByMarket(owner)).get(market.toLowerCase()) ?? []
     } catch (e) {
@@ -386,6 +386,13 @@ async function orderIds(market: Address, owner: Address): Promise<bigint[]> {
   return [...s.owner].filter(([, o]) => o === owner.toLowerCase()).map(([id]) => BigInt(id))
 }
 const slots = new Map<string, { owner: Map<number, string>; tail: number }>()
+
+// Right after you place or cancel an order the indexer has not caught up, and showing nothing would look like the order
+// vanished. For a short while afterwards that market's orders are read from the chain instead, which is immediate.
+const stale = new Map<string, number>()
+const STALE_MS = 90_000
+export const markOrdersStale = (market: Address) => stale.set(market.toLowerCase(), Date.now())
+const isStale = (market: Address) => Date.now() - (stale.get(market.toLowerCase()) ?? 0) < STALE_MS
 
 // One indexer query per owner instead of one per market: a page reads about 19 markets at once, and Envio's development
 // endpoint throttles bursts (a throttled reply has no CORS header, so it shows as a failed fetch). Callers within a few

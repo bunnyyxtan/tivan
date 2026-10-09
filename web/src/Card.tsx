@@ -3,7 +3,7 @@ import type { Acct } from './App'
 import { alertPrice, useAlerts } from './alerts'
 import { Define, Updated, ago, cents, recordViewed, useNow, usdC } from './cardParts'
 import { Breadcrumbs } from './desk'
-import { cancelOrder, buyNow, listAsk, makeOffer, sellNow, type Built, type Ctx, type Funds } from './flows'
+import { cancelOrder, buyNow, listAsk, makeOffer, repriceAsk, sellListedNow, sellNow, type Built, type Ctx, type Funds } from './flows'
 import { Button, Copyable, Seg } from './controls'
 import { catalogOf, net } from './config'
 import { explorerAddress, explorerTx, hasMarket, loadSkus, marketRules, readBook, tradeHistory, type Fill, type Sku } from './chain'
@@ -156,7 +156,7 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
   const watching = watch.list.includes(sku)
   const pick = (side: 'ask' | 'bid', lvl: { price: bigint; cumulative: bigint }) => {
     if (side === 'ask') (setMode('buy'), setPrefill({ qty: String(lvl.cumulative) }))
-    else owned > 0n ? (setMode('sell'), setPrefill({ sellMode: 'now', qty: String(lvl.cumulative < owned ? lvl.cumulative : owned) })) : (setMode('offer'), setPrefill({ price: (Number(lvl.price) / 100).toString() }))
+    else held > 0n ? (setMode('sell'), setPrefill({ sellMode: 'now', qty: String(lvl.cumulative < held ? lvl.cumulative : held) })) : (setMode('offer'), setPrefill({ price: (Number(lvl.price) / 100).toString() }))
     requestAnimationFrame(() => document.getElementById('order-form')?.scrollIntoView({ block: 'center', behavior: 'smooth' }))
   }
 
@@ -187,7 +187,7 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
         <Button size={48} onClick={() => (setMode('offer'), setPrefill({}))}>Make an offer</Button>
       )}
       {askC !== undefined && <Button variant="secondary" size={48} onClick={() => (setMode('offer'), setPrefill({}))}>Make an offer</Button>}
-      {owned > 0n && <Button variant="secondary" size={48} onClick={() => (setMode('sell'), setPrefill({}))}>Sell yours</Button>}
+      {held > 0n && <Button variant="secondary" size={48} onClick={() => (setMode('sell'), setPrefill({}))}>Sell yours</Button>}
     </div>
   )
 
@@ -252,9 +252,10 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
                 </div>
               </div>
               {buttons}
-              {owned > 0n && bidC !== undefined && (
+              {ctx && <MyOrders ctx={ctx} mine={mine} bids={book.bids} bidC={bidC} />}
+              {held > 0n && bidC !== undefined && (
                 <p className="fine sell-line">
-                  You hold {formatQty(owned)}. <button className="linkbtn" onClick={() => { const b = ctx ? sellNow(ctx, book.bids, 1n) : undefined; if (b?.spec) tx.open(b.spec); else (setMode('sell'), setPrefill({ sellMode: 'now' })) }}>Sell one now for {usdC(bidC)}</button> or <button className="linkbtn" onClick={() => (setMode('sell'), setPrefill({ sellMode: 'list' }))}>list it higher</button>.
+                  You hold {formatQty(held)}{listed > 0n ? ` more, not listed` : ''}. <button className="linkbtn" onClick={() => { const b = ctx ? sellNow(ctx, book.bids, 1n) : undefined; if (b?.spec) tx.open(b.spec); else (setMode('sell'), setPrefill({ sellMode: 'now' })) }}>Sell one now for {usdC(bidC)}</button> or <button className="linkbtn" onClick={() => (setMode('sell'), setPrefill({ sellMode: 'list' }))}>list it higher</button>.
                 </p>
               )}
               <p className="fine ctx" role="status">
@@ -263,7 +264,7 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
                 {shared && <> {shared}</>}
               </p>
               {mode && account && ctx && (
-                <OrderForm key={`${mode}-${JSON.stringify(prefill)}`} mode={mode} ctx={ctx} asks={book.asks} bids={book.bids} askC={askC} bidC={bidC} owned={owned} prefill={prefill} onClose={() => setMode(undefined)} />
+                <OrderForm key={`${mode}-${JSON.stringify(prefill)}`} mode={mode} ctx={ctx} asks={book.asks} bids={book.bids} askC={askC} bidC={bidC} owned={held} listed={listed} prefill={prefill} onClose={() => setMode(undefined)} />
               )}
               {mode && !account && <p className="notice">Sign in first. Your passkey is your account and it takes a few seconds. We will bring you back here with this order ready. <button className="linkbtn" onClick={signInHere}>Sign in</button></p>}
               <dl className="mstats">
@@ -432,7 +433,7 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
 }
 
 // ---------------------------------------------------------------- the order form
-export function OrderForm({ mode, ctx, asks, bids, askC, bidC, owned, prefill, onClose }: { mode: 'buy' | 'offer' | 'sell'; ctx: Ctx; asks: Level[]; bids: Level[]; askC?: bigint; bidC?: bigint; owned: bigint; prefill: { price?: string; qty?: string; sellMode?: 'now' | 'list' }; onClose: () => void }) {
+export function OrderForm({ mode, ctx, asks, bids, askC, bidC, owned, listed = 0n, prefill, onClose }: { mode: 'buy' | 'offer' | 'sell'; ctx: Ctx; asks: Level[]; bids: Level[]; askC?: bigint; bidC?: bigint; owned: bigint; listed?: bigint; prefill: { price?: string; qty?: string; sellMode?: 'now' | 'list' }; onClose: () => void }) {
   const tx = useTx()
   const [qty, setQty] = useState(prefill.qty ?? '1')
   const [price, setPrice] = useState(prefill.price ?? (mode === 'offer' && bidC !== undefined ? String(Number(bidC + 100n) / 100) : mode === 'sell' && askC !== undefined ? String(Number(askC) / 100) : ''))
@@ -468,7 +469,7 @@ export function OrderForm({ mode, ctx, asks, bids, askC, bidC, owned, prefill, o
           {walk.qty < q ? `${formatQty(walk.qty)} available at the moment.` : <>{walk.levels > 1 ? `Average ${usdC(walk.avgCents)}, worst ${usdC(walk.limitCents)}.` : `${usdC(walk.avgCents)} each.`} Total {usdU(walk.units, 2)}.</>}
         </p>
       )}
-      {mode === 'sell' && owned < q && <p className="fine">You hold {formatQty(owned)}.</p>}
+      {mode === 'sell' && owned < q && <p className="fine">You have {formatQty(owned)} free to sell{listed > 0n ? `; ${formatQty(listed)} more ${listed === 1n ? 'is' : 'are'} listed. Cancel or reprice a listing above to free it` : ''}.</p>}
       {errs.length > 0 && (
         <ul className="problems" role="alert">
           {errs.map((e) => <li key={e}>{e}</li>)}
@@ -541,19 +542,84 @@ function VaultInfo({ s, certs }: { s: Sku; certs?: CertRow[] }) {
   )
 }
 
+type MyOrder = { id: number; priceCents: bigint; size: bigint; isBuy: boolean }
+/** Your open listings and offers on this market, each with what you can do about it. */
+function MyOrders({ ctx, mine, bids, bidC }: { ctx: Ctx; mine: MyOrder[]; bids: Level[]; bidC?: bigint }) {
+  const tx = useTx()
+  const [edit, setEdit] = useState<number>()
+  const [price, setPrice] = useState('')
+  const [err, setErr] = useState<string>()
+  const open = (b: Built) => (b.spec ? (setErr(undefined), setEdit(undefined), tx.open(b.spec)) : setErr(b.problems[0]))
+  if (!mine.length) return null
+  return (
+    <div className="my-orders">
+      <span className="lbl-caps">Your orders on this card</span>
+      <ul>
+        {mine.map((o) => (
+          <li key={o.id}>
+            <div className="mo-row">
+              <span className={`mo-side ${o.isBuy ? 'bid' : 'ask'}`}>{o.isBuy ? 'Offer' : 'Listed'}</span>
+              <span className="mo-what">
+                <b>{usdC(o.priceCents, 2)}</b>
+                <small>{formatQty(o.size)} card{o.size === 1n ? '' : 's'} · {o.isBuy ? 'waiting for a seller' : 'waiting for a buyer'}</small>
+              </span>
+              <span className="mo-acts">
+                {!o.isBuy && <button className="linkbtn" aria-expanded={edit === o.id} onClick={() => (setEdit(edit === o.id ? undefined : o.id), setPrice((Number(o.priceCents) / 100).toFixed(2)), setErr(undefined))}>Change price</button>}
+                <button className="linkbtn" onClick={() => tx.open(cancelOrder(ctx, o))}>Cancel</button>
+              </span>
+            </div>
+            {edit === o.id && (
+              <form className="mo-edit" onSubmit={(e) => {
+                e.preventDefault()
+                if (!/^\d+(\.\d{0,2})?$/.test(price) || Number(price) <= 0) return setErr('Enter a price in dollars, like 4999.99.')
+                open(repriceAsk(ctx, o, BigInt(Math.round(Number(price) * 100)), bidC))
+              }}>
+                <label><span>New ask, per card</span><input className="num-in" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value.replace(/[^\d.]/g, ''))} autoFocus /></label>
+                <Button size={40} type="submit">Review</Button>
+              </form>
+            )}
+            {!o.isBuy && bidC !== undefined && <button className="mo-sellnow" onClick={() => open(sellListedNow(ctx, o, bids))}>Sell it now to the best offer instead · {usdC(bidC)}</button>}
+          </li>
+        ))}
+      </ul>
+      {err && <p className="error" role="alert">{err}</p>}
+    </div>
+  )
+}
+
+/** Price alerts with your own price: tell me when the ask drops to it, or when an offer rises to it. */
 function AlertRow({ s }: { s: Sku }) {
   const al = useAlerts()
-  const cur = al.has(s.sku, 'below')
-  const target = cur?.price ?? (s.ask ? alertPrice(s.ask) : undefined)
   const [blocked, setBlocked] = useState(false)
-  if (!target) return null
+  const rows: { kind: 'below' | 'bid'; label: string; base?: number }[] = [
+    { kind: 'below', label: 'Ask drops to', base: s.ask ? alertPrice(s.ask) : undefined },
+    { kind: 'bid', label: 'Best offer rises to', base: s.bid ? Math.ceil((s.bid * 1.05) / 10) * 10 : undefined },
+  ]
   return (
-    <div className="kv alertrow">
-      <span>
-        Tell me if the ask drops below {usdC(cents(target))}
-        <span className="fine" style={{ display: 'block' }}>{blocked ? 'Allow notifications in your browser first.' : 'One notification, then it turns off. Works while the app is open.'}</span>
+    <div className="alertrow">
+      <div className="ar-head">
+        <b>Price alerts</b>
+        <small>{blocked ? 'Allow notifications in your browser first.' : 'One notification each, then it turns off. Works while Tivan is open in a tab.'}</small>
+      </div>
+      {rows.map((r) => (
+        <AlertLine key={r.kind} sku={s.sku} kind={r.kind} label={r.label} base={r.base} cur={al.has(s.sku, r.kind)?.price} onToggle={async (price) => (price === undefined ? al.off(s.sku, r.kind) : setBlocked(!(await al.on({ sku: s.sku, kind: r.kind, price }))))} />
+      ))}
+    </div>
+  )
+}
+
+function AlertLine({ kind, label, base, cur, onToggle }: { sku: string; kind: 'below' | 'bid'; label: string; base?: number; cur?: number; onToggle: (price?: number) => void }) {
+  const [text, setText] = useState(cur !== undefined ? String(cur) : base !== undefined ? String(base) : '')
+  const price = /^\d+(\.\d{0,2})?$/.test(text) && Number(text) > 0 ? Number(text) : undefined
+  const on = cur !== undefined
+  return (
+    <div className={`ar-line ${on ? 'on' : ''}`}>
+      <span>{label}</span>
+      <span className="ar-price">
+        <i aria-hidden>$</i>
+        <input className="num-in" inputMode="decimal" value={text} disabled={on} aria-label={`${label}, in dollars`} onChange={(e) => setText(e.target.value.replace(/[^\d.]/g, ''))} />
       </span>
-      <button className="switch" role="switch" aria-checked={!!cur} aria-label={`Alert when the ask drops below ${usdC(cents(target))}`} onClick={async () => (cur ? al.off(s.sku, 'below') : setBlocked(!(await al.on({ sku: s.sku, kind: 'below', price: target }))))} />
+      <button className="switch" role="switch" aria-checked={on} disabled={!on && price === undefined} aria-label={`Alert when the ${kind === 'below' ? 'ask drops' : 'best offer rises'} to ${text ? `$${text}` : 'your price'}`} onClick={() => onToggle(on ? undefined : price)} />
     </div>
   )
 }
