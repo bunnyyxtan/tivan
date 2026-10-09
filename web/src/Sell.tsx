@@ -133,14 +133,15 @@ function Scanner({ onFound, onManual }: { onFound: (cert: string) => void; onMan
   )
 }
 
-export function Sell({ account }: { account: LocalAccount }) {
+export function Sell({ account, mode = 'sell' }: { account: LocalAccount; mode?: 'sell' | 'vault' }) {
   const me = account.address
   const [step, setStep] = useState<Step>('method')
+  const bringIn = mode === 'vault'
   const [cert, setCert] = useState('')
   const [found, setFound] = useState<Found>()
   const [state, setState] = useState<{ text: string; ok: boolean }>()
   const [sku, setSku] = useState<string>()
-  const port = usePortfolio(me)
+  const port = usePortfolio(me, true)
   const mine = (port.data?.holdings ?? []).filter((h) => h.count > 0)
 
   useEffect(() => {
@@ -167,7 +168,13 @@ export function Sell({ account }: { account: LocalAccount }) {
 
   return (
     <div className="sell">
-      <PageHead title="Sell a card" sub="Check your slab into the vault, then list it on its market. You are paid the moment an order fills." />
+      <PageHead
+        title={bringIn ? 'Vault a card' : 'Sell a card'}
+        sub={bringIn ? 'Send a slab you own into the vault. It becomes one token on that card’s market, which you can keep or sell.' : 'Pick one of your vaulted cards and sell it at the best offer, or list it at your own price.'}
+      >
+        <a className="ghost line md" href={bringIn ? '#/sell' : '#/vault'}>{bringIn ? 'Sell a card you hold' : 'Vault a physical card'}</a>
+      </PageHead>
+      {bringIn && (
       <ol className="sell-steps" aria-label="Steps">
         {([['Find your card', 'Scan the label or type its certificate number'], ['Check into the vault', 'The certificate is verified and the slab is received'], ['Set your price', 'Sell at the best offer, or list it at your own ask']] as const).map(([t, d], i) => {
           const at = step === 'price' ? 2 : step === 'vault' ? 1 : 0
@@ -179,9 +186,46 @@ export function Sell({ account }: { account: LocalAccount }) {
           )
         })}
       </ol>
+      )}
       <div className="sell-grid">
       <div className="sell-main">
-      {step === 'method' && (
+      {step === 'method' && !bringIn && (
+        <div className="sell-pick">
+          {!port.data ? (
+            <p className="fine">Checking your cards</p>
+          ) : mine.length ? (
+            <>
+              <span className="lbl-caps">Your cards in the vault</span>
+              <ul className="pick-list">
+                {mine.map((h) => (
+                  <li key={h.s.sku}>
+                    <button onClick={() => (h.count > h.listed ? (setSku(h.s.sku), setStep('price')) : (location.hash = `#/card/${h.s.sku}`))}>
+                      <Slab name={h.s.name} size="sm" />
+                      <span className="pick-what">
+                        <b>{cardTitle(h.s.name)}</b>
+                        <small>{cardSub(h.s.name).split(' · ')[0]} · {h.count} held{h.listed ? ` · ${h.listed} listed for sale` : ''}</small>
+                      </span>
+                      <span className="pick-price">
+                        <b>{h.s.bid ? usdC(cents(h.s.bid)) : "—"}</b>
+                        <small>{h.s.bid ? 'best offer' : 'no offers yet'}</small>
+                      </span>
+                      <span className="pick-go" aria-hidden>{h.count > h.listed ? 'Sell' : 'Manage'}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <div className="pnl-empty">
+              <IconVault />
+              <b>No cards in your vault yet</b>
+              <p className="fine">Buy one on its market, or send a slab you already own into the vault.</p>
+              <span className="pf-empty-act"><a className="btn md" href="#/markets">Browse markets</a><a className="ghost line md" href="#/vault">Vault a physical card</a></span>
+            </div>
+          )}
+        </div>
+      )}
+      {step === 'method' && bringIn && (
         <div className="method-grid">
           <button className="method" disabled={!canScan()} onClick={() => setStep('scan')}>
             <span className="method-ico" aria-hidden><IconCamera /></span>
@@ -195,22 +239,6 @@ export function Sell({ account }: { account: LocalAccount }) {
             <small>The eight to ten digits printed on the slab’s label.</small>
             <span className="method-go" aria-hidden>Enter the number</span>
           </button>
-          <div className="method method-vault">
-            <span className="method-ico" aria-hidden><IconVault /></span>
-            <b>Sell a card already in the vault</b>
-            {port.data ? mine.length ? (
-              <ul className="method-list">
-                {mine.map((h) => (
-                  <li key={h.s.sku}>
-                    <button onClick={() => (setSku(h.s.sku), setStep('price'))}>
-                      <Slab name={h.s.name} size="xs" />
-                      <span><b>{cardTitle(h.s.name)}</b><small>{cardSub(h.s.name).split(' · ')[0]} · {h.count} held</small></span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : <small>You hold no vaulted cards yet. Buy one, or check a slab in with one of the other two ways.</small> : <small>Checking your cards</small>}
-          </div>
         </div>
       )}
       {step === 'scan' && <Scanner onFound={(c) => (setCert(c), setStep('cert'))} onManual={() => setStep('cert')} />}

@@ -169,7 +169,7 @@ export function Browse({ account }: { account: Acct }) {
   const sp = useQuery()
   const f = readF(sp)
   const { data, error, refresh } = usePoll(loadSkus, 8000, [])
-  const { data: port } = usePortfolio(account?.address)
+  const { data: port } = usePortfolio(account?.address, true)
   const watch = useWatch()
   const sales = useSales()
   const cmp = useCompare()
@@ -366,7 +366,7 @@ const VIEWS: [View, string][] = [['all', 'All'], ['trending', 'Trending'], ['mov
 export function Discover({ account }: { account: Acct }) {
   const { data, error, refresh } = usePoll(async () => ({ skus: await loadSkus(), at: Date.now() }), 8000, [])
   const sales = useSales()
-  const { data: port } = usePortfolio(account?.address)
+  const { data: port } = usePortfolio(account?.address, true)
   const watch = useWatch()
   const sp = useQuery()
   const view = (VIEWS.find((v) => v[0] === sp.get('v'))?.[0] ?? 'all') as View

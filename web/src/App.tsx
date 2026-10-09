@@ -3,7 +3,7 @@ import { flushSync } from 'react-dom'
 import type { LocalAccount } from 'viem'
 import { SESSION_MS, createAccount, deviceAccount, endSession, friendlyError, hasDeviceKey, restoreSession, savedPasskey, signIn, signOut } from './account'
 import { openSettings } from './fx'
-import { IconActivity, IconChevron, IconCollection, IconCompass, IconHelp, IconMarkets, IconSettings, IconTag, IconYou } from './icons'
+import { IconActivity, IconChevron, IconCollection, IconCompass, IconHelp, IconMarkets, IconSettings, IconTag, IconVault, IconYou } from './icons'
 import { SettingsSheet } from './Settings'
 import { attestorUrl, brand, net } from './config'
 import { CardPage } from './Card'
@@ -91,7 +91,7 @@ export default function App() {
   // Free hosting sleeps when idle and takes ~a minute to wake: ring the attestor as soon as anyone opens the app, so it is
   // awake by the time they ask for gas.
   useEffect(() => void fetch(`${attestorUrl}/health`).catch(() => {}), [])
-  const tab = route === 'browse' || route === 'compare' ? 'browse' : route === 'activity' ? 'activity' : route === 'collection' ? 'collection' : route === 'vault' || route === 'sell' ? 'vault' : route === 'you' ? 'you' : route === 'help' ? 'help' : route === 'league' ? 'league' : 'markets'
+  const tab = route === 'browse' || route === 'compare' ? 'browse' : route === 'activity' ? 'activity' : route === 'collection' ? 'collection' : route === 'sell' ? 'sell' : route === 'vault' ? 'vault' : route === 'you' ? 'you' : route === 'help' ? 'help' : route === 'league' ? 'league' : 'markets'
   // Browsing is open to everyone; anything that moves money or cards asks for a passkey first.
   const out = () => (void signOut(), setAccount(undefined), (location.hash = '#/'))
   const need = (el: (a: LocalAccount) => React.ReactNode) => (account ? el(account) : <SignIn onReady={login} ended={ended} />)
@@ -103,7 +103,8 @@ export default function App() {
     : route === 'activity' ? need((a) => <Activity account={a} />)
     : route === 'browse' ? <Browse account={account} />
     : route === 'compare' ? <Compare />
-    : route === 'vault' || route === 'sell' ? need((a) => <Sell account={a} />)
+    : route === 'sell' ? need((a) => <Sell account={a} />)
+    : route === 'vault' ? need((a) => <Sell account={a} mode="vault" />)
     : route === 'league' ? <League account={account} />
     : route === 'you' ? need((a) => <AccountPage account={a} onSignOut={out} />)
     : route === 'help' ? <HelpPage />
@@ -124,7 +125,8 @@ export default function App() {
     ['browse', '#/browse', 'Browse', <IconCompass />],
     ['collection', '#/collection', 'Portfolio', <IconCollection />],
     ['activity', '#/activity', 'Activity', <IconActivity />],
-    ['vault', '#/sell', 'Sell', <IconTag />],
+    ['sell', '#/sell', 'Sell', <IconTag />],
+    ['vault', '#/vault', 'Vault a card', <IconVault />],
   ] as const
   const tabs = [nav[0], nav[1], nav[2], nav[4], ['you', '#/you', 'Account', <IconYou />]] as const
   return (
@@ -148,7 +150,7 @@ export default function App() {
           </div>
           <nav className="side-nav" aria-label="Primary">
             {nav.map(([k, href, label, icon]) => (
-              <a key={k} href={href} title={rail ? label : undefined} data-tour={k === 'browse' ? 'browse' : k === 'vault' ? 'sell' : undefined} className={tab === k ? 'on' : ''} aria-current={tab === k ? 'page' : undefined}>
+              <a key={k} href={href} title={rail ? label : undefined} data-tour={k === 'browse' ? 'browse' : k === 'sell' ? 'sell' : undefined} className={tab === k ? 'on' : ''} aria-current={tab === k ? 'page' : undefined}>
                 {icon}
                 <span>{label}</span>
               </a>
