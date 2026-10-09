@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import type { Acct } from './App'
 import { alertPrice, useAlerts } from './alerts'
-import { Define, FirstHint, SpreadBar, Updated, ago, cents, recordViewed, useNow, usdC } from './cardParts'
+import { Define, Updated, ago, cents, recordViewed, useNow, usdC } from './cardParts'
 import { Breadcrumbs } from './desk'
 import { cancelOrder, buyNow, listAsk, makeOffer, sellNow, type Built, type Ctx, type Funds } from './flows'
 import { Button, Copyable, Seg } from './controls'
@@ -262,23 +262,19 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
                 <OrderForm key={`${mode}-${JSON.stringify(prefill)}`} mode={mode} ctx={ctx} asks={book.asks} bids={book.bids} askC={askC} bidC={bidC} owned={owned} prefill={prefill} onClose={() => setMode(undefined)} />
               )}
               {mode && !account && <p className="notice">Sign in first. Your passkey is your account and it takes a few seconds. We will bring you back here with this order ready. <button className="linkbtn" onClick={signInHere}>Sign in</button></p>}
+              <dl className="mstats">
+                <div><dt>Last sale</dt><dd>{lastC !== undefined ? usdC(lastC) : '—'}</dd><small>{lastTrade ? ago(lastTrade.t * 1000, now) : s.last ? 'From the index' : 'No sales yet'}</small></div>
+                <div><dt>Spread <Define term="spread">The gap between the best offer and the ask. A narrow gap means buyers and sellers agree on the price.</Define></dt><dd>{spreadInfo ? formatBps(spreadInfo.bps, { digits: 1 }) : '—'}</dd><small>{spreadInfo ? `${usdC(spreadInfo.cents)} between them` : 'Needs an ask and an offer'}</small></div>
+                <div><dt>Vaulted</dt><dd>{s.vaulted}</dd><small>{s.vaulted === 1 ? 'slab backs this market' : 'slabs back this market'}</small></div>
+              </dl>
+              {account && s.ask && <AlertRow s={s} />}
             </div>
           )}
-          {live && (
-            <dl className="mstats">
-              <div><dt>Last sale</dt><dd>{lastC !== undefined ? usdC(lastC) : '—'}</dd><small>{lastTrade ? ago(lastTrade.t * 1000, now) : s.last ? 'From the index' : 'No sales yet'}</small></div>
-              <div><dt>Spread <Define term="spread">The gap between the best offer and the ask. A narrow gap means buyers and sellers agree on the price.</Define></dt><dd>{spreadInfo ? formatBps(spreadInfo.bps, { digits: 1 }) : '—'}</dd><small>{spreadInfo ? `${usdC(spreadInfo.cents)} between them` : 'Needs an ask and an offer'}</small></div>
-              <div><dt>Vaulted</dt><dd>{s.vaulted}</dd><small>{s.vaulted === 1 ? 'slab backs this market' : 'slabs back this market'}</small></div>
-            </dl>
-          )}
-          {live && <SpreadBar bid={bidC} ask={askC} last={lastTrade?.price} />}
           <ul className="trust">
             <li><IconVault /><span><b>Held in the vault</b>{net.name === 'testnet' ? 'Custody is simulated on the test network.' : 'Each token is backed by one graded slab.'} <button className="linkbtn" onClick={() => document.getElementById('vault')?.scrollIntoView({ behavior: 'smooth' })}>See verification</button></span></li>
             <li><IconCheck /><span><b>{net.name === 'testnet' ? 'Simulated check' : 'Certificate matched'}</b>{net.name === 'testnet' ? 'Certificates are matched against a demo registry.' : 'Matched against the grader’s registry before listing.'}</span></li>
             <li><IconActivity /><span><b>Settles on {net.chain.name}</b>Every order and trade is an on-chain transaction you can look up.</span></li>
           </ul>
-          {account && s.ask && <AlertRow s={s} />}
-          <FirstHint />
         </aside>
       </div>
 
@@ -293,7 +289,8 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
             ))}
           </nav>
 
-          <div className="pdp-grid">
+          <div className="pdp-cols">
+          <div className="pdp-main">
             <section id="history" className="pnl pnl-wide" aria-labelledby="h-history">
               <header className="pnl-h">
                 <h2 id="h-history">Price history</h2>
@@ -304,12 +301,6 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
                   <PriceChart trades={trades} askCents={askC} bidCents={bidC} updatedAt={d.at} />
                 </Suspense>
               )}
-            </section>
-
-            <section id="book" className="pnl" aria-labelledby="h-book">
-              <header className="pnl-h"><h2 id="h-book">Order book</h2><Updated at={d.at} /></header>
-              <OrderBook asks={asksAgg} bids={bidsAgg} mine={mine} spread={spreadInfo} onPick={pick} />
-              <p className="fine pnl-foot">Select a price to fill the order form with it.</p>
             </section>
 
             <section id="trades" className="pnl pnl-wide" aria-labelledby="h-trades">
@@ -338,26 +329,6 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
                   </table>
                 </div>
               )}
-            </section>
-
-            <section id="grades" className="pnl" aria-labelledby="h-grades">
-              <header className="pnl-h"><h2 id="h-grades">All grades</h2><span className="pnl-meta">{sibs.length} market{sibs.length === 1 ? '' : 's'}</span></header>
-              <ul className="grade-list">
-                {sibs.map((x) => (
-                  <li key={x.sku}>
-                    <a href={`#/card/${x.sku}`} aria-current={x.sku === sku ? 'page' : undefined}>
-                      <span className="gl-grade"><small>{parseName(x.name).grader}</small><b>{parseName(x.name).grade}</b></span>
-                      <span className="gl-figs">
-                        <span><small>Ask</small><b>{x.ask ? usdC(cents(x.ask)) : '—'}</b></span>
-                        <span><small>Offer</small><b>{x.bid ? usdC(cents(x.bid)) : '—'}</b></span>
-                        <span><small>Vaulted</small><b>{x.vaulted}</b></span>
-                      </span>
-                      {x.sku === sku && <em className="gl-here">Viewing</em>}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-              {sibs.length > 1 && <a className="linkbtn" href={`#/compare?ids=${sibs.map((x) => x.sku).join(',')}`}>Compare grades side by side</a>}
             </section>
 
             {c?.about && (
@@ -402,6 +373,35 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
               </header>
               <VaultInfo s={s} certs={certs.data} />
             </section>
+          </div>
+          <aside className="pdp-side" aria-label="Order book and grades">
+            <section id="book" className="pnl" aria-labelledby="h-book">
+              <header className="pnl-h"><h2 id="h-book">Order book</h2><Updated at={d.at} /></header>
+              <OrderBook asks={asksAgg} bids={bidsAgg} mine={mine} spread={spreadInfo} onPick={pick} />
+              <p className="fine pnl-foot">Select a price to fill the order form with it.</p>
+            </section>
+
+            <section id="grades" className="pnl" aria-labelledby="h-grades">
+              <header className="pnl-h"><h2 id="h-grades">All grades</h2><span className="pnl-meta">{sibs.length} market{sibs.length === 1 ? '' : 's'}</span></header>
+              <ul className="grade-list">
+                {sibs.map((x) => (
+                  <li key={x.sku}>
+                    <a href={`#/card/${x.sku}`} aria-current={x.sku === sku ? 'page' : undefined}>
+                      <span className="gl-grade"><small>{parseName(x.name).grader}</small><b>{parseName(x.name).grade}</b></span>
+                      <span className="gl-figs">
+                        <span><small>Ask</small><b>{x.ask ? usdC(cents(x.ask)) : '—'}</b></span>
+                        <span><small>Offer</small><b>{x.bid ? usdC(cents(x.bid)) : '—'}</b></span>
+                        <span><small>Vaulted</small><b>{x.vaulted}</b></span>
+                      </span>
+                      {x.sku === sku && <em className="gl-here">Viewing</em>}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+              {sibs.length > 1 && <a className="linkbtn" href={`#/compare?ids=${sibs.map((x) => x.sku).join(',')}`}>Compare grades side by side</a>}
+            </section>
+
+          </aside>
           </div>
 
           {sibs.length > 0 && all.some((x) => x.sku !== sku && catalogOf(x.name)?.set === c?.set) && (

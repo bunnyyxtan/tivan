@@ -1,18 +1,19 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { brand, catalog, net } from './config'
+import { brand, catalog, catalogOf, net } from './config'
 import { explorerAddress, loadSkus, pub, readBook, type FeedItem, type Sku } from './chain'
 import { cents, usdC } from './cardParts'
 import { confetti, still } from './celebrate'
 import { ago, useSales } from './desk'
 import { aggregate } from './logic/orders.ts'
-import { formatQty } from './logic/money.ts'
+import { formatBps, formatQty } from './logic/money.ts'
 import { openPalette } from './Palette'
 import { IconChevron, IconSearch } from './icons'
 import { Slab, cardTitle, parseName, usePoll } from './ui'
 
-// The public front door, shown at the site root to visitors. A poster-style hero over a moving wall of cards, a live
-// trade ticker, a popular-markets carousel, a live order book, crossing marquee ribbons, a popular-cards grid, a
-// pull-a-card toy, a call to action and a footer. Every name, price, block and trade is live; nothing here is invented.
+// The public front door, shown at the site root to visitors. A poster-style hero over a moving wall of cards, a tape of
+// recent trades, a popular-markets carousel, an order book read from chain, crossing marquee ribbons, a popular-cards
+// grid, a pull-a-card toy, a call to action and a footer. Every name, price, block and trade is real data; nothing is
+// invented, and nothing is called live that is not.
 
 const PSA: Record<string, string> = { '10': 'Gem Mint', '9': 'Mint', '8': 'NM-MT', '7': 'Near Mint', '6': 'EX-MT', '5': 'Excellent', '4': 'VG-EX', '3': 'Very Good', '2': 'Good', '1': 'Poor' }
 const gradeLabel = (name: string) => `${parseName(name).grader} ${parseName(name).grade} · ${PSA[parseName(name).grade] ?? ''}`.trim()
@@ -100,7 +101,7 @@ function liveChips(fills: FeedItem[] | undefined, all: Sku[]): Chip[] {
     const k = f.sku.toLowerCase()
     if (seen.has(k)) continue
     seen.add(k)
-    out.push({ key: `${k}-${f.t}`, name: f.name, label: 'Just sold', amount: usdC(cents(f.price)), when: ago(f.t) })
+    out.push({ key: `${k}-${f.t}`, name: f.name, label: 'Last sale', amount: usdC(cents(f.price)), when: ago(f.t) })
   }
   if (!out.length) for (const s of all.filter((x) => x.ask)) out.push({ key: s.sku, name: s.name, label: 'Lowest ask', amount: price(s) })
   return out
@@ -148,7 +149,7 @@ function Hero({ list, all, fills }: { list: Sku[]; all: Sku[]; fills?: FeedItem[
       <Wall />
       <div className="lp-hero-in">
         <div className="lp-hero-copy">
-          <p className="lp-kicker"><span className="lp-pulse" aria-hidden />{all.length ? `${all.length} markets live on ${net.chain.name}` : `Live on ${net.chain.name}`}</p>
+          <p className="lp-kicker"><span className="lp-dot" aria-hidden />{all.length ? `${all.length} markets on ${net.chain.name}` : `On ${net.chain.name}`}</p>
           <h1 className="lp-poster">
             <span className="ln">Trade graded</span>
             <span className="ln">cards on a real</span>
@@ -163,7 +164,7 @@ function Hero({ list, all, fills }: { list: Sku[]; all: Sku[]; fills?: FeedItem[
             </span>
             <span className="sr-only">Chase grails, name your price, sell in a tap.</span>
           </p>
-          <p className="lp-lead">Every slab sits in a vault with its own live order book. Buy at the ask, name your price, or sell in a tap. Trades settle on {net.chain.name} in about a second.</p>
+          <p className="lp-lead">Every slab sits in a vault with its own order book. Buy at the ask, name your price, or sell in a tap. Trades settle on {net.chain.name} in about a second.</p>
           <div className="lp-cta">
             <a className="lp-btn" href="#/markets">Browse markets</a>
             <a className="lp-btn ghost" href="#/sell">Sell a card</a>
@@ -222,7 +223,7 @@ function Ticker({ fills, all }: { fills?: FeedItem[]; all: Sku[] }) {
   ))
   return (
     <div className="lp-ticker" role="region" aria-label={fills?.length ? 'Latest trades' : 'Lowest asks'}>
-      <span className="lp-ticker-tag"><span className="lp-pulse" aria-hidden />{fills?.length ? 'Live trades' : 'Live asks'}</span>
+      <span className="lp-ticker-tag">{fills?.length ? 'Recent trades' : 'Lowest asks'}<small>Test network</small></span>
       <div className="lp-ticker-view">
         <div className="lp-ticker-run">{run}<span aria-hidden className="lp-tk-dup">{run}</span></div>
       </div>
@@ -297,72 +298,101 @@ function Exchange({ list }: { list: Sku[] }) {
   const block = useBlock()
   const { data, error } = usePoll(async () => (s ? { m: s.market, book: await readBook(s.market) } : undefined), 6000, [s?.market])
   const book = data && s && data.m === s.market ? data.book : undefined
-  const asks = book ? aggregate(book.asks, 'ask').slice(0, 6) : []
-  const bids = book ? aggregate(book.bids, 'bid').slice(0, 6) : []
-  const spread = asks[0] && bids[0] ? usdC(asks[0].price - bids[0].price) : undefined
+  const asks = book ? aggregate(book.asks, 'ask').slice(0, 5) : []
+  const bids = book ? aggregate(book.bids, 'bid').slice(0, 5) : []
+  const ask = asks[0]
+  const bid = bids[0]
+  const gap = ask && bid ? ask.price - bid.price : undefined
+  const c = s ? catalogOf(s.name) : undefined
   const steps: [string, string][] = [
-    ['Graded and vaulted', `Each slab is checked against its grader's certificate and held in custody, and one token stands for one slab.${net.name === 'testnet' ? ' On this test network the check and custody are simulated.' : ''}`],
-    ['Its own order book', 'Every card and grade trades on its own Kuru order book. Bids and asks are on chain, where anyone can read them.'],
+    ['Graded and vaulted', `Each slab is checked against its grader's certificate and held in custody. One token stands for one slab.${net.name === 'testnet' ? ' On this test network the check and custody are simulated.' : ''}`],
+    ['Its own order book', 'Every card and grade trades on its own Kuru order book. Every bid and ask is on chain, where anyone can read it.'],
     ['Settles in about a second', `Buy at the ask, sell to the best offer, or name your price. Trades settle on ${net.chain.name}, and the token is yours to keep or withdraw.`],
   ]
+  const ladder = (rows: typeof asks, side: 'bid' | 'ask') =>
+    Array.from({ length: 5 }, (_, k) => {
+      const r = rows[k]
+      return r ? (
+        <div key={`${side}${r.price}-${r.size}`} className={`lp-lv ${side}`}>
+          <i style={{ width: `${Number(r.depthBps) / 100}%` }} />
+          <span>{usdC(r.price, 2)}</span>
+          <span>{formatQty(r.size)}</span>
+        </div>
+      ) : (
+        <div key={`${side}e${k}`} className={`lp-lv ${side} empty`} aria-hidden>
+          <span>—</span>
+          <span />
+        </div>
+      )
+    })
   return (
     <section className="lp-sec lp-dark lp-ex" aria-label="How it works">
       <div className="lp-grid-bg" aria-hidden />
       <div className="lp-wrap wide lp-ex-in">
         <div className="lp-ex-copy">
-          <Heading light>A real order book for every slab</Heading>
+          <p className="lp-eyebrow">How it works</p>
+          <h2 className="lp-poster md lp-rv">A real order book<br />for every slab</h2>
+          <p className="lp-ex-lead">Not a listing and not an auction. Each card and grade is its own market, where buyers and sellers meet at a price, like a stock.</p>
           <ol className="lp-steps">
             {steps.map(([t, d], k) => (
-              <li key={t} className="lp-rv" style={{ animationDelay: `${k * 80}ms` }}>
-                <span className="lp-step-n">0{k + 1}</span>
+              <li key={t} className="lp-rv">
+                <span className="lp-step-n">{k + 1}</span>
                 <div><b>{t}</b><p>{d}</p></div>
               </li>
             ))}
           </ol>
         </div>
-        <div className="lp-book lp-rv" aria-live="off">
-          <div className="lp-book-head">
-            {s && <Slab name={s.name} size="sm" />}
-            <div>
-              <b>{s ? cardTitle(s.name) : 'Loading markets'}</b>
-              <small>{s ? gradeLabel(s.name) : ''}</small>
-            </div>
-            <span className="lp-live"><span className="lp-pulse" aria-hidden />Live</span>
-          </div>
+        <div className="lp-term lp-rv">
           {list.length > 1 && (
-            <div className="lp-book-tabs" role="tablist" aria-label="Market">
+            <div className="lp-term-tabs" role="tablist" aria-label="Market">
               {list.map((x, k) => (
-                <button key={x.sku} role="tab" aria-selected={x === s} onClick={() => setPick(k)}>{cardTitle(x.name).split(' ').slice(-1)[0]} {parseName(x.name).grade}</button>
+                <button key={x.sku} role="tab" aria-selected={x === s} onClick={() => setPick(k)}>
+                  <Slab name={x.name} size="xs" />
+                  <span><b>{cardTitle(x.name)}</b><small>{parseName(x.name).grader} {parseName(x.name).grade}</small></span>
+                </button>
               ))}
             </div>
           )}
-          <div className="lp-ladder">
-            <div className="lp-ladder-h"><span>Price</span><span>Cards</span></div>
-            {error && !book && <p className="lp-ladder-note">The order book is not answering right now.</p>}
-            {!book && !error && <p className="lp-ladder-note">Reading the order book…</p>}
-            {book && (
-              <>
-                {[...asks].reverse().map((r) => (
-                  <div key={`a${r.price}-${r.size}`} className="lp-row ask">
-                    <i style={{ width: `${Number(r.depthBps) / 100}%` }} />
-                    <span>{usdC(r.price, 2)}</span>
-                    <span>{formatQty(r.size)}</span>
-                  </div>
-                ))}
-                <div className="lp-mid">{spread ? <>Spread <b>{spread}</b></> : asks.length || bids.length ? 'One side only' : 'No orders yet'}</div>
-                {bids.map((r) => (
-                  <div key={`b${r.price}-${r.size}`} className="lp-row bid">
-                    <i style={{ width: `${Number(r.depthBps) / 100}%` }} />
-                    <span>{usdC(r.price, 2)}</span>
-                    <span>{formatQty(r.size)}</span>
-                  </div>
-                ))}
-              </>
-            )}
+          <div className="lp-term-body">
+            <div className="lp-term-art">{s && <Holo><Slab name={s.name} size="lg" /></Holo>}</div>
+            <div className="lp-term-main">
+              <div className="lp-term-title">
+                <small>{c ? `${c.category} · ${c.set}` : 'Market'}</small>
+                <b>{s ? cardTitle(s.name) : 'Loading markets'}</b>
+                <span>{s ? gradeLabel(s.name) : ''}</span>
+              </div>
+              <div className="lp-quotes">
+                <div className="lp-q bid">
+                  <small>Sell now</small>
+                  <b>{bid ? usdC(bid.price, 2) : '—'}</b>
+                  <em>{bid ? `Best offer · ${formatQty(bid.size)} wanted` : 'No offers yet'}</em>
+                </div>
+                <div className="lp-q ask">
+                  <small>Buy now</small>
+                  <b>{ask ? usdC(ask.price, 2) : '—'}</b>
+                  <em>{ask ? `Lowest ask · ${formatQty(ask.size)} for sale` : 'No one selling yet'}</em>
+                </div>
+              </div>
+              <div className="lp-gap">
+                <span>Spread</span>
+                <i aria-hidden />
+                <b>{gap !== undefined && ask ? `${usdC(gap, 2)} · ${formatBps((gap * 10_000n) / ask.price)}` : '—'}</b>
+              </div>
+              <div className="lp-depth">
+                <div className="lp-depth-col">
+                  <div className="lp-depth-h"><span>Offers</span><span>Cards</span></div>
+                  {book ? ladder(bids, 'bid') : <p className="lp-ladder-note">{error ? 'The order book is not answering right now.' : 'Reading the order book…'}</p>}
+                </div>
+                <div className="lp-depth-col">
+                  <div className="lp-depth-h"><span>Asks</span><span>Cards</span></div>
+                  {book ? ladder(asks, 'ask') : null}
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="lp-book-foot">
-            <span>Read from the order book contract{block ? ` · block ${block.toLocaleString('en-US')}` : ''}</span>
-            {s && <a href={`#/card/${s.sku}`}>Trade this card</a>}
+          <div className="lp-term-foot">
+            <span>Read from the order book contract{block ? ` at block ${block.toLocaleString('en-US')}` : ''}. Refreshes every 6 seconds.</span>
+            {s && <a href={`#/card/${s.sku}`}>Trade this card <IconChevron /></a>}
           </div>
         </div>
       </div>
@@ -491,7 +521,6 @@ function Footer() {
         <div>
           <span className="lp-brand">{brand}</span>
           <p>Graded trading cards held in a vault, each with its own on-chain order book.</p>
-          <a className="lp-social" href="https://github.com/bunnyyxtan/tivan" target="_blank" rel="noreferrer">GitHub</a>
         </div>
         <nav aria-label="Quick links">
           <h3>Quick links</h3>

@@ -120,22 +120,6 @@ export function Portfolio({ account }: { account: LocalAccount }) {
 
           <div className="pf-grid">
             <div className="pf-main">
-              <section className="pnl" aria-labelledby="pf-chart">
-                <header className="pnl-h">
-                  <h2 id="pf-chart">Value of your cards</h2>
-                  <Seg label="Period" value={period} onChange={(k) => setQuery({ p: k === 'All' ? '' : k })} options={PERIODS.map(([k]) => ({ value: k, label: k }))} />
-                </header>
-                {!fills ? <Skeleton h={220} r={12} /> : inRange.length > 1 ? (
-                  <Chart pts={inRange.map((p) => ({ t: p.t, price: Number(p.units) / 1e6 }))} h={240} tag="Latest" label={`Value of your cards over time, now ${usd(inRange.at(-1)!.units, 2)}`} />
-                ) : (
-                  <div className="pnl-empty">
-                    <IconActivity />
-                    <b>{rows.length ? 'Not enough trades to draw a line' : 'Your chart starts with your first card'}</b>
-                    <p className="fine">It is built from your own trades and each market’s last sale at the time. We do not draw lines from guesses.</p>
-                  </div>
-                )}
-              </section>
-
               <section className="pnl" aria-labelledby="pf-hold">
                 <header className="pnl-h"><h2 id="pf-hold">Holdings</h2><span className="pnl-meta">{rows.length ? `${formatQty(cardCount)} card${cardCount === 1n ? '' : 's'} in ${rows.length} market${rows.length === 1 ? '' : 's'}` : 'Empty'}</span></header>
                 {!rows.length ? (
@@ -150,6 +134,22 @@ export function Portfolio({ account }: { account: LocalAccount }) {
                     <div className="pnl-table"><DataTable cols={cols} rows={rows} rowKey={(r) => r.h.s.sku} label="Holdings" onOpen={(r) => (location.hash = `#/card/${r.h.s.sku}`)} /></div>
                     <p className="source">Average cost is the average price of your purchases on that market. Value is quantity times the best offer. Nothing here is a sale.</p>
                   </>
+                )}
+              </section>
+
+              <section className="pnl" aria-labelledby="pf-chart">
+                <header className="pnl-h">
+                  <h2 id="pf-chart">Value of your cards</h2>
+                  <Seg label="Period" value={period} onChange={(k) => setQuery({ p: k === 'All' ? '' : k })} options={PERIODS.map(([k]) => ({ value: k, label: k }))} />
+                </header>
+                {!fills ? <Skeleton h={220} r={12} /> : inRange.length > 1 ? (
+                  <Chart pts={inRange.map((p) => ({ t: p.t, price: Number(p.units) / 1e6 }))} h={240} tag="Latest" label={`Value of your cards over time, now ${usd(inRange.at(-1)!.units, 2)}`} />
+                ) : (
+                  <div className="pnl-empty pf-chart-empty">
+                    <IconActivity />
+                    <b>{rows.length ? 'Not enough trades to draw a line' : 'Your chart starts with your first card'}</b>
+                    <p className="fine">It is built from your own trades and each market’s last sale at the time. We do not draw lines from guesses.</p>
+                  </div>
                 )}
               </section>
             </div>
