@@ -30,6 +30,36 @@ indexer.onEvent({ contract: "KuruMarket", event: "Trade" }, async ({ event, cont
     volumeCents: market.volumeCents + priceCents * sizeCards,
     tradeCount: market.tradeCount + 1,
   });
+
+  // Daily candle per market, built as trades arrive (UTC days). Trades arrive in log order, so the first trade of the day
+  // sets the open and each later one moves the close.
+  const day = Math.floor(event.block.timestamp / 86_400);
+  const id = `${market.id}_${day}`;
+  const d = await context.MarketDay.get(id);
+  context.MarketDay.set(
+    d
+      ? {
+          ...d,
+          highCents: priceCents > d.highCents ? priceCents : d.highCents,
+          lowCents: priceCents < d.lowCents ? priceCents : d.lowCents,
+          closeCents: priceCents,
+          volumeCards: d.volumeCards + sizeCards,
+          volumeCents: d.volumeCents + priceCents * sizeCards,
+          trades: d.trades + 1,
+        }
+      : {
+          id,
+          market_id: market.id,
+          day,
+          openCents: priceCents,
+          highCents: priceCents,
+          lowCents: priceCents,
+          closeCents: priceCents,
+          volumeCards: sizeCards,
+          volumeCents: priceCents * sizeCards,
+          trades: 1,
+        },
+  );
 });
 
 indexer.onEvent({ contract: "KuruMarket", event: "OrderCreated" }, async ({ event, context }) => {

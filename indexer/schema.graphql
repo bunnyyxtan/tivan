@@ -11,6 +11,7 @@ type Market {
   volumeCents: BigInt!     # total quote traded, cents
   tradeCount: Int!
   trades: [Trade!]! @derivedFrom(field: "market")
+  days: [MarketDay!]! @derivedFrom(field: "market")
 }
 
 # One row per Kuru fill. Drives the price-history chart.
@@ -24,6 +25,33 @@ type Trade {
   taker: String!
   timestamp: Int! @index
   blockNumber: Int!
+  txHash: String!
+}
+
+# One market's trading on one UTC day, aggregated as trades arrive: an OHLC candle plus volume. Drives the markets
+# page's daily volume and change without the app downloading every trade.
+type MarketDay {
+  id: ID!                  # market_dayIndex (dayIndex = floor(timestamp / 86400))
+  market: Market!
+  day: Int! @index         # dayIndex
+  openCents: BigInt!
+  highCents: BigInt!
+  lowCents: BigInt!
+  closeCents: BigInt!
+  volumeCards: BigInt!
+  volumeCents: BigInt!
+  trades: Int!
+}
+
+# A grade verified by the Chainlink CRE workflow (every oracle node looked the cert up in the grader registry and they
+# agreed), as written to GradeOracle. The card page shows it next to the certificate.
+type GradeCheck {
+  id: ID!                  # grader cert number
+  specId: BigInt!
+  grade: Int!
+  holder: String!
+  name: String!
+  verifiedAt: Int! @index
   txHash: String!
 }
 

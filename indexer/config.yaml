@@ -22,6 +22,14 @@ contracts:
         field_selection:
           transaction_fields:
             - hash
+  # Chainlink CRE receiver: the slab-attest workflow verifies a grading cert on every oracle node and the forwarder
+  # writes the agreed grade here (contracts/src/GradeOracle.sol).
+  - name: GradeOracle
+    events:
+      - event: GradeVerified(uint256 indexed certId, uint256 indexed specId, uint8 grade, address indexed holder, string name, string symbol)
+        field_selection:
+          transaction_fields:
+            - hash
 chains:
   - id: 10143
     start_block: 68468000 # just before SlabVault deploy (tx 0xbb1a3473..., block 68468138)
@@ -34,3 +42,6 @@ chains:
     contracts:
       - name: SlabVault
         address: 0x998a3116dc9AaDb98AF27B31BeC93441E1991a12
+      - name: GradeOracle
+        address: 0x63cbb0c3200ea053c3d487b31f4f3aa0323db3a0
+        start_block: 69504015
