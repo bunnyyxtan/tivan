@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { flushSync } from 'react-dom'
 import type { LocalAccount } from 'viem'
-import { createAccount, deviceAccount, friendlyError, hasDeviceKey, restoreSession, savedPasskey, signIn, signOut } from './account'
+import { SESSION_MS, createAccount, deviceAccount, endSession, friendlyError, hasDeviceKey, restoreSession, savedPasskey, signIn, signOut } from './account'
 import { openSettings } from './fx'
 import { IconActivity, IconChevron, IconCollection, IconCompass, IconHelp, IconMarkets, IconSettings, IconTag, IconYou } from './icons'
 import { SettingsSheet } from './Settings'
@@ -53,8 +53,17 @@ export default function App() {
   // Stay signed in across refreshes: the key kept on this device is restored before the first screen is drawn.
   const [ready, setReady] = useState(false)
   useEffect(() => {
-    restoreSession().then((a) => (a && setAccount(a), setReady(true)))
+    restoreSession().then((r) => (r.account && setAccount(r.account), setEndsAt(r.endsAt), setEnded(r.ended), setReady(true)))
   }, [])
+  // The session ends on time even while the app is open: the kept key is deleted and the next action asks for the passkey.
+  const [endsAt, setEndsAt] = useState<number>()
+  const [ended, setEnded] = useState(false)
+  useEffect(() => {
+    if (!endsAt || !account) return
+    const id = setTimeout(() => (void endSession(), setAccount(undefined), setEnded(true)), Math.min(Math.max(0, endsAt - Date.now()), 2 ** 31 - 1))
+    return () => clearTimeout(id)
+  }, [endsAt, account])
+  const login = (a: LocalAccount) => (setAccount(a), setEndsAt(Date.now() + SESSION_MS), setEnded(false))
   const [rail, setRail] = useState(() => {
     try {
       return localStorage.getItem('tivan.rail') === '1'
@@ -85,7 +94,7 @@ export default function App() {
   const tab = route === 'browse' || route === 'compare' ? 'browse' : route === 'activity' ? 'activity' : route === 'collection' ? 'collection' : route === 'vault' || route === 'sell' ? 'vault' : route === 'you' ? 'you' : route === 'help' ? 'help' : route === 'league' ? 'league' : 'markets'
   // Browsing is open to everyone; anything that moves money or cards asks for a passkey first.
   const out = () => (void signOut(), setAccount(undefined), (location.hash = '#/'))
-  const need = (el: (a: LocalAccount) => React.ReactNode) => (account ? el(account) : <SignIn onReady={setAccount} />)
+  const need = (el: (a: LocalAccount) => React.ReactNode) => (account ? el(account) : <SignIn onReady={login} ended={ended} />)
   const page =
     route === 'card' ? <CardPage sku={args[0]} account={account} />
     : (route === 'buy' || route === 'sell' || route === 'offer' || route === 'done') && args[0] ? <CardPage sku={args[0]} account={account} />
@@ -197,7 +206,7 @@ export function CashPill({ account }: { account: Acct }) {
 }
 
 /** One calm sign-in card, shown wherever an action needs an account. Browsing never does. */
-function SignIn({ onReady }: { onReady: (a: LocalAccount) => void }) {
+function SignIn({ onReady, ended }: { onReady: (a: LocalAccount) => void; ended?: boolean }) {
   const [err, setErr] = useState<string>()
   const [busy, setBusy] = useState(false)
   const returning = !!savedPasskey()
@@ -219,8 +228,8 @@ function SignIn({ onReady }: { onReady: (a: LocalAccount) => void }) {
         <div className="gate-art" aria-hidden>
           <Slab name="PSA 10 Base Set Charizard Holo" size="sm" />
         </div>
-        <h1>{returning ? 'Welcome back' : 'Sign in to trade'}</h1>
-        <p className="gate-sub">Your passkey is your account: your device’s fingerprint, face or screen lock. Nothing to install and no seed phrase.</p>
+        <h1>{ended ? 'Your session ended' : returning ? 'Welcome back' : 'Sign in to trade'}</h1>
+        <p className="gate-sub">{ended ? 'Sessions on a device last 7 days. Your passkey opens a new one; your account, cash and cards are exactly where you left them.' : 'Your passkey is your account: your device’s fingerprint, face or screen lock. Nothing to install and no seed phrase.'}</p>
         <div className="gate-actions">
           {returning ? (
             <button className="btn wide" disabled={busy} onClick={() => go(signIn)}>

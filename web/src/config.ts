@@ -10,6 +10,8 @@ export type Network = {
   quoteSymbol: string
   quoteDecimals: number
   kuruRouter: Address // MarginAccount is read from Router.marginAccountAddress()
+  /** SealedBox: untrusted onchain storage for passkey-sealed data (the private vault). Testnet only for now. */
+  sealedBox?: Address
   /** Quote token has an open `mint(address,uint256)` (testnet stand-in for USDC). */
   mintableQuote: boolean
   /** Known SKUs, read via skuInfo so the list never depends on scanning old logs. */
@@ -28,6 +30,7 @@ const networks: Record<Network['name'], Network> = {
     quoteSymbol: 'USD',
     quoteDecimals: 6,
     kuruRouter: '0x7EFbE105Ca7415dE98F96622173458ac1c054630',
+    sealedBox: '0x6f2e62cb9fd52c23348d8a26140cb6eb2aaf61b9',
     mintableQuote: true,
     rpcs: [
       { url: 'https://testnet-rpc.monad.xyz', limit: 14 },

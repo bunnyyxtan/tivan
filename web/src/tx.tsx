@@ -88,6 +88,15 @@ const writePending = (fn: (p: Pending[]) => Pending[]) => {
 const usePending = (): Pending[] => parse<Pending>(useSyncExternalStore(subscribe, () => localStorage.getItem(PEND) ?? '[]'))
 
 // ---------------------------------------------------------------- small pieces
+// Session scope. Inside a session, trading and adding cash sign with no prompt. Moving value out of the app or into the
+// physical world (a withdrawal, a redemption) and any trade above PROMPT_ABOVE ask for the passkey again, so a lost or
+// borrowed unlocked device cannot drain the account.
+export const PROMPT_ABOVE = 1_000n * 1_000_000n // $1,000 in base units
+const TRADES: TxKind[] = ['buy', 'sell', 'offer', 'list']
+export const needsPasskey = (s: Pick<TxSpec, 'kind' | 'amountUnits' | 'account'>) =>
+  s.account.source === 'mera' &&
+  (s.kind === 'withdraw' || s.kind === 'redeem' || (TRADES.includes(s.kind) && s.amountUnits !== undefined && (s.amountUnits < 0n ? -s.amountUnits : s.amountUnits) > PROMPT_ABOVE))
+
 // Where an action happens on chain, named in the receipt: orders on the market's Kuru order book, cash in Kuru's margin account.
 const VENUE: Partial<Record<TxKind, string>> = { buy: 'Kuru order book on Monad', sell: 'Kuru order book on Monad', offer: 'Kuru order book on Monad', list: 'Kuru order book on Monad', cancel: 'Kuru order book on Monad', deposit: 'Kuru margin account on Monad', withdraw: 'Kuru margin account on Monad' }
 const sentenceOf = (s: TxSpec) => (typeof s.receiptSentence === 'function' ? s.receiptSentence() : s.receiptSentence)
@@ -179,7 +188,7 @@ export function TxProvider({ children }: { children: ReactNode }) {
       dispatch({ type: 'confirm', at: Date.now() })
       try {
         // The passkey prompt is the device's own; the review text explained it first.
-        if (reviewed.account.source === 'mera') await confirmPasskey(reviewed.account.address)
+        if (needsPasskey(reviewed)) await confirmPasskey(reviewed.account.address)
         dispatch({ type: 'passkey-ok' })
         // On the test network, network fees are topped up from the faucet first, so nobody stalls for want of MON.
         setNote('Checking your network fee balance.')
@@ -306,7 +315,7 @@ export function TxProvider({ children }: { children: ReactNode }) {
                 </dl>
                 {spec.protection && <p className="trade-note"><IconCheck />{spec.protection}</p>}
                 <Button size={48} onClick={go}>{spec.confirmLabel}</Button>
-                <p className="fine trade-fine">{spec.account.source === 'mera' ? 'Next, your device asks for your passkey. That prompt is your device’s, not ours.' : 'Test account in this browser: no passkey prompt.'} Nothing is sent until you confirm.</p>
+                <p className="fine trade-fine">{needsPasskey(spec) ? `Next, your device asks for your passkey, because ${spec.kind === 'withdraw' ? 'this moves money out of Tivan' : spec.kind === 'redeem' ? 'this takes a card out of the vault' : 'this trade is over $1,000'}. That prompt is your device’s, not ours.` : spec.account.source === 'mera' ? 'Signed by your session on this device, with no passkey prompt.' : 'Test account in this browser: no passkey prompt.'} Nothing is sent until you confirm.</p>
               </>
             )}
 

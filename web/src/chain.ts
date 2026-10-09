@@ -47,7 +47,7 @@ export const pub = createPublicClient({ chain: net.chain, transport })
 // Transactions skip the shared queue: simulate, send and wait on the first endpoint directly, so a purchase never waits
 // behind background polling. It is a handful of calls per action, well inside any endpoint's limit.
 const direct = http(net.rpcs[0].url, { retryCount: 3 })
-const fast = createPublicClient({ chain: net.chain, transport: direct })
+export const fast = createPublicClient({ chain: net.chain, transport: direct })
 export const walletFor = (account: Account) => createWalletClient({ account, chain: net.chain, transport: direct })
 
 export const vaultAbi = parseAbi([
@@ -311,6 +311,17 @@ export async function recentFills(limit = 25): Promise<FeedItem[]> {
   } catch (e) {
     console.warn('indexer down, no global feed', e)
     return []
+  }
+}
+
+/** Trading totals since a UTC day, summed from the indexer's daily candles (MarketDay). Undefined when unavailable. */
+export async function tradedSince(day: number): Promise<{ cents: bigint; trades: number } | undefined> {
+  if (!indexerUrl) return undefined
+  try {
+    const { MarketDay } = await gql<{ MarketDay: { volumeCents: string; trades: number }[] }>('query($d: Int!) { MarketDay(where: { day: { _gte: $d } }, limit: 5000) { volumeCents trades } }', { d: day })
+    return { cents: MarketDay.reduce((n, x) => n + BigInt(x.volumeCents), 0n), trades: MarketDay.reduce((n, x) => n + x.trades, 0) }
+  } catch {
+    return undefined // an older indexer deployment without MarketDay
   }
 }
 

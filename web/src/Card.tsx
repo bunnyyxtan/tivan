@@ -6,7 +6,7 @@ import { Breadcrumbs } from './desk'
 import { cancelOrder, buyNow, listAsk, makeOffer, sellNow, type Built, type Ctx, type Funds } from './flows'
 import { Button, Copyable, Seg } from './controls'
 import { catalogOf, net } from './config'
-import { explorerAddress, hasMarket, loadSkus, marketRules, readBook, tradeHistory, type Fill, type Sku } from './chain'
+import { explorerAddress, explorerTx, hasMarket, loadSkus, marketRules, readBook, tradeHistory, type Fill, type Sku } from './chain'
 import { gql } from './chain'
 import { aggregate, averageBuyUnits, spread, unrealisedPnl, walkAsks, walkBids, type Level } from './logic/orders.ts'
 import { centsToUnits, formatBps, formatQty, formatUsd } from './logic/money.ts'
@@ -41,14 +41,18 @@ export function useMarket(sku: string) {
   return { m, h }
 }
 
-type CertRow = { id: string; status: string; updatedAt: number }
+type CertRow = { id: string; status: string; updatedAt: number; cre?: string }
 /** The slabs backing a market, from the indexer when it is connected. */
 function useCerts(sku: string) {
   return usePoll(
     async (): Promise<CertRow[] | undefined> => {
       try {
         const { Cert } = await gql<{ Cert: CertRow[] }>('query($s: String!) { Cert(where: { sku: { _eq: $s } }, order_by: { updatedAt: desc }) { id status updatedAt } }', { s: sku })
-        return Cert
+        // Grades the Chainlink CRE workflow verified on the oracle network, indexed from GradeOracle. Optional: an older
+        // indexer deployment has no GradeCheck, and the list still shows without it.
+        const cre = await gql<{ GradeCheck: { id: string; txHash: string }[] }>('query($ids: [String!]) { GradeCheck(where: { id: { _in: $ids } }) { id txHash } }', { ids: Cert.map((c) => c.id) }).catch(() => ({ GradeCheck: [] }))
+        const by = new Map(cre.GradeCheck.map((g) => [g.id, g.txHash]))
+        return Cert.map((c) => ({ ...c, cre: by.get(c.id) }))
       } catch {
         return undefined
       }
@@ -514,7 +518,7 @@ function VaultInfo({ s, certs }: { s: Sku; certs?: CertRow[] }) {
               <li key={x.id}>
                 <span className="cert-id"><small>PSA</small><Copyable value={x.id} label="certificate number" /></span>
                 <span className={`pill-s ${x.status === 'VAULTED' ? 'ok' : ''}`}>{status(x.status)}</span>
-                <span className="fine">{when(x.updatedAt)}</span>
+                <span className="fine">{when(x.updatedAt)}{x.cre && <> · <a className="u" href={explorerTx(x.cre)} target="_blank" rel="noreferrer">Grade verified by Chainlink CRE</a></>}</span>
               </li>
             ))}
           </ul>
@@ -523,7 +527,7 @@ function VaultInfo({ s, certs }: { s: Sku; certs?: CertRow[] }) {
       </div>
       <div className="vault-facts">
         <dl className="fact-tiles">
-          <div><dt>Registry check</dt><dd>{test ? 'Simulated against a demo registry' : 'Checked by the attestor before vaulting'}</dd></div>
+          <div><dt>Registry check</dt><dd>{test ? 'Against a demo grader registry. Certificates verified through Chainlink CRE are marked.' : 'Checked by the attestor before vaulting'}</dd></div>
           <div><dt>Custody</dt><dd>{test ? 'Simulated: a demo custodian confirms receipt at once' : 'A vault partner checks each slab in'}</dd></div>
           <div><dt>Token contract</dt><dd><a className="linkbtn" href={explorerAddress(s.token)} target="_blank" rel="noreferrer">View on the explorer</a></dd></div>
           <div><dt>Kuru order book contract</dt><dd><a className="linkbtn" href={explorerAddress(s.market)} target="_blank" rel="noreferrer">View on the explorer</a></dd></div>

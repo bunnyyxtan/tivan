@@ -12,6 +12,8 @@ import { drip } from './attestor'
 import { IconClose } from './icons'
 
 export const openCash = () => dispatchEvent(new Event('tivan-cash'))
+/** Goes straight to the review for $10,000 of test dollars (testnet), the shortest path to a first transaction. */
+export const addTestDollars = () => dispatchEvent(new CustomEvent('tivan-cash', { detail: 'mint' }))
 const usd = (u: bigint, digits: 'auto' | 2 = 'auto') => formatUsd(u, { digits })
 const mon = (wei: bigint) => `${(Number(wei) / 1e18).toFixed(3)} MON`
 const KNOWN = 'tivan.withdrawTo'
@@ -103,7 +105,7 @@ export function CashSheet({ account }: { account: LocalAccount }) {
   const [monMsg, setMonMsg] = useState<string>()
   const [busy, setBusy] = useState(false)
   useEffect(() => {
-    const h = () => (setOpenIt(true), later(() => dlg.current && !dlg.current.open && dlg.current.showModal()))
+    const h = (e: Event) => ((e as CustomEvent).detail === 'mint' && net.mintableQuote ? mintRef.current() : (setOpenIt(true), later(() => dlg.current && !dlg.current.open && dlg.current.showModal())))
     addEventListener('tivan-cash', h)
     return () => removeEventListener('tivan-cash', h)
   }, [])
@@ -128,6 +130,8 @@ export function CashSheet({ account }: { account: LocalAccount }) {
     close()
     tx.open(spec)
   }
+  const mintRef = useRef(mint)
+  mintRef.current = mint
   const getMon = async () => {
     setBusy(true)
     setMonMsg(undefined)

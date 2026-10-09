@@ -5,12 +5,13 @@ import { askPermission, canNotify, notifyState } from './alerts'
 import { cents } from './cardParts'
 import { DepositAddress, openCash, reservedUnits } from './Cash'
 import { Button, Copyable, Seg } from './controls'
-import { savedPasskey } from './account'
+import { savedPasskey, sessionEndsAt } from './account'
 import { net } from './config'
 import { openShortcuts } from './desk'
 import { canBuzz, usePrefs } from './fx'
 import { exportKeyBytes, keyText } from './keyExport'
-import { myTrades } from './chain'
+import { explorerTx, myTrades } from './chain'
+import { emptyVault, readVault, saveVault, unlockKeys, vaultAvailable, type Shipping, type VaultData, type VaultKeys } from './vault'
 import { formatUsd, toDecimal } from './logic/money.ts'
 import { portfolioValue } from './logic/orders.ts'
 import { usePortfolio } from './portfolio'
@@ -18,7 +19,7 @@ import { useTxLog } from './tx'
 import { short } from './ui'
 
 const usd = (u: bigint, d: 'auto' | 2 = 'auto') => formatUsd(u, { digits: d })
-const SECTIONS = [['overview', 'Overview'], ['security', 'Sign-in and security'], ['deposit', 'Deposit address'], ['notifications', 'Notifications'], ['appearance', 'Appearance'], ['data', 'Data and help']] as const
+const SECTIONS = [['overview', 'Overview'], ['security', 'Sign-in and security'], ['vault', 'Private vault'], ['deposit', 'Deposit address'], ['notifications', 'Notifications'], ['appearance', 'Appearance'], ['data', 'Data and help']] as const
 
 /** A settings section: a titled card of rows. */
 function Section({ id, title, sub, children }: { id: string; title: string; sub?: string; children: ReactNode }) {
@@ -86,6 +87,7 @@ export function AccountPage({ account, onSignOut }: { account: LocalAccount; onS
         <PageHead title="Account" sub="Your balance, sign-in, deposit address and preferences" />
         <Overview account={account} />
         <Security account={account} onSignOut={onSignOut} />
+        <PrivateVault account={account} />
         <Section id="deposit" title="Deposit address" sub={`Send ${net.mintableQuote ? 'test dollars' : 'USDC'} here from any wallet on ${net.chain.name}. It is your account's own address; we do not hold its key.`}>
           <div className="set-body">
             <DepositAddress account={account} />
@@ -140,14 +142,16 @@ function Overview({ account }: { account: LocalAccount }) {
 
 function Security({ account, onSignOut }: { account: LocalAccount; onSignOut: () => void }) {
   const pk = savedPasskey()
+  const [ends, setEnds] = useState<number>()
+  useEffect(() => void sessionEndsAt().then(setEnds), [])
   const passkey = account.source === 'mera'
   return (
     <Section id="security" title="Sign-in and security" sub="How this device opens your account, and how to take your key with you.">
       <Row label="Sign-in method" hint={passkey ? 'Your fingerprint, face or screen lock. Passkeys sync to your other devices when your password manager syncs them.' : 'A test key kept in this browser. It exists on the test network only.'}>
         <span className="set-val">{passkey ? 'Passkey' : 'Test key'}{passkey && pk?.credentialId ? <small className="mono">{short(pk.credentialId)}</small> : null}</span>
       </Row>
-      <Row label="Stay signed in" hint={passkey ? 'This device keeps you signed in for 30 days. Moving cash or cards still asks for your passkey.' : 'This browser keeps you signed in until you sign out.'}>
-        <Button variant="secondary" size={40} onClick={onSignOut}>Sign out</Button>
+      <Row label="Session on this device" hint={<>Ends {ends ? new Date(ends).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : 'when you sign out'}. {passkey ? 'Trades up to $1,000 sign without a prompt. Withdrawals, redemptions, key export and larger trades ask for your passkey.' : 'Test accounts never prompt.'}</>}>
+        <Button variant="secondary" size={40} onClick={onSignOut}>End session</Button>
       </Row>
       <KeyExport account={account} />
     </Section>
@@ -273,6 +277,90 @@ function KeyExport({ account }: { account: LocalAccount }) {
         </div>
       )}
     </>
+  )
+}
+
+/** Shipping address and private notes, sealed with a key the passkey derives under its own salt (see vault.ts). */
+function PrivateVault({ account }: { account: LocalAccount }) {
+  const [keys, setKeys] = useState<VaultKeys>()
+  const [data, setData] = useState<VaultData>(emptyVault)
+  const [size, setSize] = useState<number>()
+  const [busy, setBusy] = useState<'unlock' | 'save'>()
+  const [msg, setMsg] = useState<ReactNode>()
+  const passkey = account.source === 'mera'
+  if (!vaultAvailable()) return null
+  const unlock = async () => {
+    setBusy('unlock')
+    setMsg(undefined)
+    try {
+      const k = await unlockKeys()
+      const got = await readVault(k)
+      setKeys(k)
+      setData(got?.data ?? emptyVault())
+      setSize(got?.size)
+      setMsg(got ? `Opened. Last sealed ${new Date(got.data.savedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}.` : 'Nothing sealed yet. Fill it in and seal it.')
+    } catch (e) {
+      setMsg(/cancel|not allowed|abort/i.test((e as Error).message ?? '') ? 'The passkey check was cancelled, so the vault stays locked.' : 'The vault could not be opened. Try again.')
+    } finally {
+      setBusy(undefined)
+    }
+  }
+  const save = async () => {
+    if (!keys) return
+    setBusy('save')
+    setMsg(undefined)
+    try {
+      const r = await saveVault(keys, data)
+      setSize(r.size)
+      setData({ ...data, savedAt: Date.now() })
+      setMsg(<>Sealed and stored on {net.chain.name} as {r.size} bytes of ciphertext. <a className="u" href={explorerTx(r.hash)} target="_blank" rel="noreferrer">View the transaction</a></>)
+    } catch (e) {
+      console.error(e)
+      setMsg('Sealing failed, so nothing changed on chain. Try again.')
+    } finally {
+      setBusy(undefined)
+    }
+  }
+  const lock = () => (setKeys(undefined), setData(emptyVault()), setSize(undefined), setMsg('Locked. The keys are gone from this page.'))
+  const field = (k: keyof Shipping, label: string, wide?: boolean) => (
+    <label className={`vlt-f ${wide ? 'wide' : ''}`}>
+      <span>{label}</span>
+      <input value={data.shipping[k]} autoComplete="off" onChange={(e) => setData({ ...data, shipping: { ...data.shipping, [k]: e.target.value } })} />
+    </label>
+  )
+  return (
+    <Section id="vault" title="Private vault" sub="Your shipping address and private notes, sealed with your passkey. Only ciphertext is stored, on Monad, and the passkey rebuilds the key on any of your devices. Nobody else, including Tivan, can read it.">
+      <Row
+        label={keys ? 'Unlocked on this page' : 'Locked'}
+        hint={!passkey ? 'Needs a passkey account. Test accounts have no passkey to seal with.' : keys ? <>Box <span className="mono">{keys.locator.slice(0, 10)}…{keys.locator.slice(-6)}</span>{size ? ` · ${size} bytes sealed` : ''}, kept by <span className="mono">{short(keys.keeperAddress)}</span>, a key that is not your trading account. The keys live in this page only.</> : 'Unlocking asks for your passkey once, under a separate key from the one that signs trades.'}
+      >
+        {passkey && (keys ? <Button variant="tertiary" size={40} onClick={lock}>Lock</Button> : <Button variant="secondary" size={40} pending={busy === 'unlock'} onClick={unlock}>Unlock with passkey</Button>)}
+      </Row>
+      {(keys || msg) && (
+        <div className="set-body">
+          {keys && (
+            <div className="vault-form">
+              {field('name', 'Full name', true)}
+              {field('line1', 'Address line 1', true)}
+              {field('line2', 'Address line 2', true)}
+              {field('city', 'City')}
+              {field('region', 'State or region')}
+              {field('postcode', 'Postal code')}
+              {field('country', 'Country')}
+              <label className="vlt-f wide">
+                <span>Private notes</span>
+                <textarea rows={3} value={data.notes} onChange={(e) => setData({ ...data, notes: e.target.value })} placeholder="What you paid elsewhere, where a card came from, anything you want to remember" />
+              </label>
+              <div className="vlt-f wide vault-actions">
+                <Button size={40} pending={busy === 'save'} onClick={save}>Seal and save</Button>
+                <span className="fine">Saving replaces your sealed box on chain. Nothing is shared unless you choose to send it.</span>
+              </div>
+            </div>
+          )}
+          {msg && <p className="fine" role="status">{msg}</p>}
+        </div>
+      )}
+    </Section>
   )
 }
 

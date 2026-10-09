@@ -24,14 +24,16 @@ export const hasDeviceKey = () => {
   }
 }
 
-// ---------------------------------------------------------------- staying signed in
-// The signing key is kept on this device between visits so a refresh does not ask for the passkey again. It is encrypted
-// with an AES key that the browser creates as non-extractable and keeps in IndexedDB: the raw key never sits in
-// localStorage, and a copied disk image or storage export cannot decrypt it. Script running on this site could still use
-// it, which is why moving money or cards still asks for the passkey (confirmStep). Signing out deletes it.
+// ---------------------------------------------------------------- the session
+// One passkey ceremony opens a session on this device. Inside it, everyday trading signs with a Mera signing session and no
+// prompt; withdrawals, redemptions, key export and large trades still ask for the passkey (see needsPasskey in tx.tsx).
+// The session's key is kept between visits so a refresh does not ask again. It is encrypted with an AES key the browser
+// creates as non-extractable and keeps in IndexedDB, so the raw key never sits in localStorage and a copied disk image or
+// storage export cannot decrypt it. The session ends after SESSION_MS or when the person ends it; either way the kept key
+// is deleted, and the passkey alone rebuilds the same account on any device.
 const DB = 'tivan'
 const STORE = 'session'
-const KEEP_MS = 30 * 24 * 3600 * 1000
+export const SESSION_MS = 7 * 24 * 3600 * 1000
 type Saved = { kind: 'passkey' | 'device'; at: number; wrap?: CryptoKey; iv?: Uint8Array; data?: ArrayBuffer }
 
 function idb<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest): Promise<T> {
@@ -61,18 +63,31 @@ async function keep(kind: Saved['kind'], secret?: Uint8Array) {
   }
 }
 
-/** The account from the last visit, when it is still kept on this device. */
-export async function restoreSession(): Promise<LocalAccount | undefined> {
+/** When the session on this device ends, in milliseconds since the epoch, or undefined when there is none. */
+export async function sessionEndsAt(): Promise<number | undefined> {
   try {
     const rec = await idb<Saved | undefined>('readonly', (s) => s.get('current'))
-    if (!rec || Date.now() - rec.at > KEEP_MS) return undefined
-    if (rec.kind === 'device') return hasDeviceKey() ? deviceAccount() : undefined
-    if (!rec.wrap || !rec.iv || !rec.data) return undefined
-    const key = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: rec.iv as BufferSource }, rec.wrap, rec.data))
-    return fromPrf(key)
+    return rec ? rec.at + SESSION_MS : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/** The account from the last visit while its session is open. `ended` says a session existed but ran out. */
+export async function restoreSession(): Promise<{ account?: LocalAccount; ended: boolean; endsAt?: number }> {
+  try {
+    const rec = await idb<Saved | undefined>('readonly', (s) => s.get('current'))
+    if (!rec) return { ended: false }
+    const endsAt = rec.at + SESSION_MS
+    if (Date.now() >= endsAt) return (await endSession(), { ended: true })
+    const key = localStorage.getItem(DEVICE_KEY) as `0x${string}` | null
+    if (rec.kind === 'device') return key ? { account: privateKeyToAccount(key), ended: false, endsAt } : { ended: false }
+    if (!rec.wrap || !rec.iv || !rec.data) return { ended: false }
+    const prf = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: rec.iv as BufferSource }, rec.wrap, rec.data))
+    return { account: fromPrf(prf), ended: false, endsAt }
   } catch (e) {
     console.warn('no kept session', e)
-    return undefined
+    return { ended: false }
   }
 }
 
@@ -127,9 +142,10 @@ export async function confirmPasskey(expected: string) {
 }
 export const confirmStep = (a: LocalAccount): [string, () => Promise<void>][] => (a.source === 'mera' ? [['Confirming with your passkey', () => confirmPasskey(a.address)]] : [])
 
-// Signing out forgets the kept key. The public hint (which passkey to ask for) stays, so the next visit says "Continue
-// with your passkey" and cannot start a second, empty account by accident.
-export const signOut = () => idb('readwrite', (s) => s.delete('current')).catch(() => {})
+// Ending the session forgets the kept key. The public hint (which passkey to ask for) stays, so the next visit says
+// "Continue with your passkey" and cannot start a second, empty account by accident.
+export const endSession = () => idb('readwrite', (s) => s.delete('current')).catch(() => {})
+export const signOut = endSession
 
 export const friendlyError = (e: unknown): string => {
   if (isMeraError(e)) {

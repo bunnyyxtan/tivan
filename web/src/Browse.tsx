@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from 'react'
 import { catalogOf, categories, categoryOf, net } from './config'
-import { hasMarket, loadSkus, type Sku } from './chain'
+import { hasMarket, loadSkus, tradedSince, type Sku } from './chain'
 import { usePortfolio } from './portfolio'
 import type { Acct } from './App'
 import { Breadcrumbs, CompareTray, DataTable, TableSkeleton, ago, useCompare, useSales, type Col } from './desk'
@@ -387,6 +387,8 @@ export function Discover({ account }: { account: Acct }) {
   const month = (fills ?? []).filter((x) => x.t >= monthAgo)
   const monthVol = month.reduce((n, x) => n + cents(x.price), 0n)
   const capped = (fills?.length ?? 0) >= 300
+  // Exact 30-day totals from the indexer's daily candles; the recent-sales estimate above is the fallback.
+  const days = usePoll(() => tradedSince(Math.floor(Date.now() / 86_400_000) - 29), 60000, []).data
   const lastSale = fills?.[0]
   const latestPer = (fills ?? []).filter((x, i, a) => a.findIndex((y) => y.sku.toLowerCase() === x.sku.toLowerCase()) === i).slice(0, 6)
   const movers = all.filter((s) => chg(s)).sort((a, b) => Math.abs(chg(b)!.pct) - Math.abs(chg(a)!.pct)).slice(0, 5)
@@ -452,7 +454,7 @@ export function Discover({ account }: { account: Acct }) {
 
       <section className="stats4" aria-label="Market summary">
         <Stat label="Vault value" value={data ? formatUsd(vaultValue, { digits: 0 }) : <Skeleton h={28} w={140} r={6} />} note="Each slab at its best offer" />
-        <Stat label="Traded, 30 days" value={fills ? usdC(monthVol) : '—'} note={fills ? `${capped ? 'At least ' : ''}${month.length} sales` : sales.error ? 'Needs the indexer' : ' '} />
+        <Stat label="Traded, 30 days" value={days ? usdC(days.cents) : fills ? usdC(monthVol) : '—'} note={days ? `${days.trades.toLocaleString('en-US')} sales` : fills ? `${capped ? 'At least ' : ''}${month.length} sales` : sales.error ? 'Needs the indexer' : ' '} />
         <Stat label="Median spread" value={median !== undefined ? formatBps(median, { digits: 1 }) : '—'} note="Gap from best offer to ask" />
         <Stat label="Last sale" value={lastSale ? usdC(cents(lastSale.price)) : '—'} note={lastSale ? `${cardTitle(lastSale.name)}, ${ago(lastSale.t)}` : ' '} />
       </section>
