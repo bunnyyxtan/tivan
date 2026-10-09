@@ -5,6 +5,7 @@ import { openSettings } from './fx'
 import { recentFills, type FeedItem } from './chain'
 import { IconClose, IconSearch } from './icons'
 import { Skeleton } from './States'
+import { Emblem } from './emblems'
 import { short, usd, usePoll } from './ui'
 
 // ===================================================================== keyboard
@@ -443,7 +444,7 @@ export function CompareTray({ names }: { names: (sku: string) => string | undefi
 
 // ===================================================================== account menu and the sample-market notice
 /** The signed-in account button: the user's initial, opening Account, Settings, Help and shortcuts, Sign out. */
-export function AccountMenu({ address, onSignOut, initial = 'C' }: { address: string; onSignOut: () => void; initial?: string }) {
+export function AccountMenu({ address, onSignOut }: { address: string; onSignOut: () => void }) {
   const [open, setOpen] = useState(false)
   const btn = useRef<HTMLButtonElement>(null)
   const list = useRef<HTMLDivElement>(null)
@@ -462,7 +463,7 @@ export function AccountMenu({ address, onSignOut, initial = 'C' }: { address: st
   return (
     <div className="acct-menu" onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && setOpen(false)}>
       <button ref={btn} className="acct-btn" data-tour="account" aria-label="Account menu" title={short(address)} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
-        {initial}
+        <Emblem address={address} size={32} />
       </button>
       {open && (
         <div className="menu" role="menu" aria-label="Account" ref={list} onKeyDown={key}>
