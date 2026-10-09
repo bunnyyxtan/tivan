@@ -10,3 +10,4 @@ indexer/.envio/
 indexer/generated/
 *.log
 .DS_Store
+brand/concepts/

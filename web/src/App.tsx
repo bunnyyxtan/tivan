@@ -3,7 +3,7 @@ import { flushSync } from 'react-dom'
 import type { LocalAccount } from 'viem'
 import { SESSION_MS, createAccount, deviceAccount, endSession, friendlyError, hasDeviceKey, restoreSession, savedPasskey, signIn, signOut } from './account'
 import { openSettings } from './fx'
-import { IconActivity, IconChevron, IconCollection, IconCompass, IconHelp, IconMarkets, IconSettings, IconTag, IconVault, IconYou } from './icons'
+import { IconActivity, IconChevron, IconKeystone, IconCollection, IconCompass, IconHelp, IconMarkets, IconSettings, IconTag, IconVault, IconYou } from './icons'
 import { SettingsSheet } from './Settings'
 import { attestorUrl, brand, net } from './config'
 import { CardPage } from './Card'
@@ -141,7 +141,7 @@ export default function App() {
         <aside className="side" aria-label="Sidebar">
           <div className="side-top">
             <a className="brand side-brand" href="#/markets" aria-label={`${brand}, markets`}>
-              <span className="brand-mark" aria-hidden>T</span>
+              <span className="brand-mark" aria-hidden><IconKeystone /></span>
               <span className="brand-word">{brand}</span>
             </a>
             <button className="side-fold" onClick={() => setRail(!rail)} aria-label={rail ? 'Expand the sidebar' : 'Collapse the sidebar'} aria-pressed={rail}>
@@ -167,7 +167,7 @@ export default function App() {
         <div className="mainc">
           <header className="top">
             <a className="brand top-brand" href="#/markets" aria-label={`${brand}, markets`}>
-              <span className="brand-mark" aria-hidden>T</span>
+              <span className="brand-mark" aria-hidden><IconKeystone /></span>
             </a>
             <SearchBox />
             <div className="top-right">

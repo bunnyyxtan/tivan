@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="126 118 260 280" width="260" height="280" role="img" aria-label="Tivan">
+  <path d="M180 118h66v280H148a22 22 0 0 1-22-26l32-232a22 22 0 0 1 22-22z" fill="currentColor" />
+  <path d="M266 118h66a22 22 0 0 1 22 22l32 232a22 22 0 0 1-22 26h-98z" fill="var(--tone, #8EB69B)" />
+</svg>

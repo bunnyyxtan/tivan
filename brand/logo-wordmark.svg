@@ -1,9 +1,8 @@
-<svg width="900" height="240" viewBox="0 0 900 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Tivan">
-  <rect width="900" height="240" fill="#12100E"/>
-  <rect x="48" y="40" width="104" height="160" rx="16" fill="none" stroke="#F6F1EC" stroke-width="11"/>
-  <rect x="48" y="40" width="104" height="30" rx="15" fill="#C2410C"/>
-  <rect x="48" y="55" width="104" height="15" fill="#C2410C"/>
-  <rect x="71" y="96" width="58" height="14" rx="4" fill="#F6F1EC"/>
-  <rect x="93" y="96" width="14" height="76" rx="4" fill="#F6F1EC"/>
-  <text x="210" y="158" font-family="'Hanken Grotesk', system-ui, sans-serif" font-size="128" font-weight="600" letter-spacing="-5" fill="#F6F1EC">Tivan</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 566 240" width="566" height="240" role="img" aria-label="Tivan">
+  <rect width="566" height="240" fill="#051F20"/>
+  <g transform="translate(3.8 13.1) scale(0.4143)">
+    <path d="M180 118h66v280H148a22 22 0 0 1-22-26l32-232a22 22 0 0 1 22-22z" fill="#DAF1DE" />
+    <path d="M266 118h66a22 22 0 0 1 22 22l32 232a22 22 0 0 1-22 26h-98z" fill="#8EB69B" />
+  </g>
+  <text x="197" y="164" font-family="Newsreader, 'Times New Roman', serif" font-weight="500" font-size="124" fill="#DAF1DE">Tivan</text>
 </svg>

@@ -1,11 +1,7 @@
-<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Tivan">
-  <rect width="512" height="512" rx="112" fill="#12100E"/>
-  <!-- slab / toploader case -->
-  <rect x="150" y="92" width="212" height="328" rx="26" fill="none" stroke="#F6F1EC" stroke-width="18"/>
-  <!-- grading strip -->
-  <rect x="150" y="92" width="212" height="52" rx="26" fill="#C2410C"/>
-  <rect x="150" y="118" width="212" height="26" fill="#C2410C"/>
-  <!-- T monogram = the card inside -->
-  <rect x="196" y="196" width="120" height="26" rx="8" fill="#F6F1EC"/>
-  <rect x="243" y="196" width="26" height="150" rx="8" fill="#F6F1EC"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Tivan">
+  <rect width="512" height="512" rx="112" fill="#051F20"/>
+  <g transform="translate(256 256) scale(1.107) translate(-256 -258)">
+    <path d="M180 118h66v280H148a22 22 0 0 1-22-26l32-232a22 22 0 0 1 22-22z" fill="#DAF1DE" />
+    <path d="M266 118h66a22 22 0 0 1 22 22l32 232a22 22 0 0 1-22 26h-98z" fill="#8EB69B" />
+  </g>
 </svg>

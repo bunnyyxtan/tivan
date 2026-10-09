@@ -181,7 +181,7 @@ html[data-motion='off'] *, html[data-motion='off'] *::before, html[data-motion='
 .side { position: sticky; top: 0; height: 100dvh; display: flex; flex-direction: column; gap: 8px; padding: 14px 12px 12px; border-right: 1px solid var(--line); background: var(--canvas); }
 .side-top { display: flex; align-items: center; justify-content: space-between; height: 40px; padding: 0 4px 0 6px; margin-bottom: 12px; }
 .brand { display: inline-flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 24px; font-weight: 500; letter-spacing: -0.01em; color: var(--ink); }
-.brand-mark { display: grid; place-items: center; width: 30px; height: 30px; flex-shrink: 0; border-radius: 9px; background: var(--brand-gradient); color: var(--brand-ink); font-family: var(--font-display); font-size: 19px; font-weight: 600; line-height: 1; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25); }
+.brand-mark { display: grid; place-items: center; width: 30px; height: 30px; flex-shrink: 0; border-radius: 9px; background: var(--brand-gradient); color: var(--brand-ink); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25); }
 .side-fold { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 6px; color: var(--ink-3); transform: rotate(180deg); }
 .side-fold:hover { color: var(--ink); background: var(--surface-2); }
 .side-nav { display: flex; flex-direction: column; gap: 2px; }
@@ -850,7 +850,6 @@ label.lab, .lab { display: flex; flex-direction: column; gap: 8px; font: var(--f
 /* account overview */
 .acc-hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: center; padding: 24px; background: linear-gradient(135deg, var(--surface-2), var(--surface-1) 60%); }
 .acc-id { display: flex; align-items: center; gap: 16px; min-width: 0; }
-.acc-avatar { flex: none; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 16px; background: var(--brand-gradient); color: var(--brand-ink); font: 600 18px/1 var(--font-mono); }
 .acc-id-text { display: grid; gap: 6px; min-width: 0; }
 .acc-id-text h2 { font: var(--f-section); }
 .acc-id-text .copyable .mono { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
