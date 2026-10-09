@@ -376,7 +376,7 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
           </div>
           <aside className="pdp-side" aria-label="Order book and grades">
             <section id="book" className="pnl" aria-labelledby="h-book">
-              <header className="pnl-h"><h2 id="h-book">Order book</h2><Updated at={d.at} /></header>
+              <header className="pnl-h"><h2 id="h-book">Order book</h2><span className="pnl-meta">On Kuru · <a className="u" href={explorerAddress(s.market)} target="_blank" rel="noreferrer">contract</a> · <Updated at={d.at} /></span></header>
               <OrderBook asks={asksAgg} bids={bidsAgg} mine={mine} spread={spreadInfo} onPick={pick} />
               <p className="fine pnl-foot">Select a price to fill the order form with it.</p>
             </section>
@@ -526,7 +526,7 @@ function VaultInfo({ s, certs }: { s: Sku; certs?: CertRow[] }) {
           <div><dt>Registry check</dt><dd>{test ? 'Simulated against a demo registry' : 'Checked by the attestor before vaulting'}</dd></div>
           <div><dt>Custody</dt><dd>{test ? 'Simulated: a demo custodian confirms receipt at once' : 'A vault partner checks each slab in'}</dd></div>
           <div><dt>Token contract</dt><dd><a className="linkbtn" href={explorerAddress(s.token)} target="_blank" rel="noreferrer">View on the explorer</a></dd></div>
-          <div><dt>Order book contract</dt><dd><a className="linkbtn" href={explorerAddress(s.market)} target="_blank" rel="noreferrer">View on the explorer</a></dd></div>
+          <div><dt>Kuru order book contract</dt><dd><a className="linkbtn" href={explorerAddress(s.market)} target="_blank" rel="noreferrer">View on the explorer</a></dd></div>
         </dl>
         <div className="chain-split">
           <div><b>On {net.chain.name}</b><p className="fine">Who owns each token, every order and every trade. Each links to the explorer.</p></div>

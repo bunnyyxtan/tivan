@@ -87,8 +87,8 @@ export function HelpPage() {
           <>
             <h2>How it works</h2>
             <ol className="plain">
-              <li>Each card at each grade is one market, with one token and one order book.</li>
-              <li>You buy at the ask, make an offer, or sell at the best offer. Every order is a transaction on Monad.</li>
+              <li>Each card at each grade is one market, with one token and its own order book on Kuru, an on-chain order book exchange on Monad. The vault creates the market the first time a card of that grade passes its certificate check.</li>
+              <li>You buy at the ask, make an offer, or sell at the best offer. Every order is a transaction on Monad, matched on the market’s Kuru order book. Your cash sits in your Kuru margin account, which every market draws from.</li>
               <li>The slab behind the token stays in the vault. You can request it back, which retires the token.</li>
             </ol>
             <h3>On Monad and off it</h3>

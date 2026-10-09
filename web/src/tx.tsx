@@ -88,6 +88,8 @@ const writePending = (fn: (p: Pending[]) => Pending[]) => {
 const usePending = (): Pending[] => parse<Pending>(useSyncExternalStore(subscribe, () => localStorage.getItem(PEND) ?? '[]'))
 
 // ---------------------------------------------------------------- small pieces
+// Where an action happens on chain, named in the receipt: orders on the market's Kuru order book, cash in Kuru's margin account.
+const VENUE: Partial<Record<TxKind, string>> = { buy: 'Kuru order book on Monad', sell: 'Kuru order book on Monad', offer: 'Kuru order book on Monad', list: 'Kuru order book on Monad', cancel: 'Kuru order book on Monad', deposit: 'Kuru margin account on Monad', withdraw: 'Kuru margin account on Monad' }
 const sentenceOf = (s: TxSpec) => (typeof s.receiptSentence === 'function' ? s.receiptSentence() : s.receiptSentence)
 export const clock = (ms: number) => new Date(ms).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', second: 'numeric' })
 const shortHash = (h: string) => `${h.slice(0, 10)}…${h.slice(-6)}`
@@ -347,6 +349,7 @@ export function TxProvider({ children }: { children: ReactNode }) {
                   {secs !== undefined && <span className="done-chip"><b>{secs.toFixed(1)} s</b> to settle</span>}
                   {lastStep?.block !== undefined && <span className="done-chip">Block <b>#{String(lastStep.block)}</b></span>}
                   {spec.total && <span className="done-chip">{spec.total.label} <b>{spec.total.value}</b></span>}
+                  {(spec.kind === 'buy' || spec.kind === 'sell') && <span className="done-chip">Matched on <b>Kuru</b></span>}
                 </div>
                 {badges.map((b) => (
                   <div key={b.id} className="badge-card" role="status">
@@ -364,6 +367,7 @@ export function TxProvider({ children }: { children: ReactNode }) {
                     {spec.rows.map((r) => (
                       <div key={r.label}><dt>{r.label}</dt><dd>{r.value}</dd></div>
                     ))}
+                    {VENUE[spec.kind] && <div><dt>Where</dt><dd>{VENUE[spec.kind]}</dd></div>}
                     <div><dt>Time</dt><dd>{state.updatedAt ? new Date(state.updatedAt).toLocaleString() : ''}</dd></div>
                     {lastStep?.hash && <div><dt>Transaction</dt><dd><HashLine hash={lastStep.hash} /></dd></div>}
                   </dl>
