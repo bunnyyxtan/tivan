@@ -4,5 +4,6 @@
   "receiver": "",
   "usePsaApi": true,
   "psaUrl": "https://api.psacard.com/publicapi/cert/GetByCertNumber/",
-  "gasLimit": "3000000"
+  "gasLimit": "3000000",
+  "psaAuth": true
 }

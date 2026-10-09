@@ -1,8 +1,9 @@
 {
   "chainSelectorName": "monad-testnet",
   "vault": "0x998a3116dc9AaDb98AF27B31BeC93441E1991a12",
-  "receiver": "",
-  "usePsaApi": false,
-  "psaUrl": "https://api.psacard.com/publicapi/cert/GetByCertNumber/",
-  "gasLimit": "3000000"
+  "receiver": "0x63cbb0c3200ea053c3d487b31f4f3aa0323db3a0",
+  "usePsaApi": true,
+  "psaUrl": "https://tivan-attestor.onrender.com/registry/psa/cert/",
+  "gasLimit": "3000000",
+  "psaAuth": false
 }

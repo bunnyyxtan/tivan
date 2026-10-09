@@ -7,6 +7,9 @@ import { decodeAbiParameters, encodeAbiParameters, toHex } from 'viem'
 import { type Config, onAttestRequest } from './workflow'
 import base from './config.testnet.json'
 
+// The bundled-fixtures path, with no onchain write.
+const fx = { ...base, usePsaApi: false, receiver: '' } as Config
+
 const selector = getNetwork({ chainFamily: 'evm', chainSelectorName: 'monad-testnet' })!.chainSelector.selector
 const holder = '0x9037A6733A9bD1641357AE5a12338378D3977911'
 const payload = (o: object) => ({ input: new TextEncoder().encode(JSON.stringify(o)) }) as never
@@ -18,7 +21,7 @@ describe('slab-attest', () => {
   test('fixtures cert -> report carries attest(certId, specId, grade, holder, name, symbol)', () => {
     const evm = EvmMock.testInstance(selector)
     evm.callContract = () => certsReply(0)
-    const out = JSON.parse(onAttestRequest(newTestRuntime(null, {}, base as Config), payload(req)))
+    const out = JSON.parse(onAttestRequest(newTestRuntime(null, {}, fx), payload(req)))
     expect(out.written).toBe(false)
     const [certId, specId, grade, h, name, symbol] = decodeAbiParameters(
       [{ type: 'uint256' }, { type: 'uint256' }, { type: 'uint8' }, { type: 'address' }, { type: 'string' }, { type: 'string' }],
@@ -37,7 +40,7 @@ describe('slab-attest', () => {
     const evm = EvmMock.testInstance(selector)
     evm.callContract = () => certsReply(0)
     evm.writeReport = () => ({ txStatus: 'TX_STATUS_SUCCESS', txHash: Buffer.alloc(32, 1).toString('base64') }) as never
-    const cfg = { ...base, usePsaApi: true, receiver: '0x000000000000000000000000000000000000dEaD' } as Config
+    const cfg = { ...base, usePsaApi: true, psaAuth: true, receiver: '0x000000000000000000000000000000000000dEaD' } as Config
     const secrets = new Map([['main', new Map([['PSA_TOKEN', 'tok']])]])
     const out = JSON.parse(onAttestRequest(newTestRuntime(secrets, {}, cfg), payload(req)))
     expect(auth).toBe('bearer tok')
@@ -45,10 +48,32 @@ describe('slab-attest', () => {
     expect(out.written).toBe(true)
   })
 
+  test('testnet config: demo registry API over HTTP with no token, report written to GradeOracle', () => {
+    const http = HttpActionsMock.testInstance()
+    let url = ''
+    let auth: string | undefined = 'unset'
+    http.sendRequest = (r) => {
+      url = r.url
+      auth = r.headers.authorization
+      return { statusCode: 200, body: new TextEncoder().encode(JSON.stringify({ PSACert: { CertNumber: '81234569', SpecID: 4, CardGrade: 'GEM MT 10' } })) } as never
+    }
+    const evm = EvmMock.testInstance(selector)
+    evm.callContract = () => certsReply(0)
+    let receiver = ''
+    // The receiver arrives as raw address bytes.
+    evm.writeReport = (r) => ((receiver = `0x${Buffer.from(r.receiver as unknown as Uint8Array).toString('hex')}`), { txStatus: 'TX_STATUS_SUCCESS', txHash: Buffer.alloc(32, 2).toString('base64') }) as never
+    const out = JSON.parse(onAttestRequest(newTestRuntime(null, {}, base as Config), payload(req)))
+    expect(url).toBe(`${base.psaUrl}81234569`)
+    expect(auth).toBeUndefined()
+    expect(receiver.toLowerCase()).toBe(base.receiver.toLowerCase())
+    expect(out.grade).toBe('10')
+    expect(out.written).toBe(true)
+  })
+
   test('rejects unknown certs, already-attested certs and bad payloads', () => {
     const evm = EvmMock.testInstance(selector)
     evm.callContract = () => certsReply(1)
-    const rt = () => newTestRuntime(null, {}, base as Config)
+    const rt = () => newTestRuntime(null, {}, fx)
     expect(() => onAttestRequest(rt(), payload({ ...req, certId: '99999999' }))).toThrow('not in grader registry')
     expect(() => onAttestRequest(rt(), payload(req))).toThrow('already known')
     expect(() => onAttestRequest(rt(), payload({ ...req, holder: '0x12' }))).toThrow()

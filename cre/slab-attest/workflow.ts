@@ -26,6 +26,8 @@ export const configSchema = z.object({
   receiver: z.string(), // "" = no receiver deployed yet: build + sign the report, skip the onchain write
   usePsaApi: z.boolean(),
   psaUrl: z.string().url(),
+  // false for the demo registry API on testnet, which needs no token; true for PSA's own API (secret PSA_TOKEN)
+  psaAuth: z.boolean(),
   gasLimit: z.string(),
 })
 export type Config = z.infer<typeof configSchema>
@@ -56,8 +58,8 @@ export function parseCert(certId: string, cert: PsaCert | undefined): Verified {
 
 // Runs on every DON node independently; results are then aggregated.
 const fetchPsa = (sender: HTTPSendRequester, url: string, token: string, certId: string): Verified => {
-  const res = sender.sendRequest({ url: url + certId, method: 'GET', headers: { authorization: `bearer ${token}` } }).result()
-  if (res.statusCode !== 200) throw new Error(`PSA API returned ${res.statusCode}`)
+  const res = sender.sendRequest({ url: url + certId, method: 'GET', headers: token ? { authorization: `bearer ${token}` } : {} }).result()
+  if (res.statusCode !== 200) throw new Error(`grader registry returned ${res.statusCode}`)
   return parseCert(certId, (json(res) as { PSACert?: PsaCert }).PSACert)
 }
 
@@ -70,7 +72,7 @@ export const onAttestRequest = (runtime: Runtime<Config>, payload: HTTPPayload):
   // 1. Verify against the grader registry, with consensus across nodes.
   let v: Verified
   if (cfg.usePsaApi) {
-    const token = runtime.getSecret({ id: 'PSA_TOKEN' }).result().value
+    const token = cfg.psaAuth ? runtime.getSecret({ id: 'PSA_TOKEN' }).result().value : ''
     v = new HTTPClient()
       .sendRequest(runtime, fetchPsa, consensusIdenticalAggregation<Verified>())(cfg.psaUrl, token, req.certId)
       .result()
@@ -79,7 +81,7 @@ export const onAttestRequest = (runtime: Runtime<Config>, payload: HTTPPayload):
     // node trivially agrees). Limit: only demo certs verify; flip usePsaApi + set PSA_TOKEN for the live registry.
     v = parseCert(req.certId, (fixtures as unknown as Record<string, { PSACert: PsaCert }>)[req.certId]?.PSACert)
   }
-  runtime.log(`verified cert ${v.certId}: spec ${v.specId} grade ${v.grade} (${cfg.usePsaApi ? 'PSA API' : 'fixtures'})`)
+  runtime.log(`verified cert ${v.certId}: spec ${v.specId} grade ${v.grade} (${cfg.usePsaApi ? `registry API ${cfg.psaUrl}` : 'fixtures'})`)
 
   // 2. Read the vault on Monad: refuse certs it already knows (it would revert anyway).
   const network = getNetwork({ chainFamily: 'evm', chainSelectorName: cfg.chainSelectorName })
@@ -113,7 +115,7 @@ export const onAttestRequest = (runtime: Runtime<Config>, payload: HTTPPayload):
   const report = runtime.report(prepareReportRequest(reportData)).result()
   runtime.log(`report payload ${reportData}`)
 
-  // 4. Deliver via the Keystone forwarder to a receiver contract (see README: SlabVault needs one, it isn't IReceiver).
+  // 4. Deliver via the Keystone forwarder to GradeOracle on Monad, the onchain record the attestor relay lists from.
   if (!cfg.receiver) {
     runtime.log('no receiver configured: report built and signed, onchain write skipped')
     return JSON.stringify({ ...v, holder: req.holder, reportData, written: false })
