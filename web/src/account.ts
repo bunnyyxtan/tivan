@@ -4,8 +4,8 @@ import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 import type { LocalAccount } from 'viem'
 import { net } from './config'
 
-// Only public metadata is stored: which passkey to ask for. The key itself is re-derived from the passkey's PRF
-// output on each sign-in and lives in memory for the session.
+// Stored in localStorage: only public metadata, which passkey to ask for. The key comes from the passkey's PRF output
+// and is kept encrypted in IndexedDB between visits (see "staying signed in").
 const CRED = 'slab.passkey'
 const DEVICE_KEY = 'slab.deviceKey'
 
@@ -24,6 +24,58 @@ export const hasDeviceKey = () => {
   }
 }
 
+// ---------------------------------------------------------------- staying signed in
+// The signing key is kept on this device between visits so a refresh does not ask for the passkey again. It is encrypted
+// with an AES key that the browser creates as non-extractable and keeps in IndexedDB: the raw key never sits in
+// localStorage, and a copied disk image or storage export cannot decrypt it. Script running on this site could still use
+// it, which is why moving money or cards still asks for the passkey (confirmStep). Signing out deletes it.
+const DB = 'tivan'
+const STORE = 'session'
+const KEEP_MS = 30 * 24 * 3600 * 1000
+type Saved = { kind: 'passkey' | 'device'; at: number; wrap?: CryptoKey; iv?: Uint8Array; data?: ArrayBuffer }
+
+function idb<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest): Promise<T> {
+  return new Promise((ok, fail) => {
+    const open = indexedDB.open(DB, 1)
+    open.onupgradeneeded = () => open.result.createObjectStore(STORE)
+    open.onerror = () => fail(open.error)
+    open.onsuccess = () => {
+      const req = fn(open.result.transaction(STORE, mode).objectStore(STORE))
+      req.onsuccess = () => (ok(req.result as T), open.result.close())
+      req.onerror = () => (fail(req.error), open.result.close())
+    }
+  })
+}
+
+async function keep(kind: Saved['kind'], secret?: Uint8Array) {
+  try {
+    const rec: Saved = { kind, at: Date.now() }
+    if (secret) {
+      rec.wrap = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt'])
+      rec.iv = crypto.getRandomValues(new Uint8Array(12))
+      rec.data = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: rec.iv as BufferSource }, rec.wrap, secret as BufferSource)
+    }
+    await idb('readwrite', (s) => s.put(rec, 'current'))
+  } catch (e) {
+    console.warn('could not keep the session on this device', e)
+  }
+}
+
+/** The account from the last visit, when it is still kept on this device. */
+export async function restoreSession(): Promise<LocalAccount | undefined> {
+  try {
+    const rec = await idb<Saved | undefined>('readonly', (s) => s.get('current'))
+    if (!rec || Date.now() - rec.at > KEEP_MS) return undefined
+    if (rec.kind === 'device') return hasDeviceKey() ? deviceAccount() : undefined
+    if (!rec.wrap || !rec.iv || !rec.data) return undefined
+    const key = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: rec.iv as BufferSource }, rec.wrap, rec.data))
+    return fromPrf(key)
+  } catch (e) {
+    console.warn('no kept session', e)
+    return undefined
+  }
+}
+
 function fromPrf(prfOutput: Uint8Array): LocalAccount {
   // The PRF output is 32 bytes of authenticator-bound entropy; mera validates it as a secp256k1 scalar.
   const session = createSecp256k1SigningSession({ privateKey: prfOutput })
@@ -37,6 +89,7 @@ export async function createAccount(name: string): Promise<LocalAccount> {
     user: { name, displayName: name },
   })
   localStorage.setItem(CRED, JSON.stringify({ credentialId: res.credentialId, transports: res.transports }))
+  await keep('passkey', res.prfOutput)
   return fromPrf(res.prfOutput)
 }
 
@@ -45,6 +98,7 @@ export async function signIn(pick = false): Promise<LocalAccount> {
   const credential = pick ? undefined : savedPasskey()
   const res = await getPasskeyPrfOutput({ rpId: location.hostname, credential })
   if (!credential) localStorage.setItem(CRED, JSON.stringify({ credentialId: res.credentialId }))
+  await keep('passkey', res.prfOutput)
   return fromPrf(res.prfOutput)
 }
 
@@ -58,6 +112,7 @@ export function deviceAccount(): LocalAccount {
     key = generatePrivateKey()
     localStorage.setItem(DEVICE_KEY, key)
   }
+  void keep('device')
   return privateKeyToAccount(key)
 }
 
@@ -72,9 +127,9 @@ export async function confirmPasskey(expected: string) {
 }
 export const confirmStep = (a: LocalAccount): [string, () => Promise<void>][] => (a.source === 'mera' ? [['Confirming with your passkey', () => confirmPasskey(a.address)]] : [])
 
-// NOTE: only a public hint (which passkey to ask for) is remembered, so signing out keeps it. That way the next visit says
-// "Continue with your passkey" and cannot start a second, empty account by accident.
-export function signOut() {}
+// Signing out forgets the kept key. The public hint (which passkey to ask for) stays, so the next visit says "Continue
+// with your passkey" and cannot start a second, empty account by accident.
+export const signOut = () => idb('readwrite', (s) => s.delete('current')).catch(() => {})
 
 export const friendlyError = (e: unknown): string => {
   if (isMeraError(e)) {

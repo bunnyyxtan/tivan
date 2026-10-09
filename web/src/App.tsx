@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { flushSync } from 'react-dom'
 import type { LocalAccount } from 'viem'
-import { createAccount, deviceAccount, friendlyError, hasDeviceKey, savedPasskey, signIn, signOut } from './account'
+import { createAccount, deviceAccount, friendlyError, hasDeviceKey, restoreSession, savedPasskey, signIn, signOut } from './account'
 import { openSettings } from './fx'
 import { IconActivity, IconChevron, IconCollection, IconCompass, IconHelp, IconMarkets, IconSettings, IconTag, IconYou } from './icons'
 import { SettingsSheet } from './Settings'
@@ -50,6 +50,11 @@ export type Acct = LocalAccount | undefined
 
 export default function App() {
   const [account, setAccount] = useState<LocalAccount>()
+  // Stay signed in across refreshes: the key kept on this device is restored before the first screen is drawn.
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    restoreSession().then((a) => (a && setAccount(a), setReady(true)))
+  }, [])
   const [rail, setRail] = useState(() => {
     try {
       return localStorage.getItem('tivan.rail') === '1'
@@ -79,7 +84,7 @@ export default function App() {
   useEffect(() => void fetch(`${attestorUrl}/health`).catch(() => {}), [])
   const tab = route === 'browse' || route === 'compare' ? 'browse' : route === 'activity' ? 'activity' : route === 'collection' ? 'collection' : route === 'vault' || route === 'sell' ? 'vault' : route === 'you' ? 'you' : route === 'help' ? 'help' : route === 'league' ? 'league' : 'markets'
   // Browsing is open to everyone; anything that moves money or cards asks for a passkey first.
-  const out = () => (signOut(), setAccount(undefined), (location.hash = '#/'))
+  const out = () => (void signOut(), setAccount(undefined), (location.hash = '#/'))
   const need = (el: (a: LocalAccount) => React.ReactNode) => (account ? el(account) : <SignIn onReady={setAccount} />)
   const page =
     route === 'card' ? <CardPage sku={args[0]} account={account} />
@@ -94,6 +99,7 @@ export default function App() {
     : route === 'you' ? need((a) => <AccountPage account={a} onSignOut={out} />)
     : route === 'help' ? <HelpPage />
     : <Discover account={account} />
+  if (!ready) return null
   // Visitors land on the public front page; signed-in people go straight to the app.
   if (route === '' && !account)
     return (
