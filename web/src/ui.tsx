@@ -42,12 +42,19 @@ export function useWatch() {
     }
   }
   const [list, setList] = useState(read)
+  // The private vault can replace the list from another device; every watcher re-reads on this event.
+  useEffect(() => {
+    const sync = () => setList(read())
+    addEventListener('tivan-watch', sync)
+    return () => removeEventListener('tivan-watch', sync)
+  }, [])
   const toggle = (sku: string) => {
     const next = list.includes(sku) ? list.filter((x) => x !== sku) : [...list, sku]
     setList(next)
     try {
       localStorage.setItem('slab.watch', JSON.stringify(next))
     } catch {}
+    dispatchEvent(new Event('tivan-watch'))
     return next.includes(sku)
   }
   return { list, toggle }

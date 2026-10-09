@@ -17,7 +17,7 @@ import { net } from './config'
 // three and opens the same vault, and nobody else can read it.
 
 const NAMESPACE = 'tivan.private-vault.v1'
-const VERSION = 1
+const VERSION = 2
 const boxAbi = parseAbi([
   'function boxOf(bytes32 locator) view returns (bytes)',
   'function nonceOf(bytes32 locator) view returns (uint256)',
@@ -25,9 +25,9 @@ const boxAbi = parseAbi([
 ])
 const enc = new TextEncoder()
 
-export type Shipping = { name: string; line1: string; line2: string; city: string; region: string; postcode: string; country: string }
-export type VaultData = { v: 1; shipping: Shipping; notes: string; savedAt: number }
-export const emptyVault = (): VaultData => ({ v: 1, shipping: { name: '', line1: '', line2: '', city: '', region: '', postcode: '', country: '' }, notes: '', savedAt: 0 })
+/** What the vault carries: the browser-local things that should follow you to any device, and your own notes. */
+export type VaultData = { v: 2; watch: string[]; alerts: { sku: string; kind: string; price?: number }[]; notes: Record<string, string>; savedAt: number }
+export const emptyVault = (): VaultData => ({ v: 2, watch: [], alerts: [], notes: {}, savedAt: 0 })
 
 /** Keys for one visit: held in memory only, dropped when the vault is locked or the page closes. */
 export type VaultKeys = { aes: CryptoKey; locator: Hex; keeper: Hex; keeperAddress: Hex }
@@ -56,7 +56,7 @@ export async function readVault(k: VaultKeys): Promise<{ data: VaultData; size: 
   const box = await pub.readContract({ address: net.sealedBox!, abi: boxAbi, functionName: 'boxOf', args: [k.locator] })
   const bytes = hexToBytes(box)
   if (bytes.length === 0) return undefined
-  if (bytes[0] !== VERSION) throw new Error('This vault was sealed by a newer version of Tivan.')
+  if (bytes[0] > VERSION) throw new Error('This vault was sealed by a newer version of Tivan.')
   // The locator is bound in as associated data, so a box copied to another slot will not open.
   const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes.slice(1, 13) as BufferSource, additionalData: hexToBytes(k.locator) as BufferSource }, k.aes, bytes.slice(13) as BufferSource)
   return { data: JSON.parse(new TextDecoder().decode(plain)) as VaultData, size: bytes.length }
@@ -76,4 +76,30 @@ export async function saveVault(k: VaultKeys, data: VaultData) {
   const sig = await privateKeyToAccount(k.keeper).signMessage({ message: { raw: hash } })
   const r = (await post('/vault/put', { locator: k.locator, box, nonce: nonce.toString(), sig })) as { txHash: Hex }
   return { hash: r.txHash, size: bytes.length }
+}
+
+// The browser-local things the vault carries. Kept here so one place knows every key involved.
+const WATCH = 'slab.watch'
+const ALERTS = 'tivan.alerts'
+const NOTES = 'tivan.notes'
+const readJson = <T,>(k: string, fallback: T): T => {
+  try {
+    return JSON.parse(localStorage.getItem(k) ?? '') ?? fallback
+  } catch {
+    return fallback
+  }
+}
+
+/** What this browser holds right now. */
+export const localData = (): VaultData => ({ v: 2, watch: readJson<string[]>(WATCH, []), alerts: readJson<VaultData['alerts']>(ALERTS, []), notes: readJson<Record<string, string>>(NOTES, {}), savedAt: 0 })
+
+/** Put a decrypted vault onto this device, then tell the app to re-read it. */
+export function applyVault(d: VaultData) {
+  try {
+    localStorage.setItem(WATCH, JSON.stringify(d.watch ?? []))
+    localStorage.setItem(ALERTS, JSON.stringify(d.alerts ?? []))
+    localStorage.setItem(NOTES, JSON.stringify(d.notes ?? {}))
+  } catch {}
+  dispatchEvent(new Event('tivan-alerts'))
+  dispatchEvent(new Event('tivan-watch'))
 }
