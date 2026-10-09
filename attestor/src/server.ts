@@ -21,7 +21,8 @@ const pub = createPublicClient({ chain: network.chain, transport })
 const wallet = createWalletClient({ account, chain: network.chain, transport })
 
 // ~0.2 MON covers a first listing (approve, deposit, order) plus a few trades at testnet gas prices.
-const DRIP = parseEther(process.env.DRIP_MON ?? '0.5')
+// Enough for a run of several trades, small enough that the faucet wallet lasts a demo day.
+const DRIP = parseEther(process.env.DRIP_MON ?? '0.3')
 const dripFile = new URL('../drips.json', import.meta.url)
 // A wallet can top up again once it runs low, at most once per DRIP_EVERY. "Low" must cover the app's biggest action:
 // selling a listed card is four transactions at about 0.02 MON each, so anything under half a drip tops up.
@@ -30,7 +31,7 @@ const LOW = DRIP / 2n
 const DRIP_EVERY = Number(process.env.DRIP_EVERY_MS ?? 2 * 60 * 1000)
 // Fresh addresses are free to make, so cap total drips per hour and keep enough MON for attest gas (a new market ~0.23).
 const DRIPS_PER_HOUR = Number(process.env.DRIPS_PER_HOUR ?? 30)
-const RESERVE = parseEther(process.env.DRIP_RESERVE_MON ?? '0.3')
+const RESERVE = parseEther(process.env.DRIP_RESERVE_MON ?? '0.25')
 // NOTE: drip ledger is a local JSON file (one process, one box). Limit: lost on redeploy; fine for a testnet faucet.
 const dripped: Record<string, number> = load()
 function load(): Record<string, number> {
