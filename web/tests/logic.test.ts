@@ -7,6 +7,7 @@ import type { Rules } from '../src/logic/orders.ts'
 import { decodeError, initialTx, stepSeconds, txReducer } from '../src/logic/txMachine.ts'
 import { valueSeries, change } from '../src/logic/portfolioMath.ts'
 import { bucketFor, bucketOHLC, inRange, startOfDay, summary } from '../src/logic/chartMath.ts'
+import { failoverFetch } from '../src/logic/failover.ts'
 
 const U = 1_000_000n // one dollar in base units
 
@@ -313,4 +314,61 @@ test('change over a period uses the value at its start', () => {
   assert.equal(change(pts, 99), undefined)
   assert.equal(change([{ t: 5, units: U }], 0), undefined) // one point is not a change
   assert.equal(change([], 0), undefined)
+})
+
+// ---- write failover: a transaction must leave the dead endpoint, and stay put once it finds a live one ----
+
+const res = (status: number) => new Response('{}', { status })
+const recorder = (plan: Record<string, number | 'throw'>) => {
+  const seen: string[] = []
+  const impl = (async (url: string | URL | Request) => {
+    const u = String(url)
+    seen.push(u)
+    const r = plan[u]
+    if (r === 'throw') throw new Error('connection refused')
+    return res(r ?? 200)
+  }) as unknown as typeof fetch
+  return { seen, impl }
+}
+const URLS = ['https://a.example', 'https://b.example', 'https://c.example']
+
+test('failover: a throttled endpoint hands off to the next one', async () => {
+  const { seen, impl } = recorder({ 'https://a.example': 429 })
+  const f = failoverFetch(URLS, impl)
+  assert.equal((await f('')).status, 200)
+  assert.deepEqual(seen, ['https://a.example', 'https://b.example'])
+  assert.equal(f.pinnedUrl(), 'https://b.example')
+})
+
+test('failover: a connection error hands off too', async () => {
+  const { impl } = recorder({ 'https://a.example': 'throw' })
+  const f = failoverFetch(URLS, impl)
+  assert.equal((await f('')).status, 200)
+  assert.equal(f.pinnedUrl(), 'https://b.example')
+})
+
+test('failover: later calls stay on the endpoint that answered, so a send and its receipt agree', async () => {
+  const { seen, impl } = recorder({ 'https://a.example': 429 })
+  const f = failoverFetch(URLS, impl)
+  await f('') // moves to b
+  seen.length = 0
+  await f('') // the receipt poll must not go back to a
+  await f('')
+  assert.deepEqual(seen, ['https://b.example', 'https://b.example'])
+})
+
+test('failover: a contract revert is an answer, not a dead endpoint', async () => {
+  // reverts come back HTTP 200 with a JSON-RPC error, and must never move the pin
+  const { seen, impl } = recorder({})
+  const f = failoverFetch(URLS, impl)
+  await f('')
+  await f('')
+  assert.deepEqual(seen, ['https://a.example', 'https://a.example'])
+  assert.equal(f.pinnedUrl(), 'https://a.example')
+})
+
+test('failover: every endpoint down throws rather than returning a bad response', async () => {
+  const { impl } = recorder({ 'https://a.example': 503, 'https://b.example': 429, 'https://c.example': 'throw' })
+  const f = failoverFetch(URLS, impl)
+  await assert.rejects(() => f(''))
 })

@@ -1,5 +1,6 @@
 import { createPublicClient, createWalletClient, encodeAbiParameters, getAddress, http, keccak256, parseAbi, parseAbiItem, type Account, type Address, type Hex } from 'viem'
 import { catalogOf, house, indexerUrl, net } from './config'
+import { failoverFetch } from './logic/failover'
 
 // NOTE: public Monad RPCs allow roughly 15-25 requests/sec per IP each (batched calls count individually). Every call
 // goes through one client-side limiter with a budget per endpoint: reads take whichever endpoint has room, writes and
@@ -44,9 +45,11 @@ const transport = http(undefined, {
   fetchFn: limitedFetch,
 })
 export const pub = createPublicClient({ chain: net.chain, transport })
-// Transactions skip the shared queue: simulate, send and wait on the first endpoint directly, so a purchase never waits
-// behind background polling. It is a handful of calls per action, well inside any endpoint's limit.
-const direct = http(net.rpcs[0].url, { retryCount: 3 })
+// Transactions skip the shared queue: simulate, send and wait on one endpoint directly, so a purchase never waits
+// behind background polling. It is a handful of calls per action, well inside any endpoint's limit. The endpoint is
+// rpcs[0] until it stops answering, then the next one; see failoverFetch for why they must not be mixed mid-send.
+const directFetch = failoverFetch(net.rpcs.map((e) => e.url))
+const direct = http(undefined, { retryCount: 3, fetchFn: directFetch })
 export const fast = createPublicClient({ chain: net.chain, transport: direct })
 export const walletFor = (account: Account) => createWalletClient({ account, chain: net.chain, transport: direct })
 
