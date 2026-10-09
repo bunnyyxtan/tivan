@@ -57,6 +57,7 @@ flowchart LR
 - **What runs on it.** `SlabVault` mints one whole-unit ERC-20 per (card, grade) and deploys each card's [Kuru](https://kuru.io) order book through the Kuru router. Buys, sells, offers, cancels and redemptions are all Monad transactions. Accounts are passkey wallets derived with [Mera](https://docs.monad.xyz/guides/mera).
 - **Addresses.** Monad testnet (10143): vault `0x998a3116dc9AaDb98AF27B31BeC93441E1991a12`. Monad mainnet (143): vault `0x5ad7d5e06df36415c6f3fA48299Bf92ed921859a`. Transaction hashes for the vaulting, listing, trading and redeeming runs are in [docs/DEPLOYMENTS.md](docs/DEPLOYMENTS.md).
 - **Verify it yourself.** Every receipt in the app links to the transaction on the Monad explorer.
+- **Kuru.** How Tivan brings graded cards to Kuru as a new asset class, with issuance, redemption, custody, liquidity and the roadmap: [docs/kuru-bounties.md](docs/kuru-bounties.md).
 
 ## Architecture
 
@@ -70,6 +71,13 @@ browser (React, viem, passkey)  ──reads/writes──▶  Monad RPC ──▶
 ## Attribution
 
 Built on open-source work we did not write: [Kuru](https://kuru.io) contracts and router on Monad, [OpenZeppelin Contracts](https://github.com/OpenZeppelin/openzeppelin-contracts) (MIT), [forge-std](https://github.com/foundry-rs/forge-std), [viem](https://viem.sh), [React](https://react.dev), [Vite](https://vitejs.dev), [Mera](https://docs.monad.xyz/guides/mera) for passkey accounts, [Envio HyperIndex](https://envio.dev) and the Chainlink CRE SDK. Card images in `web/public/cards` come from [Scryfall](https://scryfall.com) (Magic), the [Pokémon TCG API](https://pokemontcg.io) and [YGOPRODeck](https://ygoprodeck.com) (Yu-Gi-Oh!). They are the property of their respective owners, are shown for demonstration only, and Tivan is not affiliated with or endorsed by them. The Sports cards are public-domain vintage scans from [Wikimedia Commons](https://commons.wikimedia.org). Per-file sources and licences are in [web/public/cards/CREDITS.md](web/public/cards/CREDITS.md). A card without a photo would show a neutral "No photo yet" panel. Development started on 5 October 2026, inside the hackathon window. The history was consolidated into this repository on 6 October, so the commit dates here start that day and continue to the deadline.
+
+### Use of AI coding tools
+
+As the hackathon rules require, we disclose that AI coding tools were used to build Tivan. Claude Code (Anthropic)
+helped with code across the web app, contracts, attestor, indexer and scripts, with the interface design, and with
+research and documentation. The founder directed the product, made the design and architecture decisions, and reviewed,
+ran and tested the work. Every claim in the app and docs is checked against the code and live chain data.
 
 ## Stack
 
