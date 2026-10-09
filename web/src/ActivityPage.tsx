@@ -154,7 +154,7 @@ export function Activity({ account }: { account: LocalAccount }) {
             </>
           )}
           {tab === 'open' && (port.error && !port.data ? <ErrorNote what="Couldn’t load your orders." why={port.error} next="Try again in a moment." onRetry={port.refresh} /> : !port.data ? <TableSkeleton cols={openCols} rows={3} /> : openRows.length ? <div className="pnl-table"><DataTable cols={openCols} rows={openRows} rowKey={(r) => r.key} label="Open orders" /></div> : <Empty title="No open orders" detail="An offer or a listing waits here until it fills or you cancel it." action={<a className="btn md" href="#/browse">Find a card</a>} />)}
-          {tab === 'watch' && (!port.data ? <TableSkeleton cols={watchCols} rows={3} /> : watched.length ? <div className="pnl-table"><DataTable cols={watchCols} rows={watched} rowKey={(s) => s.sku} label="Watchlist" onOpen={(s) => (location.hash = `#/card/${s.sku}`)} /></div> : <Empty title="Nothing on your watchlist" detail="Tap the star on any market and it appears here." action={<a className="btn md" href="#/">Open Markets</a>} />)}
+          {tab === 'watch' && (!port.data ? <TableSkeleton cols={watchCols} rows={3} /> : watched.length ? <div className="pnl-table"><DataTable cols={watchCols} rows={watched} rowKey={(s) => s.sku} label="Watchlist" onOpen={(s) => (location.hash = `#/card/${s.sku}`)} /></div> : <Empty title="Nothing on your watchlist" detail="Tap the star on any market and it appears here." action={<a className="btn md" href="#/markets">Open Markets</a>} />)}
         </div>
       </section>
       <dialog ref={dlg} className="tx-dialog" aria-labelledby="rc-title" onClick={(e) => e.target === dlg.current && dlg.current?.close()}>

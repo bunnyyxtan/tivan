@@ -31,7 +31,7 @@ export function League({ account }: { account?: LocalAccount }) {
           Fair play: trades against yourself never score, a wallet scores once per card per hour, and our own market-maker accounts are not ranked.
         </p>
         <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-          <a className="btn" href="#/" style={{ flex: 1 }}>
+          <a className="btn" href="#/markets" style={{ flex: 1 }}>
             Start trading
           </a>
           <button className="ghost line" onClick={copy} style={{ flex: '0 0 auto' }}>

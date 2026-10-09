@@ -543,7 +543,7 @@ function Footer() {
   )
 }
 
-export function Landing() {
+export function Landing({ signedIn = false }: { signedIn?: boolean }) {
   const { data } = usePoll(loadSkus, 15000, [])
   const sales = useSales()
   const all = data ?? []
@@ -564,7 +564,7 @@ export function Landing() {
             <a href="#/help">Help</a>
           </nav>
           <button className="lp-search" onClick={openPalette}><IconSearch />Search cards and sets<kbd>Ctrl K</kbd></button>
-          <a className="lp-signin" href="#/you">Sign in</a>
+          {signedIn ? <a className="lp-signin" href="#/collection">Portfolio</a> : <a className="lp-signin" href="#/you">Sign in</a>}
           <a className="lp-btn sm" href="#/markets">Open the app</a>
         </div>
       </header>

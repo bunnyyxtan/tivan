@@ -120,7 +120,7 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
   if (!d)
     return (
       <>
-        <Breadcrumbs items={[['Markets', '#/'], ['Card']]} />
+        <Breadcrumbs items={[['Markets', '#/markets'], ['Card']]} />
         {m.error ? <ErrorNote what="Couldn’t load this card." why={m.error} next="Check your connection, then try again." onRetry={m.refresh} /> : <div className="cx" aria-hidden><div className="cx-media"><div className="card-hero"><Skeleton h={460} w={320} r={14} /></div></div><div className="cx-trade"><Skeleton h={14} w="30%" r={4} /><Skeleton h={40} w="80%" r={6} /><Skeleton h={64} r={10} /><Skeleton h={240} r={16} /></div></div>}
       </>
     )
@@ -193,7 +193,7 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
 
   return (
     <>
-      <Breadcrumbs items={[['Markets', '#/'], ...(c ? ([[c.category, `#/browse?cat=${encodeURIComponent(c.category)}`]] as [string, string][]) : [['Browse', '#/browse']] as [string, string][]), [title]]} />
+      <Breadcrumbs items={[['Markets', '#/markets'], ...(c ? ([[c.category, `#/browse?cat=${encodeURIComponent(c.category)}`]] as [string, string][]) : [['Browse', '#/browse']] as [string, string][]), [title]]} />
       <div className="cx">
         <div className="cx-media">
           <div className="card-hero">

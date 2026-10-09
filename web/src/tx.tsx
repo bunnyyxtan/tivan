@@ -367,7 +367,7 @@ export function TxProvider({ children }: { children: ReactNode }) {
                   </div>
                 ))}
                 <div className="done-actions">
-                  {spec.sku ? <a className="btn lg" href="#/collection" onClick={close}>View portfolio</a> : <a className="btn lg" href="#/" onClick={close}>Find a card</a>}
+                  {spec.sku ? <a className="btn lg" href="#/collection" onClick={close}>View portfolio</a> : <a className="btn lg" href="#/markets" onClick={close}>Find a card</a>}
                   <Button variant="secondary" size={48} onClick={close}>Done</Button>
                 </div>
                 <details className="done-receipt">

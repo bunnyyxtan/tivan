@@ -109,13 +109,14 @@ export default function App() {
     : route === 'help' ? <HelpPage />
     : <Discover account={account} />
   if (!ready) return null
-  // Visitors land on the public front page; signed-in people go straight to the app.
-  if (route === '' && !account)
+  // The site root is always the public front page; the app lives at #/markets. Sessions persist, so sending signed-in
+  // people straight to the app would hide the front page from anyone who has ever signed in.
+  if (route === '')
     return (
       <>
         <SettingsSheet />
-        <Palette signedIn={false} />
-        <Landing />
+        <Palette signedIn={!!account} />
+        <Landing signedIn={!!account} />
       </>
     )
   const nav = [
