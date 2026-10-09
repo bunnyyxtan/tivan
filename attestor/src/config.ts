@@ -19,6 +19,10 @@ const networks = {
     vault: '0x998a3116dc9AaDb98AF27B31BeC93441E1991a12' as Address,
     quote: '0x8C43e58dFAcF7Ee589b45EB7d0C61559F7413578' as Address, // TestUSD
     kuruRouter: '0x7EFbE105Ca7415dE98F96622173458ac1c054630' as Address,
+    // Chainlink CRE receiver: grades the slab-attest workflow verified on the oracle network (contracts/src/GradeOracle.sol)
+    gradeOracle: '0x63cbb0c3200ea053c3d487b31f4f3aa0323db3a0' as Address | undefined,
+    // Private-vault storage; the relay pays gas for writes the vault's own keeper key signed (contracts/src/SealedBox.sol)
+    sealedBox: '0x6f2e62cb9fd52c23348d8a26140cb6eb2aaf61b9' as Address | undefined,
     drip: true,
   },
   mainnet: {
@@ -31,6 +35,8 @@ const networks = {
     vault: (process.env.MAINNET_VAULT || '0x5ad7d5e06df36415c6f3fA48299Bf92ed921859a') as Address, // deploy block 110839553
     quote: '0x754704Bc059F8C67012fEd69BC8A327a5aafb603' as Address, // USDC (Kuru MON-USDC is the liquid book; MON-AUSD is empty)
     kuruRouter: '0xd651346d7c789536ebf06dc72aE3C8502cd695CC' as Address,
+    gradeOracle: undefined as Address | undefined,
+    sealedBox: undefined as Address | undefined,
     drip: false,
   },
 } as const

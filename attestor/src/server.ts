@@ -4,8 +4,9 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { createPublicClient, createWalletClient, formatEther, http, isAddress, getAddress, parseAbi, parseEther, BaseError, type Address } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { network, deployerKey, port, custodyToken } from './config.ts'
-import { verifyCert } from './psa.ts'
+import { demoRegistryRecord, verifyCert } from './psa.ts'
 
+const oracleAbi = parseAbi(['function grades(uint256) view returns (uint256 specId, uint8 grade, address holder, uint64 at)'])
 const vaultAbi = parseAbi([
   'function attest(uint256 certId, uint256 specId, uint8 grade, address holder, string name, string symbol)',
   'function confirmCustody(uint256 certId)',
@@ -95,7 +96,37 @@ async function sendNow(functionName: 'attest' | 'confirmCustody', args: readonly
   return hash
 }
 
+const boxAbi = parseAbi(['function put(bytes32 locator, bytes box, uint256 nonce, bytes sig)'])
+// Sponsored vault writes are cheap but free to the caller, so cap them like drips: per box and in total, per hour.
+const boxWrites: { t: number; locator: string }[] = []
+const hex = (v: unknown, field: string, minBytes: number, maxBytes: number): `0x${string}` => {
+  if (typeof v !== 'string' || !/^0x([0-9a-fA-F]{2})*$/.test(v) || (v.length - 2) / 2 < minBytes || (v.length - 2) / 2 > maxBytes) throw new HttpError(400, `${field}: hex, ${minBytes}-${maxBytes} bytes`)
+  return v as `0x${string}`
+}
+
 const routes: Record<string, (b: Record<string, unknown>, req: IncomingMessage) => Promise<object>> = {
+  // Relays a private-vault write and pays its gas. The SealedBox contract itself checks the keeper's signature and nonce,
+  // so this relay cannot change anyone's box; it only submits what the keeper signed. Ciphertext only ever passes through.
+  async '/vault/put'(b) {
+    if (!network.sealedBox) throw new HttpError(404, 'no private vault on this network')
+    const locator = hex(b.locator, 'locator', 32, 32)
+    const box = hex(b.box, 'box', 1, 4096)
+    const nonce = uint(b.nonce, 'nonce', 2n ** 64n)
+    const sig = hex(b.sig, 'sig', 65, 65)
+    const now = Date.now()
+    while (boxWrites.length && now - boxWrites[0].t > 3600_000) boxWrites.shift()
+    if (boxWrites.length >= 120 || boxWrites.filter((w) => w.locator === locator).length >= 12) throw new HttpError(429, 'too many vault saves this hour, try again later')
+    boxWrites.push({ t: now, locator })
+    const hash = await serial(async () => {
+      const { request } = await pub.simulateContract({ account, address: network.sealedBox!, abi: boxAbi, functionName: 'put', args: [locator, box, nonce, sig] })
+      const h = await wallet.writeContract(request)
+      const r = await pub.waitForTransactionReceipt({ hash: h })
+      if (r.status !== 'success') throw new HttpError(502, `tx ${h} reverted`)
+      return h
+    })
+    return { txHash: hash }
+  },
+
   async '/attest'(b) {
     const certId = uint(b.certId, 'certId', U256)
     const specId = uint(b.specId, 'specId', U256)
@@ -105,7 +136,12 @@ const routes: Record<string, (b: Record<string, unknown>, req: IncomingMessage) 
     const name = str(b.name, 'name', 64, /^[\p{L}\p{N} .,'#&()\-\/]+$/u)
     const symbol = str(b.symbol, 'symbol', 16, /^[A-Za-z0-9\-]+$/)
 
-    const v = await verifyCert(certId)
+    // A grade the Chainlink CRE workflow already verified on the oracle network and wrote to GradeOracle is the source
+    // of truth; otherwise this relay asks the grader registry itself.
+    const cre = network.gradeOracle
+      ? await pub.readContract({ address: network.gradeOracle, abi: oracleAbi, functionName: 'grades', args: [certId] })
+      : undefined
+    const v = cre && cre[3] > 0n ? { specId: cre[0], grade: cre[1], source: 'chainlink-cre' as const } : await verifyCert(certId)
     if (!v) throw new HttpError(422, `cert ${certId} not found in grader registry`)
     if (v.specId !== specId || v.grade !== grade)
       throw new HttpError(422, `cert ${certId} is spec ${v.specId} grade ${v.grade}, not spec ${specId} grade ${grade}`)
@@ -175,6 +211,12 @@ createServer(async (req, res) => {
     const v = await verifyCert(BigInt(cert[1])).catch(() => undefined)
     if (v === undefined) return reply(res, 502, { error: 'grader registry unavailable' })
     return v ? reply(res, 200, { specId: v.specId.toString(), grade: v.grade, subject: v.subject }) : reply(res, 404, { error: 'cert not found' })
+  }
+  // Demo grader registry API for the CRE workflow (PSA-shaped, testnet only). See demoRegistryRecord.
+  const reg = req.method === 'GET' && /^\/registry\/psa\/cert\/(\d{1,20})$/.exec(req.url ?? '')
+  if (reg) {
+    const r = demoRegistryRecord(BigInt(reg[1]))
+    return r ? reply(res, 200, r) : reply(res, 404, { error: 'cert not found in the demo registry' })
   }
   if (req.method === 'GET' && req.url === '/health')
     return reply(res, 200, { network: network.name, chainId: network.chain.id, vault: network.vault, attestor: account.address })

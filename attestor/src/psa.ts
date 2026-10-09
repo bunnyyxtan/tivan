@@ -44,6 +44,17 @@ function demoCert(certId: bigint): PsaCert | undefined {
 }
 
 type PsaCert = { CertNumber: string; SpecID: number; CardGrade: string; Subject?: string }
+
+/**
+ * The demo grader registry as an HTTP API, shaped like PSA's GetByCertNumber response. The Chainlink CRE workflow calls
+ * it from every oracle node, so the grade comes from an outside system, not from the caller. Testnet only; with a PSA
+ * token the workflow calls PSA itself.
+ */
+export function demoRegistryRecord(certId: bigint): { PSACert: PsaCert } | undefined {
+  if (network.name !== 'testnet') return undefined
+  const cert = fixtures[certId.toString()]?.PSACert ?? demoCert(certId)
+  return cert ? { PSACert: cert } : undefined
+}
 export type Verified = { certId: bigint; specId: bigint; grade: number; subject: string; source: 'psa-api' | 'fixtures' }
 
 /** Look the cert up in the grader registry. Returns null if PSA doesn't know it. */
