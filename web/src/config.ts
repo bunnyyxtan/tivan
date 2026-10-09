@@ -32,10 +32,10 @@ const networks: Record<Network['name'], Network> = {
     kuruRouter: '0x7EFbE105Ca7415dE98F96622173458ac1c054630',
     sealedBox: '0x6f2e62cb9fd52c23348d8a26140cb6eb2aaf61b9',
     mintableQuote: true,
-    rpcs: [
-      { url: 'https://testnet-rpc.monad.xyz', limit: 14 },
-      { url: 'https://rpc.ankr.com/monad_testnet', limit: 24, logs: false }, // rejects batched 100-block getLogs ranges
-    ],
+    // Ankr's free public endpoint used to sit here and absorbed most reads, but it is anonymous and unkeyed:
+    // no account, no quota to watch, nobody to ask when it degrades. Reads now go to the dedicated endpoint
+    // (VITE_RPC_URL, prepended below) with the public RPC as the per-IP fallback.
+    rpcs: [{ url: 'https://testnet-rpc.monad.xyz', limit: 14 }],
     seedSkus: [
       { specId: 4n, grade: 10 },
       { specId: 4n, grade: 9 },

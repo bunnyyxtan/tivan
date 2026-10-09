@@ -1,5 +1,7 @@
 # Builds the web app and publishes it to GitHub Pages on every push to main.
 # Set repository Variables: VITE_ATTESTOR_URL (hosted attestor), VITE_INDEXER_URL (Envio GraphQL), VITE_RPC_URL, VITE_RPC_LIMIT and VITE_RPC_LOGS (optional dedicated RPC).
+# Variables, not Secrets, on purpose: every VITE_ value is compiled into the public bundle. A paid RPC URL with
+# its key in the path (Quicknode, Alchemy) is public once deployed, and so is its credit. See .env.example.
 name: Deploy to GitHub Pages
 on:
   push:

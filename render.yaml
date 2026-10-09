@@ -18,5 +18,9 @@ services:
         value: testnet
       - key: DEPLOYER_KEY
         sync: false
+      # Dedicated RPC for the signer (Alchemy). Server-side, so unlike the web app's key this one stays secret.
+      # Without it the attestor falls back to the public testnet RPC, which it shares per-IP with the maker below.
+      - key: RPC_URL
+        sync: false
       - key: MAKER_KEY
         sync: false
