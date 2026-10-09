@@ -138,8 +138,8 @@ export const IconKeyboard = ({ size }: { size?: number }) => (
   </Icon>
 )
 
-export const IconKeystone = () => (
-  <svg viewBox="126 118 260 280" width="15.8" height="17" aria-hidden>
+export const IconKeystone = ({ h = 17 }: { h?: number }) => (
+  <svg viewBox="126 118 260 280" width={h * 0.929} height={h} aria-hidden>
     <path d="M180 118h66v280H148a22 22 0 0 1-22-26l32-232a22 22 0 0 1 22-22z" fill="currentColor" />
     <path d="M266 118h66a22 22 0 0 1 22 22l32 232a22 22 0 0 1-22 26h-98z" fill="currentColor" opacity="0.66" />
   </svg>

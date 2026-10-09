@@ -1488,7 +1488,8 @@ button.method:disabled { opacity: 0.6; cursor: not-allowed; }
 .lp-strip { margin: 0; padding: 7px 16px; text-align: center; font-size: 12px; color: #a9c6b2; background: var(--lp-dark); border-bottom: 1px solid #143a33; }
 .lp-nav { position: sticky; top: 0; z-index: 30; background: color-mix(in srgb, var(--lp-dark) 92%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid #143a33; }
 .lp-nav-in { display: flex; align-items: center; gap: 22px; height: 64px; }
-.lp-brand { font-family: var(--font-display); font-size: 26px; font-weight: 600; color: var(--lp-mint); letter-spacing: -0.01em; }
+.lp-brand { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-display); font-size: 26px; font-weight: 600; color: var(--lp-mint); letter-spacing: -0.01em; }
+.lp-brand svg { transform: translateY(1px); }
 .lp-nav nav { display: flex; gap: 22px; margin-left: 8px; }
 .lp-nav nav a { position: relative; font: 600 12px/1 var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: #c3dfca; }
 .lp-nav nav a::after { content: ''; position: absolute; left: 0; right: 0; bottom: -6px; height: 2px; border-radius: 2px; background: var(--lp-green); transform: scaleX(0); transition: transform 0.25s var(--lp-ease); }

@@ -7,7 +7,7 @@ import { ago, useSales } from './desk'
 import { aggregate } from './logic/orders.ts'
 import { formatBps, formatQty } from './logic/money.ts'
 import { openPalette } from './Palette'
-import { IconChevron, IconSearch } from './icons'
+import { IconChevron, IconKeystone, IconSearch } from './icons'
 import { Slab, cardTitle, parseName, usePoll } from './ui'
 
 // The public front door, shown at the site root to visitors. A poster-style hero over a moving wall of cards, a tape of
@@ -556,7 +556,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
       {net.name === 'testnet' && <p className="lp-strip">Test network. Prices come from an automated market maker. Cash and custody are simulated.</p>}
       <header className="lp-nav">
         <div className="lp-wrap wide lp-nav-in">
-          <a className="lp-brand" href="#/">{brand}</a>
+          <a className="lp-brand" href="#/"><IconKeystone h={24} />{brand}</a>
           <nav aria-label="Primary">
             <a href="#/markets">Markets</a>
             <a href="#/browse">Browse</a>
