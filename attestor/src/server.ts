@@ -21,12 +21,13 @@ const pub = createPublicClient({ chain: network.chain, transport })
 const wallet = createWalletClient({ account, chain: network.chain, transport })
 
 // ~0.2 MON covers a first listing (approve, deposit, order) plus a few trades at testnet gas prices.
-const DRIP = parseEther(process.env.DRIP_MON ?? '0.2')
+const DRIP = parseEther(process.env.DRIP_MON ?? '0.5')
 const dripFile = new URL('../drips.json', import.meta.url)
 // A wallet can top up again once it runs low, at most once per DRIP_EVERY. "Low" must cover the app's biggest action:
-// a first buy is three transactions (approve, deposit, order) at about 0.02 MON each, so anything under 0.1 MON tops up.
+// selling a listed card is four transactions at about 0.02 MON each, so anything under half a drip tops up.
 const LOW = DRIP / 2n
-const DRIP_EVERY = 10 * 60 * 1000
+// Short, because a session can spend several transactions in a row and nobody should stall mid-trade waiting for it.
+const DRIP_EVERY = Number(process.env.DRIP_EVERY_MS ?? 2 * 60 * 1000)
 // Fresh addresses are free to make, so cap total drips per hour and keep enough MON for attest gas (a new market ~0.23).
 const DRIPS_PER_HOUR = Number(process.env.DRIPS_PER_HOUR ?? 30)
 const RESERVE = parseEther(process.env.DRIP_RESERVE_MON ?? '0.3')
@@ -170,7 +171,7 @@ const routes: Record<string, (b: Record<string, unknown>, req: IncomingMessage) 
     if (!network.drip) throw new HttpError(403, 'drip is testnet only')
     const to = addr(b.address, 'address')
     const last = dripped[to]
-    if (last !== undefined && Date.now() - last < DRIP_EVERY) throw new HttpError(429, 'already topped up this address in the last 10 minutes')
+    if (last !== undefined && Date.now() - last < DRIP_EVERY) throw new HttpError(429, `already topped up this address in the last ${Math.round(DRIP_EVERY / 60000)} minutes`)
     if (Object.values(dripped).filter((t) => Date.now() - t < 3600_000).length >= DRIPS_PER_HOUR)
       throw new HttpError(429, 'faucet busy, try again later or use faucet.monad.xyz')
     dripped[to] = Date.now() // reserve before awaiting so concurrent requests can't double-drip
