@@ -8,6 +8,8 @@
 | TestUSD (testnet stand-in for USDC) | `0x8C43e58dFAcF7Ee589b45EB7d0C61559F7413578` |
 | SlabToken: PSA 10 Base Set Charizard Holo | `0xbe11cB16ea59C3B1ff829Aa1C4C494b0d965aEa8` |
 | Kuru market for that SKU (deployed by SlabVault) | `0x21E6D98767bbFc5FC13aFA80c67d87e34f3d6648` |
+| GradeOracle (Chainlink CRE receiver; simulation forwarder `0xB9F79d863261869B234c481D1f9A7af84AeAd192`) | `0x63cbb0c3200ea053c3d487b31f4f3aa0323db3a0` (tx `0xa3b6e4c6536e035ddcc28b66041523c7e530905d9bb127062a6266af07c78642`, block 69504015) |
+| SealedBox (private-vault ciphertext, keeper-signed writes) | `0x6f2e62cb9fd52c23348d8a26140cb6eb2aaf61b9` (tx `0x6e070572934744390613e81a94f5efaadc49b88ef8de2bb4ea6a8bca0303ad80`) |
 
 End-to-end run (cert 81234567):
 
@@ -83,6 +85,19 @@ Market maker seeding (`cast`, `BUYER_ADDR`): certs 81234573 / 81234575 / 8123457
 Book state left for the demo: every market is two-sided except Pikachu, whose asks were bought out (bids at $1,300
 and $1,250). Fixture certs still unused: 81234569 (Charizard PSA 10), 81234572 (Jordan PSA 8), 81234578 (LeBron),
 81234579 (Black Lotus).
+
+## Passkey account runs (2026-10-09, Monad testnet)
+
+Driven in headless Edge with a virtual WebAuthn authenticator that supports PRF (Mera), against the app and a local
+attestor:
+
+| Check | Result |
+|---|---|
+| Landing page to a confirmed Monad transaction (new visitor, $10,000 test dollars) | 4 taps, 1 passkey ceremony, about 6 s in total, 0.8 s to settle |
+| Buy for $475.16 inside the session | 0 passkey prompts, settled in 0.7 s, matched on the Kuru book |
+| Buy for $1,545 (over the $1,000 session limit) | 1 passkey prompt, settled in 0.9 s |
+| Private vault: seal a shipping name and notes | 225 bytes of ciphertext written to SealedBox by the relay, with no MON in the account |
+| Stateless test: wipe all site storage, sign in with the same passkey | same address; the vault reopens and decrypts the same data from chain |
 
 ## Monad mainnet (chain 143)
 

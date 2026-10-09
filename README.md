@@ -58,6 +58,7 @@ flowchart LR
 - **Addresses.** Monad testnet (10143): vault `0x998a3116dc9AaDb98AF27B31BeC93441E1991a12`. Monad mainnet (143): vault `0x5ad7d5e06df36415c6f3fA48299Bf92ed921859a`. Transaction hashes for the vaulting, listing, trading and redeeming runs are in [docs/DEPLOYMENTS.md](docs/DEPLOYMENTS.md).
 - **Verify it yourself.** Every receipt in the app links to the transaction on the Monad explorer.
 - **Kuru.** How Tivan brings graded cards to Kuru as a new asset class, with issuance, redemption, custody, liquidity and the roadmap: [docs/kuru-bounties.md](docs/kuru-bounties.md).
+- **Chainlink CRE, Mera and Envio.** How each is used, with measured runs: [docs/sponsor-bounties.md](docs/sponsor-bounties.md).
 
 ## Architecture
 
