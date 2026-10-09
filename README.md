@@ -11,17 +11,8 @@ under a second. Holders can redeem the physical slab at any time.
 **Live demo:** https://bunnyyxtan.github.io/tivan/ (Monad testnet; nothing uses real money, vault custody is simulated).
 
 <p align="center">
-  <img src="docs/screenshots/landing-desktop-dark.jpg" alt="The front page: live markets, the vault and the latest block" width="100%">
-</p>
-
-<p align="center">
   <img src="docs/screenshots/markets-desktop-dark.jpg" alt="Markets, desktop, dark theme" width="49%">
   <img src="docs/screenshots/card-desktop-light.jpg" alt="Card page, desktop, light theme" width="49%">
-</p>
-
-<p align="center">
-  <img src="docs/screenshots/browse-desktop-dark.jpg" alt="Browse, with grade, price and set filters" width="63%">
-  <img src="docs/screenshots/markets-mobile.jpg" alt="Markets on a phone" width="17%">
 </p>
 
 Built for [Monad Metropolis](https://hackathon.monad.xyz). Running on Monad testnet; the mainnet vault is deployed with
