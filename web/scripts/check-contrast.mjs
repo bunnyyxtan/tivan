@@ -1,4 +1,4 @@
-// Measures the colour tokens in src/index.css against the contrast rules in BRAND.md, in both modes.
+// Measures the colour tokens in src/index.css against the contrast rules, in both modes.
 // Usage: cd web && node scripts/check-contrast.mjs   (exits 1 if any pair fails)
 import { readFileSync } from 'node:fs'
 
