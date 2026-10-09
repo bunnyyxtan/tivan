@@ -37,8 +37,15 @@ which tokens can exist.
 
 **Simulation.** `cre workflow simulate ./slab-attest -T testnet-settings --trigger-index 0 --http-payload ... --broadcast`
 runs the workflow against Monad testnet and writes through the simulation forwarder
-(`0xB9F79d863261869B234c481D1f9A7af84AeAd192`) to GradeOracle (`0x63cbb0c3200ea053c3d487b31f4f3aa0323db3a0`). The
-result of our run is recorded in [`cre/README.md`](../cre/README.md).
+(`0xB9F79d863261869B234c481D1f9A7af84AeAd192`) to GradeOracle (`0x63cbb0c3200ea053c3d487b31f4f3aa0323db3a0`). Our run
+on 9 October 2026:
+- the nodes verified cert 81234569 as spec 4, grade 10 through the registry API;
+- the report was written in Monad testnet tx `0x33464a6267c4716a20f973b297c2949d8a86f15a974dbc676943b96401ed8dd3`,
+  where GradeOracle emitted `GradeVerified`;
+- the attestor then listed the cert in the vault with `verifiedBy: chainlink-cre` (tx
+  `0x7c8de09c2817f7d0483859c64236d6c7904545de7af15bd73624bac3d8bfc18a`).
+
+The full output is in [`cre/README.md`](../cre/README.md).
 
 **Tests.** `bun test` runs the handler on the CRE SDK's test runtime: the fixtures path, PSA's own API with a bearer
 token, the testnet demo registry API with no token writing to GradeOracle, and rejection of unknown certificates,
