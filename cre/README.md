@@ -47,11 +47,14 @@ cre workflow simulate ./slab-attest -T testnet-settings --non-interactive \
 
 | Step | Result |
 |---|---|
-| `bun test` | 4 pass, 0 fail, 14 expect() calls: fixtures path; PSA API with a bearer token through a receiver; the testnet demo registry API over HTTP with no token, writing to GradeOracle; unknown cert, already-attested cert, bad holder and bad symbol rejected |
+| `bun test` | 4 pass, 0 fail: fixtures path; PSA API with a bearer token through a receiver; the testnet demo registry API over HTTP with no token, writing to GradeOracle; unknown cert, already-attested cert, bad holder and bad symbol rejected |
 | `cre workflow build ./slab-attest -T testnet-settings -R .` | `✓ Workflow compiled successfully` |
 | GradeOracle deployed on Monad testnet | `0x63cbb0c3200ea053c3d487b31f4f3aa0323db3a0`, tx `0xa3b6e4c6536e035ddcc28b66041523c7e530905d9bb127062a6266af07c78642` |
 | Demo registry API (attestor, local run) | known cert returns the PSA-shaped record; unknown cert returns 404 |
-| `cre workflow simulate ... --broadcast` | pending: needs `cre login`; the output goes here |
+| `cre workflow supported-chains` | `monad-testnet` listed, simulation forwarder `0xB9F79d863261869B234c481D1f9A7af84AeAd192` |
+| `cre workflow simulate ./slab-attest -T testnet-settings --non-interactive --trigger-index 0 --http-payload ./slab-attest/payload.json --broadcast` | `verified cert 81234569: spec 4 grade 10 (registry API https://tivan-attestor.onrender.com/registry/psa/cert/)`, then `attest report written: 0x33464a6267c4716a20f973b297c2949d8a86f15a974dbc676943b96401ed8dd3`. Simulation result `written: true`. |
+| The write on Monad testnet | tx `0x33464a62…8dd3` succeeded in block 69517349, sent to the simulation forwarder, which called GradeOracle. `GradeVerified(certId 81234569, specId 4, grade 10, holder 0x9037…7911, "PSA 10 Base Set Charizard Holo", "CHZ10")`; `grades(81234569)` now returns spec 4, grade 10 |
+| The attestor lists the cert from the CRE record | `POST /attest` on the live attestor returned `"verifiedBy":"chainlink-cre"`, SlabVault.attest tx `0x7c8de09c2817f7d0483859c64236d6c7904545de7af15bd73624bac3d8bfc18a` |
 
 ## Limits
 

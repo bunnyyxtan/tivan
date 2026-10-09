@@ -25,7 +25,7 @@ export const configSchema = z.object({
   vault: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
   receiver: z.string(), // "" = no receiver deployed yet: build + sign the report, skip the onchain write
   usePsaApi: z.boolean(),
-  psaUrl: z.string().url(),
+  psaUrl: z.string().regex(/^https:\/\/\S+\/$/), // z.url() needs the URL class, which the CRE runtime lacks
   // false for the demo registry API on testnet, which needs no token; true for PSA's own API (secret PSA_TOKEN)
   psaAuth: z.boolean(),
   gasLimit: z.string(),
