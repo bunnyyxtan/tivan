@@ -38,8 +38,12 @@ dark-first, in a classic style with no AI look. Tokens live in `web/src/index.cs
   - There is no marketing hero and no site footer inside the app. Browsing never needs an account.
 - Every page opens with the same head: title, one line of context, then the page's own actions on the right.
 - Radii 8 (controls), 12 (inner panels), 16 (cards and panels), 18 to 20 (dialogs, stage). Spacing steps of 4.
-- Card page: the slab on a lit stage on the left. On the right, a sticky buy box with grade picker, lowest ask, best
-  offer, Buy now and Make an offer, then market figures, the spread, and trust notes. History, book and trades follow.
+- Card page: the slab on a sticky lit stage on the left. On the right: title, grade picker, then one buy box (lowest
+  ask, best offer, Buy now, Make an offer, cash line, a stats strip and the price alert as its footer), then trust notes.
+  Below, two columns that stack on their own: main (price history, trades, vault) and a sticky side (order book, grades).
+- Price chart: a figures strip (last sale and change, high, low, trades, cards), range and toggle chips, then the step
+  line with prices and the last sale, ask and best offer marked on the right axis. Time ticks fall on round local times.
+- Settings pages (Account): titled cards of rows, label and hint on the left, value or control on the right.
 
 ## Voice and honesty
 - Calm and exact. No exclamation marks, marketing language or filler. Never "audited". Fees read "Currently 0%".
@@ -69,7 +73,8 @@ prices or grades, auto-rotating carousels, cursor-following effects, a toast for
   - hero: drifting aurora, a tilted wall of card art scrolling in columns that bleeds off the right edge, the featured
     slab with a holographic pointer tilt, floating chips of the latest real sales, rolling sub-lines, and live stats
     (markets, cards in the vault, latest block);
-  - a live trade ticker band, a live order book section (read from the contract every 6 s, changed rows flash), a
+  - a recent-trades tape (labelled as test-network trades, never "live"), a "How it works" section with a trading-terminal
+    panel: market tabs, the slab, sell-now and buy-now quotes, the spread and a five-level book read from the contract every 6 s, a
     "Pull a random grail" toy (shuffle, flip, confetti; nothing is bought), a card wall in the CTA gutters and a giant
     footer wordmark.
 - The landing page may use holo tilt, rotating chips and words, and the spring green #3FE59B; the app does not.

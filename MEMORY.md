@@ -35,7 +35,10 @@ bunnyyxtan/tivan (public), branch `main` only.
 - Cash opens as a centred modal (a bottom sheet on phones) with tabs: Test dollars, Deposit, Withdraw, Network fees.
   Not a side drawer.
 - Key export only behind a fresh passkey check plus press-and-hold. Never say "seed phrase". No backup passkey: each
-  passkey's PRF output gives a different address.
+  passkey's PRF output gives a different address, so the account page does not offer or explain one (owner, 2026-10-09).
+- People stay signed in: the key is kept encrypted in IndexedDB for 30 days (passkey) or until sign-out (test key).
+  Moving cash or cards still asks for the passkey.
+- Landing copy never calls testnet trades "live": the tape is "Recent trades · Test network". No GitHub link anywhere.
 - Fees read from config and are worded "Currently 0%". "Built on Monad" is plain text only, with no logo.
 - Card descriptions are optional and only ever owner-supplied with sources. Never generate them.
 - 3D view is always labelled "Rendered view, not a photograph". Cert checks on testnet are labelled "Simulated check".
@@ -46,7 +49,8 @@ bunnyyxtan/tivan (public), branch `main` only.
 - Dark mode was lifted for legibility on 2026-10-08: canvas #0B2B26, panels #123630 and #163832, text #EAF8EC, #C3DFCA, #A3C6AE.
 
 ## How it works (short)
-- Accounts: the WebAuthn PRF output is the secp256k1 private key of a plain EOA (`web/src/account.ts`). On testnet a
+- Accounts: the WebAuthn PRF output is the secp256k1 private key of a plain EOA (`web/src/account.ts`). `restoreSession`
+  decrypts the kept key on load with a non-extractable AES-GCM key from IndexedDB; `signOut` deletes it. On testnet a
   fallback key can live in localStorage (`slab.deviceKey`). Whoever signs a transaction pays its fee in MON, so a
   server wallet cannot pay for the user's transactions without smart accounts and a paymaster (not built).
 - Testnet MON: before any transaction, `ensureGas` (`web/src/attestor.ts`, called from `tx.tsx`) asks the faucet when
