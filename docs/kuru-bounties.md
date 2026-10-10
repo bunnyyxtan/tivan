@@ -4,7 +4,7 @@ Answers to the questions asked at submission for the two Kuru bounties at Monad 
 **Bring New Assets and Markets to Kuru** and **Build the Next Consumer Trading App on Kuru**. Tivan is built and run by
 one founder, who will keep building it after the hackathon.
 
-What is live today, stated plainly: Tivan runs on Monad testnet with 19 card-and-grade markets, each with its own Kuru
+What is live today, stated plainly: Tivan runs on Monad testnet with 26 card-and-grade markets, each with its own Kuru
 order book. Custody and the certificate check are simulated on testnet, and testnet prices come from our own market-maker
 bot. A vault with four demo tokens is also deployed on mainnet, with no books: Kuru told us on 10 October 2026 that they do
 not deploy markets on mainnet for security reasons, so Tivan is a testnet product for this submission.
