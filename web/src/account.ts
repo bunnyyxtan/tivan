@@ -155,7 +155,7 @@ export const prfUnavailable = (e: unknown) => isMeraError(e) && e.code === 'PRF_
 
 export const friendlyError = (e: unknown): string => {
   if (isMeraError(e)) {
-    if (e.code === 'PRF_UNAVAILABLE') return 'This device’s passkey provider can’t create a Slab account yet.'
+    if (e.code === 'PRF_UNAVAILABLE') return 'This device’s passkey provider can’t create a Tivan account yet.'
     if (e.code === 'PASSKEY_OPERATION_FAILED') return 'Passkey request was cancelled or isn’t available here.'
   }
   const err = e as { shortMessage?: string; message?: string; details?: string }
