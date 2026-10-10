@@ -1,5 +1,5 @@
 import { createPublicClient, createWalletClient, encodeAbiParameters, getAddress, http, keccak256, parseAbi, parseAbiItem, type Account, type Address, type Hex } from 'viem'
-import { catalogOf, house, indexerUrl, net } from './config'
+import { house, indexerUrl, net } from './config'
 import { failoverFetch } from './logic/failover'
 
 // NOTE: public Monad RPCs allow roughly 15-25 requests/sec per IP each (batched calls count individually). Every call
@@ -227,9 +227,10 @@ async function fetchSkus(): Promise<Sku[]> {
       }
     }),
   )
-  // Only cards in the catalog are shown; retired markets stay on-chain but out of sight.
+  // Every market the vault lists is shown. The catalog only adds a picture, set and category; a card it does not
+  // know yet appears under Other with the drawn slab, so a newly attested card trades in the app the moment it lists.
   const last = await lastSales()
-  return all.filter((s) => catalogOf(s.name)).map((s) => ({ ...s, last: last.get(s.sku.toLowerCase()) }))
+  return all.map((s) => ({ ...s, last: last.get(s.sku.toLowerCase()) }))
 }
 
 /** The last sale per card from Envio in one query. Empty when no indexer is set or it is down. */
@@ -397,7 +398,7 @@ const STALE_MS = 90_000
 export const markOrdersStale = (market: Address) => stale.set(market.toLowerCase(), Date.now())
 const isStale = (market: Address) => Date.now() - (stale.get(market.toLowerCase()) ?? 0) < STALE_MS
 
-// One indexer query per owner instead of one per market: a page reads about 19 markets at once, and Envio's development
+// One indexer query per owner instead of one per market: a page reads every market at once, and Envio's development
 // endpoint throttles bursts (a throttled reply has no CORS header, so it shows as a failed fetch). Callers within a few
 // seconds share one request.
 const ownerOrders = new Map<string, { at: number; p: Promise<Map<string, bigint[]>> }>()

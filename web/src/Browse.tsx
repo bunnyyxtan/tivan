@@ -14,7 +14,7 @@ import { askText, gradeOf, lastText, offerText } from './Market'
 import { IconGrid, IconList, IconSearch, IconStar } from './icons'
 import { Chip, Opt, RangeDual, Seg, Select } from './controls'
 import { pct } from './format'
-import { Slab, cardTitle, parseName, usePoll, useWatch, usd } from './ui'
+import { Slab, cardTitle, parseName, usePoll, useWatch, usd, cardSub } from './ui'
 
 // ===================================================================== filters, kept in the URL
 type F = { q: string; cat: string; set: string; gmin?: number; gmax?: number; pmin?: number; pmax?: number; sale: boolean; sort: string; view: 'grid' | 'table' }
@@ -90,7 +90,7 @@ function CatBar({ all, value, onPick, watch }: { all: Sku[]; value: string; onPi
   const groups: [string, string, Sku[]][] = [
     ['', 'All markets', all],
     ...(watch ? ([['Watching', 'Watchlist', all.filter((s) => watch.includes(s.sku))]] as [string, string, Sku[]][]) : []),
-    ...categories.map((c) => [c, c, all.filter((s) => categoryOf(s.name) === c)] as [string, string, Sku[]]).filter(([, , l]) => l.length),
+    ...[...categories, 'Other'].map((c) => [c, c, all.filter((s) => categoryOf(s.name) === c)] as [string, string, Sku[]]).filter(([, , l]) => l.length),
   ]
   return (
     <nav className="catbar" aria-label="Filter by category">
@@ -418,7 +418,7 @@ export function Discover({ account }: { account: Acct }) {
           <span>
             <b>{cardTitle(s.name)}</b>
             <small>
-              {parseName(s.name).grader} {parseName(s.name).grade} · {catalogOf(s.name)?.set.replace(' · ', ' ')}
+              {cardSub(s.name)}
               {owned(s) > 0 ? <em className="own"> · You own {owned(s)}</em> : null}
             </small>
           </span>
@@ -553,7 +553,7 @@ export function Compare() {
     ['Grade', (s) => (parseName(s.name).grade ? `${parseName(s.name).grader} ${parseName(s.name).grade}` : undefined)],
     ['Set', (s) => set(s)?.[0]],
     ['Year', (s) => set(s)?.[1]],
-    ['Category', (s) => (catalogOf(s.name) ? categoryOf(s.name) : undefined)],
+    ['Category', (s) => categoryOf(s.name)],
     ['Ask', (s) => (s.ask ? usd(s.ask) : hasMarket(s) ? 'No sellers' : 'Opening soon')],
     ['Best offer', (s) => (s.bid ? usd(s.bid) : hasMarket(s) ? 'No offers' : undefined)],
     ['Last sale', (s) => (s.last ? usd(s.last) : undefined)],

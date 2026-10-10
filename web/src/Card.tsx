@@ -138,7 +138,7 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
   const fills: Fill[] = h.data?.fills ?? []
   const trades = fills.map((f) => ({ t: f.t, price: cents(f.price), size: BigInt(f.size), hash: f.hash }))
   const lastTrade = trades.at(-1)
-  const sibs = all.filter((x) => catalogOf(x.name)?.title === c?.title).sort((a, b) => gradeOf(b) - gradeOf(a))
+  const sibs = all.filter((x) => parseName(x.name).title === parseName(s.name).title).sort((a, b) => gradeOf(b) - gradeOf(a))
   const hold = port.data?.holdings.find((x) => x.s.sku === sku)
   const funds: Funds | undefined = port.data && { ma: port.data.ma, cashRaw: port.data.cashRaw, exCashRaw: port.data.exCashRaw, wallet: hold?.wallet ?? 0n, onBook: hold?.onBook ?? 0n, gas: port.data.gas }
   const available = funds ? funds.cashRaw + funds.exCashRaw : undefined
