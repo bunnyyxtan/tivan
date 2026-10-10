@@ -3,7 +3,7 @@
 import { Args, Flags } from '@oclif/core'
 import { PluginCommand, type CommandIO } from '@metamask/agent-wallet/plugin'
 import type { Address } from 'viem'
-import { CHAIN_ID, bookAbi, findCard, marketFor, pub, toCents, ZERO } from '../../tivan.js'
+import { CHAIN_ID, bookAbi, findCard, live, marketFor, pub, toCents, ZERO } from '../../tivan.js'
 
 type Result = { card: string; price: number; size: number; market: Address; hash: string; status: string }
 
@@ -26,6 +26,11 @@ export default class TivanBuy extends PluginCommand<Result> {
 
     const { market } = await marketFor(pub(), card.spec, card.grade)
     if (market === ZERO) throw new Error(`${card.id} has no market yet`)
+    // Orders are post-only, so the agent can rest a bid but never take the ask. Kuru reverts a crossing one with
+    // PostOnlyError; catch it here, before the wallet prompts, with the price that would have worked.
+    const [, ask] = await pub().readContract({ address: market, abi: bookAbi, functionName: 'bestBidAsk' })
+    if (live(ask) && BigInt(cents) * 10n ** 16n >= ask)
+      throw new Error(`$${(cents / 100).toFixed(2)} is at or above the ask of $${(Number(ask) / 1e18).toFixed(2)}; this command only rests bids, so bid below the ask`)
 
     const submit = await this.ctx.walletExecutor(io, this.pluginCommandId)
     const result = await submit(

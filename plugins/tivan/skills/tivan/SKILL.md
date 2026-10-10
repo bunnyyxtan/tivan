@@ -56,7 +56,9 @@ mm tivan buy WAGNER3 --price 640000 --size 1
   fractional sizes.
 
 This places a resting limit order, not a market buy. A bid below the ask sits on the book
-until someone sells into it. To fill immediately, bid at or above the current ask.
+until someone sells into it. Orders are post-only: a bid at or above the current ask is refused
+before anything is signed, so always bid below the ask. To buy straight away, tell the user to
+take the ask in the Tivan app.
 
 ## How to use this well
 
