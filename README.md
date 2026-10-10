@@ -60,7 +60,7 @@ flowchart LR
 - **Addresses.** Monad testnet (10143), where everything runs: vault `0x998a3116dc9AaDb98AF27B31BeC93441E1991a12`. Monad mainnet (143), vault only, no markets: `0x5ad7d5e06df36415c6f3fA48299Bf92ed921859a`. Transaction hashes for the vaulting, listing, trading and redeeming runs are in [docs/DEPLOYMENTS.md](docs/DEPLOYMENTS.md).
 - **Verify it yourself.** Every receipt in the app links to the transaction on the Monad explorer.
 - **Kuru.** How Tivan brings graded cards to Kuru as a new asset class, with issuance, redemption, custody, liquidity and the roadmap: [docs/kuru-bounties.md](docs/kuru-bounties.md).
-- **Agents.** [`plugins/tivan`](plugins/tivan) is a MetaMask Agent Wallet plugin: `mm tivan markets` reads every Kuru book over a public RPC with no capability at all, and `mm tivan buy CHZ10 --price 4800` rests a bid through the Agent Wallet executor, so its signing, policy and MFA apply unchanged. The plugin holds no keys.
+- **Agents.** [`plugins/tivan`](plugins/tivan) is a MetaMask Agent Wallet plugin: `mm tivan markets` reads every Kuru book over a public RPC, `mm tivan orders <address>` shows what is still resting (from the Envio indexer, re-checked on the book), and `mm tivan buy CHZ10 --price 4800` rests a bid through the Agent Wallet executor, so its signing, policy and MFA apply unchanged. The two reads need no capability at all, and the plugin holds no keys.
 - **Chainlink CRE, Mera and Envio.** How each is used, with measured runs: [docs/sponsor-bounties.md](docs/sponsor-bounties.md).
 
 ## Architecture
@@ -103,7 +103,7 @@ attestor/    Node relay: attest, custody, testnet gas drip, cert lookup
 cre/         Chainlink CRE workflow and demo registry fixtures
 indexer/     Envio indexer: SKUs, trades, orders
 web/         React app (markets, trading, collection, vault, league)
-plugins/     MetaMask Agent Wallet plugin: read every book, rest a bid
+plugins/     MetaMask Agent Wallet plugin: read every book, see open orders, rest a bid
 scripts/     Testnet market maker
 docs/        Deployments, bounty write-ups and the mainnet listing record
 brand/       Logo assets

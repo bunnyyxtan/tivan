@@ -22,4 +22,10 @@ assert.equal(findCard('chz10')?.spec, 4n, 'card ids are case-insensitive')
 assert.equal(findCard('nope'), undefined)
 assert.equal(new Set(CARDS.map((c) => c.id)).size, CARDS.length, 'card ids are unique')
 
+// `mm tivan orders` names a book from the indexer and finds its short id by the same label the vault lists,
+// `PSA <grade> <name>`. If a card's name drifts from the on-chain name, the id column silently goes blank.
+const label = (c) => `PSA ${c.grade} ${c.name}`
+assert.equal(new Set(CARDS.map(label)).size, CARDS.length, 'one label per card')
+assert.equal(CARDS.find((c) => label(c) === 'PSA 10 Base Set Charizard Holo')?.id, 'CHZ10')
+assert.equal(CARDS.find((c) => label(c) === 'PSA 9 Base Set Charizard Holo')?.id, 'CHZ9', 'grade is part of the label')
 console.log(`ok — ${CARDS.length} cards, sku and unit maths check out`)

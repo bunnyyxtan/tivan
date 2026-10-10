@@ -14,6 +14,15 @@ Wallet — the plugin holds no keys and never bypasses signing, policy or MFA.
 
 ## Commands
 
+### `mm tivan orders <address>`
+
+Shows what an address still has resting on Tivan's books. Orders come from Tivan's Envio
+indexer and each one is re-checked on the book with `s_orders`, so a filled or cancelled order
+never shows. No wallet capability, no signing, no cost.
+
+Use it after a bid to confirm the order rested, and whenever the user asks what they have open.
+The address is required: ask for it rather than guessing.
+
 ### `mm tivan markets`
 
 Lists all 19 markets with their best bid and ask, read live from the Kuru books on Monad

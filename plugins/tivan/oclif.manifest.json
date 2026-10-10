@@ -175,6 +175,89 @@
         "tivan",
         "markets.js"
       ]
+    },
+    "tivan:orders": {
+      "aliases": [],
+      "args": {
+        "address": {
+          "description": "The account to look up, 0x…",
+          "name": "address",
+          "required": true
+        }
+      },
+      "description": "Show the orders an address still has resting on Tivan markets",
+      "flags": {
+        "format": {
+          "char": "f",
+          "description": "Output format: text | json | toon (defaults to text in TTY, json when piped)",
+          "name": "format",
+          "hasDynamicHelp": false,
+          "multiple": false,
+          "options": [
+            "text",
+            "json",
+            "toon"
+          ],
+          "type": "option"
+        },
+        "json": {
+          "description": "Shorthand for --format=json",
+          "name": "json",
+          "allowNo": false,
+          "type": "boolean"
+        },
+        "toon": {
+          "description": "Shorthand for --format=toon",
+          "name": "toon",
+          "allowNo": false,
+          "type": "boolean"
+        },
+        "verbose": {
+          "char": "v",
+          "description": "Show debug logs on stderr. Use this for troubleshooting",
+          "name": "verbose",
+          "allowNo": false,
+          "type": "boolean"
+        }
+      },
+      "hasDynamicHelp": false,
+      "hiddenAliases": [],
+      "id": "tivan:orders",
+      "pluginAlias": "mm-plugin-tivan",
+      "pluginName": "mm-plugin-tivan",
+      "pluginType": "core",
+      "strict": true,
+      "enableJsonFlag": false,
+      "requiresAuth": true,
+      "requiresInit": true,
+      "requiresFees": false,
+      "byokPasswordFlags": {
+        "password": {
+          "description": "Password to unlock the BYOK mnemonic (BYOK mode only)",
+          "env": "MM_PASSWORD",
+          "input": [],
+          "multiple": false,
+          "type": "option"
+        }
+      },
+      "walletTimeoutFlags": {
+        "wallet-timeout": {
+          "description": "Seconds to wait per wallet job (MFA/signing), max 600; overrides config walletTimeoutSeconds",
+          "min": 1,
+          "max": 600,
+          "input": [],
+          "multiple": false,
+          "type": "option"
+        }
+      },
+      "STRUCTURED_FORMATS": {},
+      "isESM": true,
+      "relativePath": [
+        "dist",
+        "commands",
+        "tivan",
+        "orders.js"
+      ]
     }
   },
   "version": "0.1.0"

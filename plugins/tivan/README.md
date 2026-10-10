@@ -13,6 +13,7 @@ transaction signed by the Agent Wallet.
 | Command | Capability | What it does |
 |---|---|---|
 | `mm tivan markets` | none | All 19 markets with live best bid and ask, straight from the Kuru books |
+| `mm tivan orders <address>` | none | That address's resting orders, from Tivan's Envio indexer, each re-checked on the book |
 | `mm tivan buy <card> --price <dollars>` | `wallet-submit` | Rests a bid on that card's book |
 
 ```console
@@ -24,7 +25,15 @@ PIKA10    PSA 10 Base Set Pikachu Red Cheeks    bid    $1,300.00  ask    $1,550.
 
 $ mm tivan buy CHZ10 --price 4800
 bid 1 x CHZ10 (PSA 10 Base Set Charizard Holo) at $4800.00 — 0x…
+
+$ mm tivan orders 0x9037a6733a9bd1641357ae5a12338378d3977911
+CHZ10     ask  1 x    $5,040.32  PSA 10 Base Set Charizard Holo  (order 12)
+CHZ9      bid  1 x      $442.84  PSA 9 Base Set Charizard Holo   (order 14)
 ```
+
+`orders` reads Tivan's Envio indexer for the orders an address created, then calls `s_orders`
+on each book to drop the ones already filled or cancelled, so what it prints is what is still
+resting.
 
 `--price` is dollars per card. `--size` is a whole number of cards (default 1); cards are
 indivisible.

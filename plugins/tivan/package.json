@@ -38,6 +38,11 @@
         "dataAccess": []
       },
       {
+        "id": "tivan:orders",
+        "capabilities": [],
+        "dataAccess": []
+      },
+      {
         "id": "tivan:buy",
         "capabilities": [
           "wallet-submit"
