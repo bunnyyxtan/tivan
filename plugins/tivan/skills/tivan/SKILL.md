@@ -9,7 +9,7 @@ Every graded slab in Tivan's vault is tokenised one-for-one and trades on **its 
 order book**. A card and a grade together make a market: PSA 10 Charizard and PSA 9
 Charizard are two separate books with separate prices.
 
-This plugin gives the Agent Wallet two commands. Every transaction is signed by the Agent
+This plugin gives the Agent Wallet three commands. Every transaction is signed by the Agent
 Wallet — the plugin holds no keys and never bypasses signing, policy or MFA.
 
 ## Commands
@@ -67,9 +67,8 @@ take the ask in the Tivan app.
    ask is, then let them confirm. A bid is real money and the Agent Wallet will ask them to sign.
 3. **Respect the grade.** "Charizard" is ambiguous — `CHZ10` and `CHZ9` differ by about 10x in
    price. Ask which grade if the user hasn't said.
-4. **Sanity-check the price.** A bid far above the ask overpays; the user almost certainly meant
-   something near the ask. A bid far below it will simply never fill, which is fine if they
-   intended a lowball, but say so.
+4. **Sanity-check the price.** A bid at or above the ask is refused, so suggest one just under it.
+   A bid far below it will simply never fill, which is fine if they intended a lowball, but say so.
 5. **Cash must already be in the Kuru MarginAccount.** The plugin places orders; it does not move
    funds. If a bid reverts for want of margin, tell the user to fund their account in the Tivan
    app at https://tivan.store rather than trying to work around it.
