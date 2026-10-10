@@ -6,8 +6,8 @@ one founder, who will keep building it after the hackathon.
 
 What is live today, stated plainly: Tivan runs on Monad testnet with 19 card-and-grade markets, each with its own Kuru
 order book. Custody and the certificate check are simulated on testnet, and testnet prices come from our own market-maker
-bot. The mainnet vault is deployed, and four demo markets wait for Kuru to create their books (Kuru's router only lets its
-own team create markets on mainnet).
+bot. A vault with four demo tokens is also deployed on mainnet, with no books: Kuru told us on 10 October 2026 that they do
+not deploy markets on mainnet for security reasons, so Tivan is a testnet product for this submission.
 
 ---
 
@@ -168,13 +168,13 @@ The founder will keep building Tivan full-time after Metropolis.
 
 | When | What |
 |---|---|
-| October to November 2026 | Mainnet markets with Kuru for the four demo cards; a real-user testing round; PSA registry API access; the CRE workflow on a live oracle network |
+| October to November 2026 | A real-user testing round on testnet; PSA registry API access; the CRE workflow on a live oracle network; a mainnet path agreed with Kuru |
 | By end of 2026 | Custody agreement signed (PSA Vault first); legal opinion; first 20 real markets with seed inventory; redemption with identity checks; card on-ramp |
 | Early 2027 | Dealer programme; installable mobile app; more graders (BGS, CGC, SGC); funded Kuru pools; a trading API for market makers |
 | Mid 2027 | Index markets (baskets of cards); regional launches with local payment methods; a public proof-of-reserves dashboard |
 
 What we would like from Kuru:
-- listing the mainnet markets (the parameters are tested on a mainnet fork and written down in
+- a route to mainnet markets when Kuru is ready (the parameters are tested on a mainnet fork and written down in
   [docs/mainnet-markets.md](mainnet-markets.md));
 - liquidity introductions;
 - advice on market making for high-value, low-volume assets.

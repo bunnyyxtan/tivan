@@ -1,5 +1,9 @@
 # Mainnet market listing
 
+> **Status, 10 October 2026: this is not happening.** Kuru told us they do not deploy markets on Monad mainnet for
+> security reasons, and offered to support our testnet markets instead. Tivan therefore runs on testnet only. This
+> document stays as the record of the listing path and the parameters, which are dry-run on a mainnet fork.
+
 Kuru restricts `Router.deployProxy` to its owner on Monad mainnet, so the mainnet `SlabVault` lists each SKU token with
 `market == 0x0`. Once Kuru deploys a USDC market for a token, anyone attaches it with `SlabVault.linkMarket(sku, market)`.
 The vault accepts the market only if `Router.verifiedMarket` reports the SKU token as base and the vault's USDC as quote.

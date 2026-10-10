@@ -116,12 +116,14 @@ RPC `https://rpc.monad.xyz`.
 `attestor` = `custodian` = the deployer key (`MAINNET_DEPLOYER_ADDR` in `.env`). USDC, not AUSD: Kuru's official
 MON-AUSD book is empty while MON-USDC is liquid.
 
-**Markets pending Kuru listing.** Kuru mainnet market deployment is owner-gated: `Router.deployProxy` reverts
+**No mainnet markets.** Kuru told us on 10 October 2026 that they do not deploy markets on Monad mainnet for security
+reasons, and offered testnet support instead, so this vault stays a deploy-path record and nothing trades on it. The
+mechanism, for the record: Kuru mainnet market deployment is owner-gated, `Router.deployProxy` reverts
 `Unauthorized` (`0x82b42900`) for anyone but Kuru's owner (on testnet it is permissionless). `SlabVault._list` therefore
 try/catches `deployProxy`, so each new SKU gets its `SlabToken` with `market == 0x0`. Once Kuru deploys a USDC market for
 a SKU token, anyone calls `SlabVault.linkMarket(sku, market)`; it checks `Router.verifiedMarket(market)` (base = the SKU
-token, quote = the vault's USDC) and emits `MarketLinked(sku, market)`. The request to Kuru, with exact parameters, is
-in [mainnet-markets.md](mainnet-markets.md).
+token, quote = the vault's USDC) and emits `MarketLinked(sku, market)`. The parameters we would have used are in
+[mainnet-markets.md](mainnet-markets.md).
 
 **DEMO SKUs.** Four SKUs, 1 token each, held by the deployer. There are **no physical cards** behind them: every token
 name starts with "DEMO", and the web app labels them as demo listings.

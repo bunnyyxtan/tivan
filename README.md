@@ -15,8 +15,9 @@ under a second. Holders can redeem the physical slab at any time.
   <img src="docs/screenshots/card-desktop-light.jpg" alt="Card page, desktop, light theme" width="49%">
 </p>
 
-Built for [Monad Metropolis](https://hackathon.monad.xyz). Running on Monad testnet; the mainnet vault is deployed with
-demo tokens only. Addresses and transaction hashes are in [docs/DEPLOYMENTS.md](docs/DEPLOYMENTS.md).
+Built for [Monad Metropolis](https://hackathon.monad.xyz). Tivan runs on Monad testnet. A vault with four DEMO tokens
+is also deployed on mainnet, but it has no order books: Kuru told us on 10 October 2026 that they do not deploy markets
+on mainnet for security reasons. Addresses and transaction hashes are in [docs/DEPLOYMENTS.md](docs/DEPLOYMENTS.md).
 
 ## Why
 
@@ -31,8 +32,9 @@ share one fungible token and one order book, which gives a live bid, a live ask 
    card and grade from the registry response, never from the user, then calls `SlabVault.attest`. The same check is
    implemented as a Chainlink CRE workflow in [`cre/`](cre).
 2. **List.** The first attest of a new card and grade deploys its `SlabToken` (0 decimals) and a Kuru order book through
-   `Router.deployProxy`. On Kuru mainnet that call is owner-gated, so the vault lists the token with no market and
-   anyone can attach the book later with `linkMarket` (see [docs/mainnet-markets.md](docs/mainnet-markets.md)).
+   `Router.deployProxy`, which is permissionless on testnet. On mainnet it is owner-gated and Kuru does not deploy
+   markets there, so the mainnet vault lists a token with no market; `linkMarket` can attach a book the day one exists
+   (see [docs/mainnet-markets.md](docs/mainnet-markets.md)).
 3. **Custody.** The custodian confirms receipt of the slab with `confirmCustody`, which mints one token to the depositor.
 4. **Trade.** Kuru's limit order book handles limit orders, market orders and resting bids in USDC. Fees are 0%.
 5. **Redeem.** `redeem(sku, shippingHash)` burns one token and releases the oldest vaulted copy of that card and
@@ -55,7 +57,7 @@ flowchart LR
 
 - **Why Monad.** One order book per card only works if a trade is cheap and final within about a second. Monad's fast finality and low fees make a real on-chain book per card practical, where it would be too slow or too costly elsewhere.
 - **What runs on it.** `SlabVault` mints one whole-unit ERC-20 per (card, grade) and deploys each card's [Kuru](https://kuru.io) order book through the Kuru router. Buys, sells, offers, cancels and redemptions are all Monad transactions. Accounts are passkey wallets derived with [Mera](https://docs.monad.xyz/guides/mera).
-- **Addresses.** Monad testnet (10143): vault `0x998a3116dc9AaDb98AF27B31BeC93441E1991a12`. Monad mainnet (143): vault `0x5ad7d5e06df36415c6f3fA48299Bf92ed921859a`. Transaction hashes for the vaulting, listing, trading and redeeming runs are in [docs/DEPLOYMENTS.md](docs/DEPLOYMENTS.md).
+- **Addresses.** Monad testnet (10143), where everything runs: vault `0x998a3116dc9AaDb98AF27B31BeC93441E1991a12`. Monad mainnet (143), vault only, no markets: `0x5ad7d5e06df36415c6f3fA48299Bf92ed921859a`. Transaction hashes for the vaulting, listing, trading and redeeming runs are in [docs/DEPLOYMENTS.md](docs/DEPLOYMENTS.md).
 - **Verify it yourself.** Every receipt in the app links to the transaction on the Monad explorer.
 - **Kuru.** How Tivan brings graded cards to Kuru as a new asset class, with issuance, redemption, custody, liquidity and the roadmap: [docs/kuru-bounties.md](docs/kuru-bounties.md).
 - **Agents.** [`plugins/tivan`](plugins/tivan) is a MetaMask Agent Wallet plugin: `mm tivan markets` reads every Kuru book over a public RPC with no capability at all, and `mm tivan buy CHZ10 --price 4800` rests a bid through the Agent Wallet executor, so its signing, policy and MFA apply unchanged. The plugin holds no keys.
@@ -85,7 +87,7 @@ ran and tested the work. Every claim in the app and docs is checked against the 
 
 | Layer | Choice |
 |---|---|
-| Chain | Monad (testnet 10143, mainnet 143) |
+| Chain | Monad testnet (10143); a vault is also deployed on mainnet (143), without markets |
 | Contracts | Solidity, Foundry, OpenZeppelin |
 | Order books | Kuru CLOB, one market per card and grade |
 | Grade verification | Chainlink CRE workflow, with a Node relay for the demo |
@@ -103,7 +105,7 @@ indexer/     Envio indexer: SKUs, trades, orders
 web/         React app (markets, trading, collection, vault, league)
 plugins/     MetaMask Agent Wallet plugin: read every book, rest a bid
 scripts/     Testnet market maker
-docs/        Deployments and mainnet market parameters
+docs/        Deployments, bounty write-ups and the mainnet listing record
 brand/       Logo assets
 ```
 
@@ -179,7 +181,7 @@ MAKER_KEY=0x... node maker.mjs --once   # one pass
 | Network | SlabVault |
 |---|---|
 | Monad testnet | `0x998a3116dc9AaDb98AF27B31BeC93441E1991a12` |
-| Monad mainnet | `0x5ad7d5e06df36415c6f3fA48299Bf92ed921859a` (demo tokens, markets pending Kuru) |
+| Monad mainnet | `0x5ad7d5e06df36415c6f3fA48299Bf92ed921859a` (DEMO tokens, vault only, no order books) |
 
 ## Limitations
 
@@ -193,7 +195,8 @@ MAKER_KEY=0x... node maker.mjs --once   # one pass
   workflow compiles and passes its tests.
 - Tokens are whole cards. Within a grade, copies differ in centering and eye appeal; FIFO redemption and a curated list
   of liquid cards limit that, they do not remove it.
-- Mainnet order books do not exist until Kuru deploys them. Trading is verified on testnet only.
+- There are no mainnet order books. Kuru deploys mainnet markets itself and told us on 10 October 2026 that they will
+  not do so for security reasons, so trading runs and is verified on testnet only.
 - The contracts have not been audited.
 
 ## Notes
