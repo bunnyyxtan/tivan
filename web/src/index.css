@@ -45,7 +45,6 @@
   --chart-fill-bottom: rgba(142, 182, 155, 0);
   --shadow-overlay: 0 24px 64px rgba(2, 14, 14, 0.55), 0 2px 8px rgba(2, 14, 14, 0.4);
   --stage: radial-gradient(120% 90% at 50% 0%, #2b5f51 0%, #1a4038 50%, #123630 100%);
-  --brand-gradient: linear-gradient(135deg, #235347 0%, #8eb69b 100%);
   /* the PSA label drawn on a slab depicts a physical object: a white label with a red rule */
   --slab-strip: #b3261e;
   --slab-label: #fbfaf7;
@@ -119,7 +118,6 @@
   --chart-fill-bottom: rgba(35, 83, 71, 0);
   --shadow-overlay: 0 24px 64px rgba(5, 31, 32, 0.16), 0 2px 8px rgba(5, 31, 32, 0.08);
   --stage: radial-gradient(120% 90% at 50% 0%, #ffffff 0%, #eaf6ec 55%, #daf1de 100%);
-  --brand-gradient: linear-gradient(135deg, #0b2b26 0%, #235347 100%);
 }
 
 /* ===================================================================== base */
@@ -181,7 +179,7 @@ html[data-motion='off'] *, html[data-motion='off'] *::before, html[data-motion='
 .side { position: sticky; top: 0; height: 100dvh; display: flex; flex-direction: column; gap: 8px; padding: 14px 12px 12px; border-right: 1px solid var(--line); background: var(--canvas); }
 .side-top { display: flex; align-items: center; justify-content: space-between; height: 40px; padding: 0 4px 0 6px; margin-bottom: 12px; }
 .brand { display: inline-flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 24px; font-weight: 500; letter-spacing: -0.01em; color: var(--ink); }
-.brand-mark { display: grid; place-items: center; width: 30px; height: 30px; flex-shrink: 0; border-radius: 9px; background: var(--brand-gradient); color: var(--brand-ink); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25); }
+.brand-mark { display: grid; place-items: center; width: 30px; height: 30px; flex-shrink: 0; border-radius: 9px; background: #051f20; /* the logo tile, same in both themes */ box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25); }
 .side-fold { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 6px; color: var(--ink-3); transform: rotate(180deg); }
 .side-fold:hover { color: var(--ink); background: var(--surface-2); }
 .side-nav { display: flex; flex-direction: column; gap: 2px; }
@@ -1489,7 +1487,8 @@ button.method:disabled { opacity: 0.6; cursor: not-allowed; }
 .lp-nav { position: sticky; top: 0; z-index: 30; background: color-mix(in srgb, var(--lp-dark) 92%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid #143a33; }
 .lp-nav-in { display: flex; align-items: center; gap: 22px; height: 64px; }
 .lp-brand { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-display); font-size: 26px; font-weight: 600; color: var(--lp-mint); letter-spacing: -0.01em; }
-.lp-brand svg { transform: translateY(1px); }
+/* Centre the mark on the capitals, as in brand/logo-wordmark.svg, not on the line box (which sat it 0.18em low). */
+.lp-brand svg { transform: translateY(-0.13em); }
 .lp-nav nav { display: flex; gap: 22px; margin-left: 8px; }
 .lp-nav nav a { position: relative; font: 600 12px/1 var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: #c3dfca; }
 .lp-nav nav a::after { content: ''; position: absolute; left: 0; right: 0; bottom: -6px; height: 2px; border-radius: 2px; background: var(--lp-green); transform: scaleX(0); transition: transform 0.25s var(--lp-ease); }
