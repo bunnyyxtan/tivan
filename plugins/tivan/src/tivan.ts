@@ -3,7 +3,6 @@
 import { createPublicClient, http, parseAbi, type Address, type PublicClient } from 'viem'
 import { monadTestnet } from 'viem/chains'
 
-export const VAULT: Address = '0x998a3116dc9AaDb98AF27B31BeC93441E1991a12'
 export const CHAIN_ID = monadTestnet.id
 
 export const bookAbi = parseAbi(['function bestBidAsk() view returns (uint256,uint256)', 'function addBuyOrder(uint32,uint96,bool)'])
