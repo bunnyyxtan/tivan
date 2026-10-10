@@ -8,7 +8,7 @@
 | TestUSD (testnet stand-in for USDC) | `0x8C43e58dFAcF7Ee589b45EB7d0C61559F7413578` |
 | SlabToken: PSA 10 Base Set Charizard Holo | `0xbe11cB16ea59C3B1ff829Aa1C4C494b0d965aEa8` |
 | Kuru market for that SKU (deployed by SlabVault) | `0x21E6D98767bbFc5FC13aFA80c67d87e34f3d6648` |
-| GradeOracle (Chainlink CRE receiver; simulation forwarder `0xB9F79d863261869B234c481D1f9A7af84AeAd192`) | `0x63cbb0c3200ea053c3d487b31f4f3aa0323db3a0` (tx `0xa3b6e4c6536e035ddcc28b66041523c7e530905d9bb127062a6266af07c78642`, block 69504015) |
+| GradeOracle (Chainlink CRE receiver; simulation forwarder `0xB9F79d863261869B234c481D1f9A7af84AeAd192`) | `0x63cbb0c3200ea053c3d487b31f4f3aa0323db3a0` (tx `0xa3b6e4c6536e035ddcc28b66041523c7e530905d9bb127062a6266af07c78642`, block 69504015), source verified on [Sourcify](https://repo.sourcify.dev/10143/0x63cbb0c3200ea053c3d487b31f4f3aa0323db3a0) |
 | SealedBox (private-vault ciphertext, keeper-signed writes) | `0x6f2e62cb9fd52c23348d8a26140cb6eb2aaf61b9` (tx `0x6e070572934744390613e81a94f5efaadc49b88ef8de2bb4ea6a8bca0303ad80`) |
 
 End-to-end run (cert 81234567):

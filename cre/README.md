@@ -67,6 +67,22 @@ cre workflow simulate ./slab-attest -T testnet-settings --non-interactive --trig
 | The write on Monad testnet | tx `0x33464a62…8dd3` succeeded in block 69517349, sent to the simulation forwarder, which called GradeOracle. `GradeVerified(certId 81234569, specId 4, grade 10, holder 0x9037…7911, "PSA 10 Base Set Charizard Holo", "CHZ10")`; `grades(81234569)` now returns spec 4, grade 10 |
 | The attestor lists the cert from the CRE record | `POST /attest` on the live attestor returned `"verifiedBy":"chainlink-cre"`, SlabVault.attest tx `0x7c8de09c2817f7d0483859c64236d6c7904545de7af15bd73624bac3d8bfc18a` |
 
+## Recorded run (2026-10-10, demo video)
+
+Video: https://youtu.be/KSa6NWY8uYc. Smart App Control was enforced on the recording machine, so the wasm came from the
+`Build CRE wasm` workflow and was passed with `--wasm`. The payload is [`slab-attest/payload.json`](slab-attest/payload.json)
+and the relay call body is [`attest.json`](attest.json), cert 90049997, a testnet restock cert for Alpha Black Lotus PSA 9.
+
+| Step | Result |
+|---|---|
+| `cre workflow simulate ./slab-attest -T testnet-settings --non-interactive --trigger-index 0 --http-payload ./slab-attest/payload.json --wasm <abs>\slab-attest\binary.wasm --broadcast` | `verified cert 90049997: spec 1993232 grade 9`, report written in tx `0x93020b5601d6d5fbb2318e8cf0c5a9fe4486038b68c6995f5569d4bf510985f4` (block 69802995); GradeOracle emitted `GradeVerified` and the forwarder's `ReportProcessed` has `result: true` |
+| `curl.exe -s -X POST https://tivan-attestor.onrender.com/attest -H "content-type: application/json" -d "@attest.json"` | `"verifiedBy":"chainlink-cre"`, SlabVault.attest tx `0xacedb4dd2b47413d7390e3f5e9909c25750cf7783746db410786d9e2c43cae12` |
+
+Each cert can be written once. A second simulate for the same cert makes the forwarder report `result: false`, and a
+second attest reverts with `cert known`; use a fresh cert from 90040000 to 90049999 for another run.
+
+GradeOracle is verified on Sourcify (runtime match, optimizer on, 200 runs).
+
 ## Limits
 
 - The HTTP trigger is `trigger({})` (any caller), fine for simulation; a deployed workflow must set `authorizedKeys`.
