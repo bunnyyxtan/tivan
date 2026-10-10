@@ -1,0 +1,27 @@
+# Builds the CRE workflow to WASM on Linux and uploads it as an artifact.
+# Windows Smart App Control blocks the unsigned javy.exe the compiler shells out to, so the wasm is
+# built here instead and fed to `cre workflow simulate --wasm <path>` locally.
+name: Build CRE wasm
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - run: bun install --frozen-lockfile
+        working-directory: cre/slab-attest
+      - run: bun test
+        working-directory: cre/slab-attest
+      - run: bun x cre-compile ./main.ts ./binary.wasm
+        working-directory: cre/slab-attest
+      - run: sha256sum binary.wasm
+        working-directory: cre/slab-attest
+      - uses: actions/upload-artifact@v4
+        with:
+          name: slab-attest-wasm
+          path: cre/slab-attest/binary.wasm
+          if-no-files-found: error
