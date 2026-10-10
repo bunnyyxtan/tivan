@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from 'react'
 import { catalogOf, categories, categoryOf, net } from './config'
-import { hasMarket, loadSkus, tradedSince, type Sku } from './chain'
+import { hasMarket, loadSkus, peekSkus, tradedSince, type Sku } from './chain'
 import { usePortfolio } from './portfolio'
 import type { Acct } from './App'
 import { Breadcrumbs, CompareTray, DataTable, TableSkeleton, ago, useCompare, useSales, type Col } from './desk'
@@ -8,7 +8,7 @@ import { Delta, Live, MarketTile, PageHead, Spark, Stat, lastSaleAt, pointsFor }
 import { cents, usdC } from './cardParts'
 import { spread } from './logic/orders.ts'
 import { centsToUnits, formatBps, formatUsd } from './logic/money.ts'
-import { setQuery, useQuery, useRestoreScroll, useWide } from './route'
+import { navigate, setQuery, useQuery, useRestoreScroll, useWide } from './route'
 import { Empty, ErrorNote, ItemCardSkeleton, Skeleton } from './States'
 import { askText, gradeOf, lastText, offerText } from './Market'
 import { IconGrid, IconList, IconSearch, IconStar } from './icons'
@@ -90,7 +90,7 @@ function CatBar({ all, value, onPick, watch }: { all: Sku[]; value: string; onPi
   const groups: [string, string, Sku[]][] = [
     ['', 'All markets', all],
     ...(watch ? ([['Watching', 'Watchlist', all.filter((s) => watch.includes(s.sku))]] as [string, string, Sku[]][]) : []),
-    ...[...categories, 'Other'].map((c) => [c, c, all.filter((s) => categoryOf(s.name) === c)] as [string, string, Sku[]]).filter(([, , l]) => l.length),
+    ...[...categories, 'New listings'].map((c) => [c, c, all.filter((s) => categoryOf(s.name) === c)] as [string, string, Sku[]]).filter(([, , l]) => l.length),
   ]
   return (
     <nav className="catbar" aria-label="Filter by category">
@@ -168,7 +168,7 @@ export function Browse({ account }: { account: Acct }) {
   const wide = useWide()
   const sp = useQuery()
   const f = readF(sp)
-  const { data, error, refresh } = usePoll(loadSkus, 8000, [])
+  const { data, error, refresh } = usePoll(loadSkus, 8000, [], peekSkus)
   const { data: port } = usePortfolio(account?.address, true)
   const watch = useWatch()
   const sales = useSales()
@@ -198,7 +198,7 @@ export function Browse({ account }: { account: Acct }) {
       label: 'Card',
       sort: 'name',
       cell: (s, tab) => (
-        <a className="tcard" href={`#/card/${s.sku}`} tabIndex={tab}>
+        <a className="tcard" href={`/card/${s.sku}`} tabIndex={tab}>
           <Slab name={s.name} size="xs" vt={`card-${s.sku}`} />
           <span>
             <b>{cardTitle(s.name)}</b>
@@ -298,14 +298,14 @@ export function Browse({ account }: { account: Acct }) {
       ))}
     </div>
   ) : (
-    <DataTable cols={cols} rows={list} rowKey={(s) => s.sku} label="Cards" sort={f.sort} onSort={onSort} onOpen={(s) => (location.hash = `#/card/${s.sku}`)} onRowKey={toggleCmp} />
+    <DataTable cols={cols} rows={list} rowKey={(s) => s.sku} label="Cards" sort={f.sort} onSort={onSort} onOpen={(s) => navigate(`/card/${s.sku}`)} onRowKey={toggleCmp} />
   )
   return (
     <>
       <PageHead
         title={f.cat === 'Watching' ? 'Watchlist' : f.cat || 'Browse'}
         sub={data ? `${all.length} graded cards, each with its own order book` : 'Reading the catalogue'}
-        crumbs={f.cat ? <Breadcrumbs items={[['Browse', '#/browse'], [f.cat === 'Watching' ? 'Watchlist' : f.cat]]} /> : undefined}
+        crumbs={f.cat ? <Breadcrumbs items={[['Browse', '/browse'], [f.cat === 'Watching' ? 'Watchlist' : f.cat]]} /> : undefined}
       />
       {data && <CatBar all={all} value={f.cat} watch={watch.list} onPick={(k) => setQuery({ cat: k })} />}
       <div className="browse">
@@ -364,7 +364,10 @@ type View = 'all' | 'trending' | 'movers' | 'recent' | 'watch'
 const VIEWS: [View, string][] = [['all', 'All'], ['trending', 'Trending'], ['movers', 'Top movers'], ['recent', 'Recently traded'], ['watch', 'Watchlist']]
 
 export function Discover({ account }: { account: Acct }) {
-  const { data, error, refresh } = usePoll(async () => ({ skus: await loadSkus(), at: Date.now() }), 8000, [])
+  const { data, error, refresh } = usePoll(async () => ({ skus: await loadSkus(), at: Date.now() }), 8000, [], () => {
+    const skus = peekSkus()
+    return skus && { skus, at: Date.now() }
+  })
   const sales = useSales()
   const { data: port } = usePortfolio(account?.address, true)
   const watch = useWatch()
@@ -413,7 +416,7 @@ export function Discover({ account }: { account: Acct }) {
       key: 'card',
       label: 'Market',
       cell: (s, tab) => (
-        <a className="tcard" href={`#/card/${s.sku}`} tabIndex={tab}>
+        <a className="tcard" href={`/card/${s.sku}`} tabIndex={tab}>
           <Slab name={s.name} size="xs" />
           <span>
             <b>{cardTitle(s.name)}</b>
@@ -436,7 +439,7 @@ export function Discover({ account }: { account: Acct }) {
       label: 'Trade',
       right: true,
       cell: (s, tab) => (
-        <a className="btn xs" tabIndex={tab} href={`#/card/${s.sku}`}>
+        <a className="btn xs" tabIndex={tab} href={`/card/${s.sku}`}>
           {s.ask ? 'Buy' : 'Offer'}
         </a>
       ),
@@ -445,8 +448,8 @@ export function Discover({ account }: { account: Acct }) {
   return (
     <div className="dash">
       <PageHead title="Markets" sub={data ? <>{all.length} markets · {slabs} slabs in the vault · <Live at={data.at} /></> : 'Reading the markets'}>
-        <a className="ghost line md" href="#/browse">Browse all</a>
-        <a className="btn md" href="#/sell">Sell a card</a>
+        <a className="ghost line md" href="/browse">Browse all</a>
+        <a className="btn md" href="/sell">Sell a card</a>
       </PageHead>
 
       {error && !data && <ErrorNote what="Couldn’t load the markets." why={error} next="Check your connection, then try again." onRetry={refresh} />}
@@ -482,7 +485,7 @@ export function Discover({ account }: { account: Acct }) {
             <Empty title={view === 'watch' ? 'Your watchlist is empty' : view === 'movers' ? 'No moves yet' : 'Nothing here yet'} detail={view === 'watch' ? 'Tap the star on any market to follow it here.' : 'Moves appear once a market has traded twice.'} />
           ) : (
             <div className="tscroll">
-              <DataTable cols={cols} rows={rows} rowKey={(s) => s.sku} label="Markets" onOpen={(s) => (location.hash = `#/card/${s.sku}`)} />
+              <DataTable cols={cols} rows={rows} rowKey={(s) => s.sku} label="Markets" onOpen={(s) => navigate(`/card/${s.sku}`)} />
             </div>
           )}
         </section>
@@ -498,7 +501,7 @@ export function Discover({ account }: { account: Acct }) {
               <ol className="feed">
                 {latestPer.map((x) => (
                   <li key={`${x.sku}-${x.t}`}>
-                    <a href={`#/card/${all.find((s) => s.sku.toLowerCase() === x.sku.toLowerCase())?.sku ?? x.sku}`}>
+                    <a href={`/card/${all.find((s) => s.sku.toLowerCase() === x.sku.toLowerCase())?.sku ?? x.sku}`}>
                       <Slab name={x.name} size="xs" />
                       <span className="feed-t"><b>{cardTitle(x.name)}</b><small>{parseName(x.name).grader} {parseName(x.name).grade} · {ago(x.t)}</small></span>
                       <span className="fig">{usdC(cents(x.price))}</span>
@@ -516,7 +519,7 @@ export function Discover({ account }: { account: Acct }) {
               <ol className="feed">
                 {movers.map((s) => (
                   <li key={s.sku}>
-                    <a href={`#/card/${s.sku}`}>
+                    <a href={`/card/${s.sku}`}>
                       <Slab name={s.name} size="xs" />
                       <span className="feed-t"><b>{cardTitle(s.name)}</b><small>{usdC(cents(chg(s)!.prev))} to {usdC(cents(chg(s)!.last))}</small></span>
                       <Delta c={chg(s)} />
@@ -539,7 +542,7 @@ const NA = <span className="na">Information unavailable</span>
 export function Compare() {
   const sp = useQuery()
   const stored = useCompare()
-  const { data, error, refresh } = usePoll(loadSkus, 8000, [])
+  const { data, error, refresh } = usePoll(loadSkus, 8000, [], peekSkus)
   const [diff, setDiff] = useState(false)
   const ids = (sp.get('ids') ?? '').split(',').filter(Boolean)
   const cards = (ids.length ? ids : stored.ids).map((id) => data?.find((s) => s.sku === id)).filter((s): s is Sku => !!s)
@@ -564,11 +567,11 @@ export function Compare() {
   const shown = diff ? rows.filter(([, v]) => new Set(cards.map(v)).size > 1) : rows
   return (
     <>
-      <PageHead title="Compare" sub="Up to four markets side by side" crumbs={<Breadcrumbs items={[['Browse', '#/browse'], ['Compare']]} />} />
+      <PageHead title="Compare" sub="Up to four markets side by side" crumbs={<Breadcrumbs items={[['Browse', '/browse'], ['Compare']]} />} />
       {error && !data && <ErrorNote what="Couldn’t load the cards." why={error} next="Try again." onRetry={refresh} />}
       {!data && !error && <Skeleton h={320} r={12} />}
       {data && cards.length < 2 && (
-        <Empty title="Pick at least two cards to compare" detail="Use Compare on any card in Browse. The tray keeps up to four." action={<a className="ghost line" href="#/browse">Back to Browse</a>} />
+        <Empty title="Pick at least two cards to compare" detail="Use Compare on any card in Browse. The tray keeps up to four." action={<a className="ghost line" href="/browse">Back to Browse</a>} />
       )}
       {cards.length >= 2 && (
         <>
@@ -587,7 +590,7 @@ export function Compare() {
                   </th>
                   {cards.map((s) => (
                     <th key={s.sku} scope="col">
-                      <a href={`#/card/${s.sku}`}>
+                      <a href={`/card/${s.sku}`}>
                         <Slab name={s.name} size="sm" />
                         <b>{cardTitle(s.name)}</b>
                       </a>

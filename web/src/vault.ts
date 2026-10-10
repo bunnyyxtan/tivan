@@ -27,8 +27,6 @@ const enc = new TextEncoder()
 
 /** What the vault carries: the browser-local things that should follow you to any device, and your own notes. */
 export type VaultData = { v: 2; watch: string[]; alerts: { sku: string; kind: string; price?: number }[]; notes: Record<string, string>; savedAt: number }
-export const emptyVault = (): VaultData => ({ v: 2, watch: [], alerts: [], notes: {}, savedAt: 0 })
-
 /** Keys for one visit: held in memory only, dropped when the vault is locked or the page closes. */
 export type VaultKeys = { aes: CryptoKey; locator: Hex; keeper: Hex; keeperAddress: Hex }
 

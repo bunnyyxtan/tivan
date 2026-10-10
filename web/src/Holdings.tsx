@@ -13,7 +13,7 @@ import { centsToUnits, formatBps, formatQty, formatUsd } from './logic/money.ts'
 import { averageBuyUnits, unrealisedPnl } from './logic/orders.ts'
 import { change, valueSeries, type MarketFills } from './logic/portfolioMath.ts'
 import { usePortfolio } from './portfolio'
-import { setQuery, useQuery } from './route'
+import { navigate, setQuery, useQuery } from './route'
 import { ErrorNote, Skeleton } from './States'
 import { IconActivity } from './icons'
 import { Slab, cardSub, cardTitle, usePoll } from './ui'
@@ -74,7 +74,7 @@ export function Portfolio({ account }: { account: LocalAccount }) {
   const share = (v: bigint) => (total > 0n ? Number((v * 10_000n) / total) / 100 : 0)
 
   const cols: Col<Row>[] = [
-    { key: 'card', label: 'Card', cell: (r, t) => <a className="tcard" href={`#/card/${r.h.s.sku}`} tabIndex={t}><Slab name={r.h.s.name} size="xs" /><span><b>{cardTitle(r.h.s.name)}</b><small>{cardSub(r.h.s.name).split(' · ')[0]}{r.h.listed ? ` · ${r.h.listed} listed` : ''}</small></span></a> },
+    { key: 'card', label: 'Card', cell: (r, t) => <a className="tcard" href={`/card/${r.h.s.sku}`} tabIndex={t}><Slab name={r.h.s.name} size="xs" /><span><b>{cardTitle(r.h.s.name)}</b><small>{cardSub(r.h.s.name).split(' · ')[0]}{r.h.listed ? ` · ${r.h.listed} listed` : ''}</small></span></a> },
     { key: 'qty', label: 'Held', right: true, cell: (r) => formatQty(r.qty) },
     { key: 'cost', label: 'Average cost', right: true, cell: (r) => (r.avg ? usd(r.avg.avgUnits, 2) : <span className="na">Not bought here</span>) },
     { key: 'val', label: 'Value', right: true, cell: (r) => (r.value !== undefined ? <b className="fig">{usd(r.value, 2)}</b> : <span className="na">No offers</span>) },
@@ -87,7 +87,7 @@ export function Portfolio({ account }: { account: LocalAccount }) {
     <>
       <PageHead title="Portfolio" sub="Your cards, cash and open offers, valued from the live order books">
         <button className="ghost line md" onClick={openCash}>Add cash</button>
-        <a className="btn md" href="#/browse">Find a card</a>
+        <a className="btn md" href="/browse">Find a card</a>
       </PageHead>
       {error && !data && <ErrorNote what="Couldn’t load your portfolio." why={error} next="Check your connection, then try again." onRetry={refresh} />}
       {!data && !error && <Skeleton h={260} r={16} />}
@@ -113,7 +113,7 @@ export function Portfolio({ account }: { account: LocalAccount }) {
               <div><dt>Cards held</dt><dd>{formatQty(cardCount)}</dd><small>{rows.length} market{rows.length === 1 ? '' : 's'}</small></div>
               <div><dt>Unrealised P&amp;L</dt><dd className={known.length ? (pnlSum >= 0n ? 'up' : 'down') : ''}>{known.length ? usd(pnlSum, 2, true) : '—'}</dd><small>{known.length ? 'At best offer, against your cost' : 'Needs a card bought here'}</small></div>
               <div><dt>Cash available</dt><dd>{usd(available, 2)}</dd><small><button className="linkbtn" onClick={openCash}>Add cash</button></small></div>
-              <div><dt>Open orders</dt><dd>{orders ? Object.values(orders).flat().length : '—'}</dd><small><a className="linkbtn" href="#/activity?tab=open">Manage</a></small></div>
+              <div><dt>Open orders</dt><dd>{orders ? Object.values(orders).flat().length : '—'}</dd><small><a className="linkbtn" href="/activity?tab=open">Manage</a></small></div>
             </dl>
           </section>
           {unmarked > 0 && <p className="fine pf-parts">{unmarked} card{unmarked === 1 ? ' has' : 's have'} no offer, so {unmarked === 1 ? 'it is' : 'they are'} left out of the cards figure.</p>}
@@ -127,11 +127,11 @@ export function Portfolio({ account }: { account: LocalAccount }) {
                     {sample.length > 0 && <span className="catcard-fan pf-fan" aria-hidden>{sample.map((n) => <Slab key={n} name={n} size="sm" />)}</span>}
                     <b>No cards in your portfolio yet</b>
                     <p className="fine">Buy one at the ask, make an offer below it, or check in a slab you own.</p>
-                    <span className="pf-empty-act"><a className="btn md" href="#/browse">Browse markets</a><a className="ghost line md" href="#/vault">Vault a card</a></span>
+                    <span className="pf-empty-act"><a className="btn md" href="/browse">Browse markets</a><a className="ghost line md" href="/vault">Vault a card</a></span>
                   </div>
                 ) : (
                   <>
-                    <div className="pnl-table"><DataTable cols={cols} rows={rows} rowKey={(r) => r.h.s.sku} label="Holdings" onOpen={(r) => (location.hash = `#/card/${r.h.s.sku}`)} /></div>
+                    <div className="pnl-table"><DataTable cols={cols} rows={rows} rowKey={(r) => r.h.s.sku} label="Holdings" onOpen={(r) => navigate(`/card/${r.h.s.sku}`)} /></div>
                     <p className="source">Average cost is the average price of your purchases on that market. Value is quantity times the best offer. Nothing here is a sale.</p>
                   </>
                 )}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { brand, catalog, catalogOf, net } from './config'
-import { explorerAddress, loadSkus, pub, readBook, type FeedItem, type Sku } from './chain'
+import { explorerAddress, loadSkus, peekSkus, pub, readBook, type FeedItem, type Sku } from './chain'
 import { cents, usdC } from './cardParts'
 import { confetti, still } from './celebrate'
 import { ago, useSales } from './desk'
@@ -166,8 +166,8 @@ function Hero({ list, all, fills }: { list: Sku[]; all: Sku[]; fills?: FeedItem[
           </p>
           <p className="lp-lead">Every slab sits in a vault with its own order book. Buy at the ask, name your price, or sell in a tap. Trades settle on {net.chain.name} in about a second.</p>
           <div className="lp-cta">
-            <a className="lp-btn" href="#/markets">Browse markets</a>
-            <a className="lp-btn ghost" href="#/sell">Sell a card</a>
+            <a className="lp-btn" href="/markets">Browse markets</a>
+            <a className="lp-btn ghost" href="/sell">Sell a card</a>
           </div>
           <dl className="lp-stats">
             <div><dt>Markets</dt><dd>{all.length || '—'}</dd></div>
@@ -181,7 +181,7 @@ function Hero({ list, all, fills }: { list: Sku[]; all: Sku[]; fills?: FeedItem[
               <span className="lp-ring" aria-hidden />
               <span className="lp-back b1" aria-hidden><Slab name={at(1).name} size="lg" /></span>
               <span className="lp-back b2" aria-hidden><Slab name={at(-1).name} size="lg" /></span>
-              <a key={s.sku} className="lp-front" href={`#/card/${s.sku}`} aria-label={`${cardTitle(s.name)}, ${gradeLabel(s.name)}, ${price(s)}`}>
+              <a key={s.sku} className="lp-front" href={`/card/${s.sku}`} aria-label={`${cardTitle(s.name)}, ${gradeLabel(s.name)}, ${price(s)}`}>
                 <Holo><Slab name={s.name} size="xl" /></Holo>
               </a>
               <span className="lp-spark" aria-hidden>✦</span>
@@ -275,7 +275,7 @@ function Popular({ list }: { list: Sku[] }) {
           <button className="lp-arrow in prev" onClick={() => step(-1)} aria-label="Scroll back"><IconChevron /></button>
           <div className="lp-track" ref={track} tabIndex={0} aria-label="Popular markets">
             {list.map((s, k) => (
-              <a key={s.sku} className={`lp-pop ${k === mid ? 'on' : ''}`} href={`#/card/${s.sku}`}>
+              <a key={s.sku} className={`lp-pop ${k === mid ? 'on' : ''}`} href={`/card/${s.sku}`}>
                 <span className="lp-pop-art"><Slab name={s.name} size="md" /></span>
                 <b>{cardTitle(s.name)}</b>
                 <small>{gradeLabel(s.name)}</small>
@@ -392,7 +392,7 @@ function Exchange({ list }: { list: Sku[] }) {
           </div>
           <div className="lp-term-foot">
             <span>Read from the order book contract{block ? ` at block ${block.toLocaleString('en-US')}` : ''}. Refreshes every 6 seconds.</span>
-            {s && <a href={`#/card/${s.sku}`}>Trade this card <IconChevron /></a>}
+            {s && <a href={`/card/${s.sku}`}>Trade this card <IconChevron /></a>}
           </div>
         </div>
       </div>
@@ -422,7 +422,7 @@ function Cards({ list }: { list: Sku[] }) {
         <Heading>Popular cards</Heading>
         <div className="lp-grid">
           {list.map((s, k) => (
-            <a key={s.sku} className="lp-card lp-rv" style={{ animationDelay: `${(k % 4) * 60}ms` }} href={`#/card/${s.sku}`}>
+            <a key={s.sku} className="lp-card lp-rv" style={{ animationDelay: `${(k % 4) * 60}ms` }} href={`/card/${s.sku}`}>
               <span className="lp-card-art"><Holo><Slab name={s.name} size="md" /></Holo></span>
               <b>{gradeLabel(s.name).split(' · ')[1] || parseName(s.name).grade}</b>
               <small>{cardTitle(s.name)}</small>
@@ -431,7 +431,7 @@ function Cards({ list }: { list: Sku[] }) {
             </a>
           ))}
         </div>
-        <div className="lp-center"><a className="lp-btn outline" href="#/browse">View all cards</a></div>
+        <div className="lp-center"><a className="lp-btn outline" href="/browse">View all cards</a></div>
       </div>
     </section>
   )
@@ -482,7 +482,7 @@ function Pull({ list }: { list: Sku[] }) {
           </div>
           <div className="lp-cta">
             <button className="lp-btn dark" onClick={pull} disabled={!list.length || phase === 'shuffle'}>{phase === 'shown' ? 'Pull again' : 'Pull a card'}</button>
-            {phase === 'shown' && s && <a className="lp-btn ghost-dark" href={`#/card/${s.sku}`}>View market</a>}
+            {phase === 'shown' && s && <a className="lp-btn ghost-dark" href={`/card/${s.sku}`}>View market</a>}
           </div>
           <p className="lp-pull-fine">A random pick from the live markets, just for fun. Nothing is bought until you review and confirm a trade.</p>
         </div>
@@ -504,8 +504,8 @@ function Cta({ a, b, c }: { a?: Sku; b?: Sku; c?: Sku }) {
           <h2 className="lp-poster md lp-rv">Ready to own your first grail?</h2>
           <p>Sign in with a passkey. No seed phrase, no extension, and browsing never needs an account.</p>
           <div className="lp-cta">
-            <a className="lp-btn" href="#/markets">Get your first card</a>
-            <a className="lp-btn ghost" href="#/help">How it works</a>
+            <a className="lp-btn" href="/markets">Get your first card</a>
+            <a className="lp-btn ghost" href="/help">How it works</a>
           </div>
         </div>
       </div>
@@ -524,12 +524,14 @@ function Footer() {
         </div>
         <nav aria-label="Quick links">
           <h3>Quick links</h3>
-          <a href="#/markets">Markets</a>
-          <a href="#/browse">Browse</a>
-          <a href="#/sell">Sell a card</a>
-          <a href="#/help">Help center</a>
-          <a href="#/help?s=fees">Fees</a>
-          <a href="#/help?s=custody">Custody and verification</a>
+          <a href="/markets">Markets</a>
+          <a href="/browse">Browse</a>
+          <a href="/sell">Sell a card</a>
+          <a href="/help">Help center</a>
+          <a href="/help?s=fees">Fees</a>
+          <a href="/help?s=custody">Custody and verification</a>
+          <a href="/privacy">Privacy</a>
+          <a href="/terms">Terms</a>
         </nav>
         <div>
           <h3>Built on Monad</h3>
@@ -544,28 +546,30 @@ function Footer() {
 }
 
 export function Landing({ signedIn = false }: { signedIn?: boolean }) {
-  const { data } = usePoll(loadSkus, 15000, [])
+  const { data } = usePoll(loadSkus, 15000, [], peekSkus)
   const sales = useSales()
   const all = data ?? []
-  const byAsk = [...all].filter((s) => s.ask).sort((a, b) => b.ask! - a.ask!)
+  // The front page is a showcase, so it features cards with a photo on file; the counts still include every market.
+  const shown = all.filter((s) => catalogOf(s.name))
+  const byAsk = shown.filter((s) => s.ask).sort((a, b) => b.ask! - a.ask!)
   const count = new Map<string, number>()
   for (const f of sales.fills ?? []) count.set(f.sku.toLowerCase(), (count.get(f.sku.toLowerCase()) ?? 0) + 1)
-  const popular = [...all].sort((a, b) => (count.get(b.sku.toLowerCase()) ?? 0) - (count.get(a.sku.toLowerCase()) ?? 0) || (b.ask ?? 0) - (a.ask ?? 0))
+  const popular = [...shown].sort((a, b) => (count.get(b.sku.toLowerCase()) ?? 0) - (count.get(a.sku.toLowerCase()) ?? 0) || (b.ask ?? 0) - (a.ask ?? 0))
   return (
     <div className="lp">
       {net.name === 'testnet' && <p className="lp-strip">Test network. Prices come from an automated market maker. Cash and custody are simulated.</p>}
       <header className="lp-nav">
         <div className="lp-wrap wide lp-nav-in">
-          <a className="lp-brand" href="#/"><IconKeystone h={24} />{brand}</a>
+          <a className="lp-brand" href="/"><IconKeystone h={24} />{brand}</a>
           <nav aria-label="Primary">
-            <a href="#/markets">Markets</a>
-            <a href="#/browse">Browse</a>
-            <a href="#/sell">Sell</a>
-            <a href="#/help">Help</a>
+            <a href="/markets">Markets</a>
+            <a href="/browse">Browse</a>
+            <a href="/sell">Sell</a>
+            <a href="/help">Help</a>
           </nav>
           <button className="lp-search" onClick={openPalette}><IconSearch />Search cards and sets<kbd>Ctrl K</kbd></button>
-          {signedIn ? <a className="lp-signin" href="#/collection">Portfolio</a> : <a className="lp-signin" href="#/you">Sign in</a>}
-          <a className="lp-btn sm" href="#/markets">Open the app</a>
+          {signedIn ? <a className="lp-signin" href="/collection">Portfolio</a> : <a className="lp-signin" href="/you">Sign in</a>}
+          <a className="lp-btn sm" href="/markets">Open the app</a>
         </div>
       </header>
       <Hero list={byAsk.slice(0, 6)} all={all} fills={sales.fills} />

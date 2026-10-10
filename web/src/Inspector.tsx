@@ -4,6 +4,7 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { Button, Select, Seg, useOnClose } from './controls'
 import { catalogOf } from './config'
+import { CardImage } from './fx'
 import { cardTitle, parseName, Slab } from './ui'
 
 // The inspector: a rendered 3D slab, and a 2D precision view. Both use representative art, never a photograph of the exact slab, and say so.
@@ -367,7 +368,7 @@ function Precision({ name, sibs }: { name: string; sibs: { name: string; sku: st
           onWheel={(e) => { if (e.ctrlKey || e.metaKey) (e.preventDefault(), zoom(e.deltaY > 0 ? 1 / 1.2 : 1.2)) }}
         >
           <div className="prec-inner" style={{ transform: `translate(${t.x}px, ${t.y}px) scale(${t.scale})` }}>
-            {label ? <div className="prec-label"><Slab name={n} size="xl" /></div> : c?.imageUrl ? <img src={c.imageUrl} alt={`${cardTitle(n)}, ${parseName(n).grader} ${parseName(n).grade}, representative image`} draggable={false} /> : <div className="nophoto"><b>{cardTitle(n)}</b><small>No image on file</small></div>}
+            {label ? <div className="prec-label"><Slab name={n} size="xl" /></div> : c?.imageUrl ? <img src={c.imageUrl} alt={`${cardTitle(n)}, ${parseName(n).grader} ${parseName(n).grade}, representative image`} draggable={false} /> : <CardImage alt={cardTitle(n)} label={cardTitle(n)} />}
           </div>
           {loupe && pos && c?.imageUrl && !label && <i className="loupe" style={{ left: pos.x - 70, top: pos.y - 70, backgroundImage: `url(${c.imageUrl})`, backgroundSize: `${pos.w * 3}px auto`, backgroundPosition: `${-pos.x * 3 + 70}px ${-pos.y * 3 + 70}px` }} aria-hidden />}
         </div>

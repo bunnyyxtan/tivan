@@ -6,6 +6,7 @@ import { recentFills, type FeedItem } from './chain'
 import { IconClose, IconSearch } from './icons'
 import { Skeleton } from './States'
 import { Emblem } from './emblems'
+import { navigate } from './route'
 import { short, usd, usePoll } from './ui'
 
 // ===================================================================== keyboard
@@ -82,14 +83,14 @@ function suggest(q: string): Group[] {
   const out: Group[] = []
   if (!s) {
     const r = readRecent()
-    if (r.length) out.push({ title: 'Recent searches', items: r.map((x) => ({ label: x, href: `#/browse?q=${enc(x)}` })) })
+    if (r.length) out.push({ title: 'Recent searches', items: r.map((x) => ({ label: x, href: `/browse?q=${enc(x)}` })) })
   } else {
     const cards = catalog.filter((c) => hasText(`${c.title} ${c.set}`, s)).slice(0, 5)
-    if (cards.length) out.push({ title: 'Cards', items: cards.map((c) => ({ label: c.title, sub: c.set, href: `#/browse?q=${enc(c.title)}` })) })
+    if (cards.length) out.push({ title: 'Cards', items: cards.map((c) => ({ label: c.title, sub: c.set, href: `/browse?q=${enc(c.title)}` })) })
     const sets = [...new Set(catalog.map((c) => c.set))].filter((x) => hasText(x, s)).slice(0, 4)
-    if (sets.length) out.push({ title: 'Sets', items: sets.map((x) => ({ label: x, href: `#/browse?set=${enc(x)}` })) })
+    if (sets.length) out.push({ title: 'Sets', items: sets.map((x) => ({ label: x, href: `/browse?set=${enc(x)}` })) })
   }
-  if (cats.length) out.push({ title: 'Categories', items: cats.map((c) => ({ label: c, href: `#/browse?cat=${enc(c)}` })) })
+  if (cats.length) out.push({ title: 'Categories', items: cats.map((c) => ({ label: c, href: `/browse?cat=${enc(c)}` })) })
   return out
 }
 
@@ -114,7 +115,7 @@ export function SearchBox() {
     try {
       localStorage.setItem(RK, JSON.stringify(next))
     } catch {}
-    location.hash = href
+    navigate(href)
     setQ('')
     setOpen(false)
     input.current?.blur()
@@ -129,7 +130,7 @@ export function SearchBox() {
     if (e.key === 'Enter') {
       const pick = flat[i]
       if (pick) go(pick.href, pick.label)
-      else if (q.trim()) go(`#/browse?q=${enc(q.trim())}`, q.trim())
+      else if (q.trim()) go(`/browse?q=${enc(q.trim())}`, q.trim())
     }
   }
   return (
@@ -432,7 +433,7 @@ export function CompareTray({ names }: { names: (sku: string) => string | undefi
         Clear
       </button>
       {c.ids.length > 1 ? (
-        <a className="btn" href={`#/compare?ids=${c.ids.join(',')}`}>
+        <a className="btn" href={`/compare?ids=${c.ids.join(',')}`}>
           Compare {c.ids.length} cards
         </a>
       ) : (
@@ -467,7 +468,7 @@ export function AccountMenu({ address, onSignOut }: { address: string; onSignOut
       </button>
       {open && (
         <div className="menu" role="menu" aria-label="Account" ref={list} onKeyDown={key}>
-          <a role="menuitem" href="#/you" onClick={() => close(false)}>
+          <a role="menuitem" href="/you" onClick={() => close(false)}>
             Account
           </a>
           <button role="menuitem" onClick={() => (close(false), openSettings())}>

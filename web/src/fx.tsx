@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { IconSettings } from './icons'
+import { IconKeystone, IconSettings } from './icons'
 
 // ---- preferences: saved in this browser, applied as <html> attributes
 export type Theme = 'system' | 'light' | 'dark'
@@ -8,7 +8,7 @@ const KEY = 'tivan.prefs'
 const defaults = (): Prefs => ({ motion: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'off' : 'full', dense: false, view: 'grid', theme: 'dark', haptics: false })
 export const defaultPrefs = defaults
 
-export const readPrefs = (): Prefs => {
+const readPrefs = (): Prefs => {
   try {
     const s = JSON.parse(localStorage.getItem(KEY) ?? '{}')
     const d = defaults()
@@ -68,8 +68,9 @@ export const SettingsButton = ({ className = '', compact = false }: { className?
   </button>
 )
 
-// ---- CardImage: the one place a card photograph is drawn. Fixed aspect ratio, lazy, a plain frame while it loads, and a neutral
-// frame carrying the card's name when the photo is missing or fails. Never a stand-in illustration.
+// ---- CardImage: the one place a card photograph is drawn. Fixed aspect ratio, lazy, a plain frame while it loads. A card with
+// no photo on file (a new listing, or a photo that fails) gets a name card: its title and number set in type on the brand
+// green, labelled as a new listing. Never a stand-in illustration of the card itself.
 export function CardImage({ src, alt, label }: { src?: string; alt: string; label?: string }) {
   const [state, setState] = useState<'loading' | 'loaded' | 'failed'>(src ? 'loading' : 'failed')
   const ref = useRef<HTMLImageElement>(null)
@@ -78,13 +79,16 @@ export function CardImage({ src, alt, label }: { src?: string; alt: string; labe
     const i = ref.current
     if (i?.complete && i.naturalWidth) setState('loaded') // cached photos can finish before React attaches onLoad
   }, [src])
+  const [, name = label, no] = label?.match(/^(.*?)\s*(#\S+)?$/) ?? []
   return (
     <span className={`card-img ${state}`}>
       {src && state !== 'failed' && <img ref={ref} src={src} alt={alt} loading="lazy" decoding="async" onLoad={() => setState('loaded')} onError={() => setState('failed')} />}
       {state === 'failed' && (
-        <span className="nophoto" role="img" aria-label={`${alt}, no photo yet`}>
-          {label && <b>{label}</b>}
-          <small>No photo yet</small>
+        <span className="cardface" role="img" aria-label={`${alt}, name card, no photo on file`}>
+          <small>New listing</small>
+          {name && <b>{name}</b>}
+          {no && <i>{no}</i>}
+          <span className="cardface-mark"><IconKeystone /></span>
         </span>
       )}
     </span>

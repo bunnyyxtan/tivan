@@ -67,7 +67,10 @@ export function buyNow(c: Ctx, asks: Level[], qty: bigint): Built {
       protection: `Price protection: fill-or-kill at ${usd(w.units, 2)}. If the price moves before it fills, nothing is charged.`,
       confirmLabel: `Buy for ${usd(total)}`,
       steps,
-      precheck: async () => ({ reviewedCents: w.limitCents, currentCents: walkAsks((await readBook(c.s.market)).asks, qty).qty === qty ? walkAsks((await readBook(c.s.market)).asks, qty).limitCents : 0n }),
+      precheck: async () => {
+        const now = walkAsks((await readBook(c.s.market)).asks, qty) // one book read, not two
+        return { reviewedCents: w.limitCents, currentCents: now.qty === qty ? now.limitCents : 0n }
+      },
       reconcile: afterOrder(c),
       receiptSentence: `Bought ${formatQty(qty)} ${c.label} for ${usd(total, 2)}.`,
       amountUnits: -total,
@@ -138,7 +141,10 @@ export function sellNow(c: Ctx, bids: Level[], qty: bigint): Built {
       protection: `Price protection: fill-or-kill with a floor of ${usd(w.units, 2)}. If the offers drop before it fills, nothing is sold.`,
       confirmLabel: `Sell for ${usd(proceeds)}`,
       steps,
-      precheck: async () => ({ reviewedCents: w.limitCents, currentCents: walkBids((await readBook(c.s.market)).bids, qty).qty === qty ? walkBids((await readBook(c.s.market)).bids, qty).limitCents : 0n }),
+      precheck: async () => {
+        const now = walkBids((await readBook(c.s.market)).bids, qty) // one book read, not two
+        return { reviewedCents: w.limitCents, currentCents: now.qty === qty ? now.limitCents : 0n }
+      },
       reconcile: afterOrder(c),
       receiptSentence: `Sold ${formatQty(qty)} ${c.label} for ${usd(proceeds, 2)}.`,
       amountUnits: proceeds,

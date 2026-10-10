@@ -94,7 +94,7 @@ const usePending = (): Pending[] => parse<Pending>(useSyncExternalStore(subscrib
 // Session scope. Inside a session, trading and adding cash sign with no prompt. Moving value out of the app or into the
 // physical world (a withdrawal, a redemption) and any trade above PROMPT_ABOVE ask for the passkey again, so a lost or
 // borrowed unlocked device cannot drain the account.
-export const PROMPT_ABOVE = 1_000n * 1_000_000n // $1,000 in base units
+const PROMPT_ABOVE = 1_000n * 1_000_000n // $1,000 in base units
 const TRADES: TxKind[] = ['buy', 'sell', 'offer', 'list']
 export const needsPasskey = (s: Pick<TxSpec, 'kind' | 'amountUnits' | 'account'>) =>
   s.account.source === 'mera' &&
@@ -370,7 +370,7 @@ export function TxProvider({ children }: { children: ReactNode }) {
                   </div>
                 ))}
                 <div className="done-actions">
-                  {spec.sku ? <a className="btn lg" href="#/collection" onClick={close}>View portfolio</a> : <a className="btn lg" href="#/markets" onClick={close}>Find a card</a>}
+                  {spec.sku ? <a className="btn lg" href="/collection" onClick={close}>View portfolio</a> : <a className="btn lg" href="/markets" onClick={close}>Find a card</a>}
                   <Button variant="secondary" size={48} onClick={close}>Done</Button>
                 </div>
                 <details className="done-receipt">
@@ -383,7 +383,7 @@ export function TxProvider({ children }: { children: ReactNode }) {
                     <div><dt>Time</dt><dd>{state.updatedAt ? new Date(state.updatedAt).toLocaleString() : ''}</dd></div>
                     {lastStep?.hash && <div><dt>Transaction</dt><dd><HashLine hash={lastStep.hash} /></dd></div>}
                   </dl>
-                  <p className="fine">Updated from chain data. <a className="u" href="#/activity" onClick={close}>View in Activity</a></p>
+                  <p className="fine">Updated from chain data. <a className="u" href="/activity" onClick={close}>View in Activity</a></p>
                 </details>
               </section>
             )}

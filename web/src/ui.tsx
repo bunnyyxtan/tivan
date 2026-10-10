@@ -62,12 +62,13 @@ export function useWatch() {
 
 /** A graded slab: acrylic case, grader label, the card photo (or an honest placeholder). Tilts under the pointer. */
 export function Slab({ name, size = 'md', vt, alt }: { name: string; size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'; vt?: string; alt?: string }) {
-  const { grader, grade, title } = parseName(name)
+  const { grader, grade } = parseName(name)
   const c = catalogOf(name)
   const [setName, year] = c?.set.split(' · ') ?? []
   // The label never truncates: the long form carries the set, the short form drops it. CSS picks one by the slab's width.
-  const full = `${grader} · ${setName ? `${year} ${setName}` : title}`.toUpperCase()
-  const short = `${grader} · ${year ?? title}`.toUpperCase()
+  // A card outside the catalog has no set or year on file; its name card carries the title, so the label stays short.
+  const full = `${grader} · ${setName ? `${year} ${setName}` : 'New listing'}`.toUpperCase()
+  const short = (year ? `${grader} · ${year}` : grader).toUpperCase()
   const labelBucket = full.length <= 14 ? 1 : full.length <= 20 ? 2 : full.length <= 27 ? 3 : 4
   return (
     <div className="slab-wrap" style={vt ? ({ viewTransitionName: vt } as React.CSSProperties) : undefined}>
@@ -147,8 +148,9 @@ export function Steps({ steps, error }: { steps: Step[]; error?: string }) {
   )
 }
 
-export function usePoll<T>(fn: () => Promise<T>, ms: number, deps: unknown[]) {
-  const [data, setData] = useState<T>()
+/** `initial` draws the last known value at once (e.g. peekSkus); the first poll replaces it. */
+export function usePoll<T>(fn: () => Promise<T>, ms: number, deps: unknown[], initial?: () => T | undefined) {
+  const [data, setData] = useState<T | undefined>(initial)
   const [error, setError] = useState<string>()
   const [tick, setTick] = useState(0)
   useEffect(() => {

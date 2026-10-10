@@ -1,6 +1,7 @@
 import { createPublicClient, createWalletClient, encodeAbiParameters, getAddress, http, keccak256, parseAbi, parseAbiItem, type Account, type Address, type Hex } from 'viem'
 import { house, indexerUrl, net } from './config'
 import { failoverFetch } from './logic/failover'
+import type { Level } from './logic/orders'
 
 // NOTE: public Monad RPCs allow roughly 15-25 requests/sec per IP each (batched calls count individually). Every call
 // goes through one client-side limiter with a budget per endpoint: reads take whichever endpoint has room, writes and
@@ -44,14 +45,15 @@ const transport = http(undefined, {
   batch: { batchSize: 5 },
   fetchFn: limitedFetch,
 })
-export const pub = createPublicClient({ chain: net.chain, transport })
+// Reads made in the same tick go out as one Multicall3 eth_call, so every market's vault and book reads are one request.
+export const pub = createPublicClient({ chain: net.chain, transport, batch: { multicall: true } })
 // Transactions skip the shared queue: simulate, send and wait on one endpoint directly, so a purchase never waits
 // behind background polling. It is a handful of calls per action, well inside any endpoint's limit. The endpoint is
 // rpcs[0] until it stops answering, then the next one; see failoverFetch for why they must not be mixed mid-send.
 const directFetch = failoverFetch(net.rpcs.map((e) => e.url))
 const direct = http(undefined, { retryCount: 3, fetchFn: directFetch })
 export const fast = createPublicClient({ chain: net.chain, transport: direct })
-export const walletFor = (account: Account) => createWalletClient({ account, chain: net.chain, transport: direct })
+const walletFor = (account: Account) => createWalletClient({ account, chain: net.chain, transport: direct })
 
 export const vaultAbi = parseAbi([
   'function skuOf(uint256 specId, uint8 grade) pure returns (bytes32)',
@@ -96,7 +98,7 @@ export const marginAccount = () =>
     functionName: 'marginAccountAddress',
   }))
 
-export const ZERO: Address = '0x0000000000000000000000000000000000000000'
+const ZERO: Address = '0x0000000000000000000000000000000000000000'
 /** Kuru mainnet gates market deployment, so a SKU can exist with market == 0x0 until Kuru lists it (SlabVault.linkMarket). */
 export const hasMarket = (s: { market: Address }) => s.market !== ZERO
 
@@ -114,7 +116,7 @@ export type Sku = {
   last?: number
 }
 
-type Listed = { sku: Hex; token: Address; market: Address; name: string }
+type Listed = { sku: Hex; token: Address; market: Address; name: string; last?: number }
 const scanKey = `slab.skus.${net.chain.id}.${net.vault}`
 
 let scanning: Promise<Listed[]> | undefined
@@ -133,11 +135,11 @@ export async function gql<T>(query: string, variables: object = {}): Promise<T> 
   return j.data
 }
 
-/** Every SKU the vault has listed, from the Envio indexer (SkuListed -> Market rows). */
+/** Every SKU the vault has listed, with its last sale, from the Envio indexer (SkuListed -> Market rows) in one query. */
 async function indexedSkus(): Promise<Listed[]> {
-  const { Market } = await gql<{ Market: Listed[] }>('{ Market(order_by: { listedAt: asc }) { sku token market: id name } }')
+  const { Market } = await gql<{ Market: (Listed & { lastPriceCents: string | number | null })[] }>('{ Market(order_by: { listedAt: asc }) { sku token market: id name lastPriceCents } }')
   // A SKU still waiting for its Kuru market is keyed by its bytes32 sku in the indexer.
-  return Market.map((m) => (m.market.length === 42 ? m : { ...m, market: ZERO }))
+  return Market.map(({ lastPriceCents, ...m }) => ({ ...m, market: m.market.length === 42 ? m.market : ZERO, last: lastPriceCents ? Number(lastPriceCents) / 100 : undefined }))
 }
 
 /** Every SKU the vault has listed: seeded SKUs now, plus SkuListed logs found by a background scan cached per browser. */
@@ -198,14 +200,37 @@ async function scanLogs(cache: { block: string; skus: Listed[] }) {
 // bestBidAsk is 1e18-scaled; an empty side reads as 0 or uint256 max.
 const px = (x: bigint) => (x > 0n && x < 2n ** 255n ? Number(x) / 1e18 : undefined)
 let recent: { t: number; p: Promise<Sku[]> } | undefined
+const SNAP = `tivan.skus.${net.chain.id}.${net.vault}`
+let snap: Sku[] | undefined
+/** The last list this browser read, so a page draws at once and then refreshes in place. */
+export function peekSkus(): Sku[] | undefined {
+  if (!snap)
+    try {
+      snap = JSON.parse(localStorage.getItem(SNAP) ?? 'null') ?? undefined
+    } catch {}
+  return snap
+}
 /** All SKUs with vault counts and top of book; concurrent/rapid callers share one fetch. */
 export function loadSkus(): Promise<Sku[]> {
-  if (!recent || Date.now() - recent.t > 3000) recent = { t: Date.now(), p: fetchSkus() }
-  recent.p.catch(() => (recent = undefined))
+  if (!recent || Date.now() - recent.t > 3000) {
+    const p = fetchSkus()
+    recent = { t: Date.now(), p }
+    p.then(
+      (s) => {
+        snap = s
+        try {
+          localStorage.setItem(SNAP, JSON.stringify(s))
+        } catch {}
+      },
+      () => recent?.p === p && (recent = undefined),
+    )
+  }
   return recent.p
 }
 async function fetchSkus(): Promise<Sku[]> {
   if (!net.vault) return []
+  // Every market the vault lists is shown. The catalog only adds a photo, set and category; a card it does not know yet
+  // appears under New listings with its name card, so a newly attested card trades in the app the moment it lists.
   const listed = await listedSkus()
   const top = (market: Address) => (market === ZERO ? Promise.resolve([0n, 0n] as const) : pub.readContract({ address: market, abi: bookAbi, functionName: 'bestBidAsk' }))
   const all = await Promise.all(
@@ -227,21 +252,7 @@ async function fetchSkus(): Promise<Sku[]> {
       }
     }),
   )
-  // Every market the vault lists is shown. The catalog only adds a picture, set and category; a card it does not
-  // know yet appears under Other with the drawn slab, so a newly attested card trades in the app the moment it lists.
-  const last = await lastSales()
-  return all.map((s) => ({ ...s, last: last.get(s.sku.toLowerCase()) }))
-}
-
-/** The last sale per card from Envio in one query. Empty when no indexer is set or it is down. */
-async function lastSales(): Promise<Map<string, number>> {
-  if (!indexerUrl) return new Map()
-  try {
-    const { Market } = await gql<{ Market: { sku: string; lastPriceCents: string | number | null }[] }>('{ Market { sku lastPriceCents } }')
-    return new Map(Market.filter((m) => m.lastPriceCents).map((m) => [m.sku.toLowerCase(), Number(m.lastPriceCents) / 100]))
-  } catch {
-    return new Map()
-  }
+  return all
 }
 
 const tradeEvent = parseAbiItem('event Trade(uint40 orderId, address makerAddress, bool isBuy, uint256 price, uint96 updatedSize, address takerAddress, address txOrigin, uint96 filledSize)')
@@ -428,27 +439,6 @@ export async function openOrders(market: Address, owner: Address): Promise<Order
   return live.flat()
 }
 
-export type Level = { price: number; size: number }
-/** Kuru getL2Book (verified live on testnet): 32-byte block number, then (price, size) words for bids until a zero price, then asks likewise. */
-export function decodeL2(data: Hex): { bids: Level[]; asks: Level[] } {
-  const words = (data.slice(2).match(/.{64}/g) ?? []).slice(1).map((w) => BigInt('0x' + w))
-  const sides: Level[][] = [[], []]
-  let side = 0
-  for (let i = 0; i < words.length && side < 2; ) {
-    if (words[i] === 0n) {
-      side++
-      i++
-      continue
-    }
-    sides[side].push({
-      price: Number(words[i]) / 100,
-      size: Number(words[i + 1]),
-    }) // L2 prices use pricePrecision (cents); sizes sizePrecision (whole cards)
-    i += 2
-  }
-  return { bids: sides[0], asks: sides[1] }
-}
-
 /** Simulate (readable revert reasons), send, wait. */
 export async function send(
   account: Account,
@@ -485,11 +475,11 @@ export function marketRules(market: Address): Promise<MarketRules> {
   return rulesCache.get(k)!
 }
 
-export type BookLevel = { price: bigint; size: bigint }
-/** The same getL2Book decoding as decodeL2, but exact: prices in whole cents and sizes in whole cards as bigint, no floats. */
-export function decodeBook(data: Hex): { bids: BookLevel[]; asks: BookLevel[] } {
+/** Kuru getL2Book (verified live on testnet): a 32-byte block number, then (price, size) words for bids until a zero price,
+ * then asks likewise. Exact: prices in whole cents and sizes in whole cards as bigint, no floats. */
+function decodeBook(data: Hex): { bids: Level[]; asks: Level[] } {
   const words = (data.slice(2).match(/.{64}/g) ?? []).slice(1).map((w) => BigInt('0x' + w))
-  const sides: BookLevel[][] = [[], []]
+  const sides: Level[][] = [[], []]
   let side = 0
   for (let i = 0; i < words.length && side < 2; ) {
     if (words[i] === 0n) {

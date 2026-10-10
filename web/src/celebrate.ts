@@ -81,4 +81,3 @@ export function earn(kind: TxKind, seconds?: number): Badge[] {
     } catch {}
   return out
 }
-export const badgesEarned = () => read()

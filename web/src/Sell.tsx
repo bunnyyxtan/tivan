@@ -12,6 +12,7 @@ import { usePortfolio } from './portfolio'
 import { Slab, cardSub, cardTitle } from './ui'
 import { IconCamera, IconKeyboard, IconVault } from './icons'
 import { post } from './attestor'
+import { navigate } from './route'
 import { writeLog } from './tx'
 
 // "Sell your card": choose a method, find the slab by scanning or typing its certificate, confirm it, check it into the vault,
@@ -52,7 +53,7 @@ function PrivateNote({ cert }: { cert: string }) {
 }
 
 /** The certificate number from what a label barcode or QR code holds: a PSA cert URL, or the number itself. */
-export const parseCert = (raw: string): string | undefined => /cert\/(\d{7,10})/i.exec(raw)?.[1] ?? /\b(\d{7,10})\b/.exec(raw)?.[1]
+const parseCert = (raw: string): string | undefined => /cert\/(\d{7,10})/i.exec(raw)?.[1] ?? /\b(\d{7,10})\b/.exec(raw)?.[1]
 
 type BD = { detect: (v: HTMLVideoElement) => Promise<{ rawValue: string }[]> }
 const detectorCtor = (): (new (o: { formats: string[] }) => BD) | undefined => (window as unknown as { BarcodeDetector?: new (o: { formats: string[] }) => BD }).BarcodeDetector
@@ -172,7 +173,7 @@ export function Sell({ account, mode = 'sell' }: { account: LocalAccount; mode?:
         title={bringIn ? 'Vault a card' : 'Sell a card'}
         sub={bringIn ? 'Send a slab you own into the vault. It becomes one token on that card’s market, which you can keep or sell.' : 'Pick one of your vaulted cards and sell it at the best offer, or list it at your own price.'}
       >
-        <a className="ghost line md" href={bringIn ? '#/sell' : '#/vault'}>{bringIn ? 'Sell a card you hold' : 'Vault a physical card'}</a>
+        <a className="ghost line md" href={bringIn ? '/sell' : '/vault'}>{bringIn ? 'Sell a card you hold' : 'Vault a physical card'}</a>
       </PageHead>
       {bringIn && (
       <ol className="sell-steps" aria-label="Steps">
@@ -199,7 +200,7 @@ export function Sell({ account, mode = 'sell' }: { account: LocalAccount; mode?:
               <ul className="pick-list">
                 {mine.map((h) => (
                   <li key={h.s.sku}>
-                    <button onClick={() => (h.count > h.listed ? (setSku(h.s.sku), setStep('price')) : (location.hash = `#/card/${h.s.sku}`))}>
+                    <button onClick={() => (h.count > h.listed ? (setSku(h.s.sku), setStep('price')) : navigate(`/card/${h.s.sku}`))}>
                       <Slab name={h.s.name} size="sm" />
                       <span className="pick-what">
                         <b>{cardTitle(h.s.name)}</b>
@@ -220,7 +221,7 @@ export function Sell({ account, mode = 'sell' }: { account: LocalAccount; mode?:
               <IconVault />
               <b>No cards in your vault yet</b>
               <p className="fine">Buy one on its market, or send a slab you already own into the vault.</p>
-              <span className="pf-empty-act"><a className="btn md" href="#/markets">Browse markets</a><a className="ghost line md" href="#/vault">Vault a physical card</a></span>
+              <span className="pf-empty-act"><a className="btn md" href="/markets">Browse markets</a><a className="ghost line md" href="/vault">Vault a physical card</a></span>
             </div>
           )}
         </div>
@@ -273,7 +274,7 @@ export function Sell({ account, mode = 'sell' }: { account: LocalAccount; mode?:
           <div><dt>Listing</dt><dd>Your ask joins the card’s order book. Cancel it any time before it fills.</dd></div>
           <div><dt>Fees</dt><dd>Shown on the review screen before you confirm, read from the market.</dd></div>
         </dl>
-        <a className="u" href="#/help?s=custody">Custody and verification</a>
+        <a className="u" href="/help?s=custody">Custody and verification</a>
       </aside>
       </div>
     </div>
@@ -372,7 +373,7 @@ function Price({ sku, account }: { sku: string; account: LocalAccount }) {
       </dl>
       <SpreadBar bid={bids[0]?.price} ask={asks[0]?.price} last={last ? cents(last.price) : undefined} />
       {h.data && h.data.fills.length > 0 && <p className="fine">Recent trades: {h.data.fills.slice(-5).reverse().map((f) => usdC(cents(f.price))).join(', ')}. This is context, not advice.</p>}
-      {ctx ? <OrderForm mode="sell" ctx={ctx} asks={book.asks} bids={book.bids} askC={asks[0]?.price} bidC={bids[0]?.price} owned={(hold?.wallet ?? 0n) + (hold?.onBook ?? 0n)} prefill={{}} onClose={() => (location.hash = `#/card/${sku}`)} /> : <p className="fine">Reading your balances…</p>}
+      {ctx ? <OrderForm mode="sell" ctx={ctx} asks={book.asks} bids={book.bids} askC={asks[0]?.price} bidC={bids[0]?.price} owned={(hold?.wallet ?? 0n) + (hold?.onBook ?? 0n)} prefill={{}} onClose={() => navigate(`/card/${sku}`)} /> : <p className="fine">Reading your balances…</p>}
     </section>
   )
 }

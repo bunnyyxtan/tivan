@@ -11,7 +11,7 @@ export function League({ account }: { account?: LocalAccount }) {
   const [copied, setCopied] = useState(false)
   const me = account?.address.toLowerCase()
   const mine = data?.findIndex((t) => t.addr === me) ?? -1
-  const invite = `${location.origin}${location.pathname}#/league`
+  const invite = `${location.origin}/league`
   const copy = () => {
     navigator.clipboard?.writeText(`Trade graded cards on Monad testnet with ${brand}. Free test dollars, real order books: ${invite}`)
     setCopied(true)
@@ -31,7 +31,7 @@ export function League({ account }: { account?: LocalAccount }) {
           Fair play: trades against yourself never score, a wallet scores once per card per hour, and our own market-maker accounts are not ranked.
         </p>
         <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-          <a className="btn" href="#/markets" style={{ flex: 1 }}>
+          <a className="btn" href="/markets" style={{ flex: 1 }}>
             Start trading
           </a>
           <button className="ghost line" onClick={copy} style={{ flex: '0 0 auto' }}>

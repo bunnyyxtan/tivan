@@ -5,7 +5,7 @@ import { IconChevron, IconClose } from './icons'
 // Each is keyboard operable, shows the focus ring from the base styles, and uses the native picker on touch screens.
 
 const COARSE = '(pointer: coarse)'
-export const useCoarse = () =>
+const useCoarse = () =>
   useSyncExternalStore(
     (cb) => (matchMedia(COARSE).addEventListener('change', cb), () => matchMedia(COARSE).removeEventListener('change', cb)),
     () => matchMedia(COARSE).matches,

@@ -134,8 +134,8 @@ function Overview({ account }: { account: LocalAccount }) {
       {v && v.unmarked > 0 && <p className="fine acc-note">{v.unmarked} card{v.unmarked === 1 ? ' has' : 's have'} no offer yet, so {v.unmarked === 1 ? 'it is' : 'they are'} left out of the total.</p>}
       <div className="acc-actions">
         <Button size={40} onClick={openCash}>Add cash</Button>
-        <a className="ghost line s40" href="#/collection">Portfolio</a>
-        <a className="ghost line s40" href="#/activity">Activity</a>
+        <a className="ghost line s40" href="/collection">Portfolio</a>
+        <a className="ghost line s40" href="/activity">Activity</a>
       </div>
     </section>
   )
@@ -416,7 +416,7 @@ function DataHelp({ account }: { account: LocalAccount }) {
         <Button variant="secondary" size={40} onClick={openShortcuts}>Show</Button>
       </Row>
       <Row label="Help center" hint="Fees, custody, verification and how trades settle.">
-        <a className="ghost line s40" href="#/help">Open</a>
+        <a className="ghost line s40" href="/help">Open</a>
       </Row>
       <Row label="Network" hint={`Chain ID ${net.chain.id}`}><span className="set-val">{net.chain.name}</span></Row>
     </Section>

@@ -30,9 +30,9 @@ export function Checklist({ account }: { account: LocalAccount }) {
   const cash = data ? data.cashRaw + data.exCashRaw > 0n || (orders ? reservedUnits(orders) > 0n : false) : false
   const items: { done: boolean; label: string; act: React.ReactNode }[] = [
     { done: cash || has('deposit'), label: 'Add cash', act: <button className="mini" onClick={openCash}>Add</button> },
-    { done: holds || open || has('buy', 'offer', 'list'), label: 'Make your first offer or buy', act: <a className="mini" href="#/browse">Browse</a> },
-    { done: has('vault'), label: 'Vault a card', act: <a className="mini" href="#/vault">Vault</a> },
-    { done: alertCount() > 0, label: 'Turn on a price alert', act: <a className="mini" href="#/browse">Pick</a> },
+    { done: holds || open || has('buy', 'offer', 'list'), label: 'Make your first offer or buy', act: <a className="mini" href="/browse">Browse</a> },
+    { done: has('vault'), label: 'Vault a card', act: <a className="mini" href="/vault">Vault</a> },
+    { done: alertCount() > 0, label: 'Turn on a price alert', act: <a className="mini" href="/browse">Pick</a> },
   ]
   const done = items.filter((i) => i.done).length
   if (off)

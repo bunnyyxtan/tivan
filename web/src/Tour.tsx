@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button } from './controls'
+import { navigate } from './route'
 
 // A short spotlight tour: five steps at most, skippable at every step, fully keyboard operable, and never started on its own.
 // The spotlight is four flat scrims around the target, with the target itself left clear: no glow, no blur.
@@ -24,7 +25,7 @@ export function Tour() {
   const from = useRef<HTMLElement | null>(null)
   useEffect(() => {
     const start = () => {
-      location.hash = '#/markets'
+      navigate('/markets')
       setTimeout(() => {
         const found = STEPS.map((step) => ({ step, el: document.querySelector<HTMLElement>(`[data-tour="${step.target}"]`) })).filter((x): x is { step: Step; el: HTMLElement } => !!x.el && x.el.offsetParent !== null).slice(0, 5)
         if (!found.length) return

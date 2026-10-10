@@ -81,7 +81,7 @@ export const Live = ({ at, label = 'Live' }: { at?: number; label?: string }) =>
 export function MarketTile({ s, c, pts, tag, at }: { s: Sku; c?: Change; pts: number[]; tag?: string; at?: number }) {
   const price = s.ask ?? s.last
   return (
-    <a className="mtile" href={`#/card/${s.sku}`}>
+    <a className="mtile" href={`/card/${s.sku}`}>
       <span className="mtile-art">
         {tag && <span className="badge">{tag}</span>}
         {at && <span className="fresh">{ago(at)}</span>}

@@ -5,8 +5,8 @@ import { Define, Updated, ago, cents, recordViewed, useNow, usdC } from './cardP
 import { Breadcrumbs } from './desk'
 import { cancelOrder, buyNow, listAsk, makeOffer, repriceAsk, sellListedNow, sellNow, type Built, type Ctx, type Funds } from './flows'
 import { Button, Copyable, Seg } from './controls'
-import { catalogOf, net } from './config'
-import { explorerAddress, explorerTx, hasMarket, loadSkus, marketRules, readBook, tradeHistory, type Fill, type Sku } from './chain'
+import { brand, catalogOf, net } from './config'
+import { explorerAddress, explorerTx, hasMarket, loadSkus, marketRules, peekSkus, readBook, tradeHistory, type Fill, type Sku } from './chain'
 import { gql } from './chain'
 import { aggregate, averageBuyUnits, spread, unrealisedPnl, walkAsks, walkBids, type Level } from './logic/orders.ts'
 import { centsToUnits, formatBps, formatQty, formatUsd } from './logic/money.ts'
@@ -16,6 +16,7 @@ import { useTx } from './tx'
 import { cardSub, cardTitle, parseName, usePoll, useWatch } from './ui'
 import { Viewer, gradeOf } from './Market'
 import { IconActivity, IconCheck, IconShare, IconStar, IconVault } from './icons'
+import { here, navigate } from './route'
 import { MarketTile } from './kit'
 
 const PriceChart = lazy(() => import('./PriceChart'))
@@ -27,17 +28,22 @@ const when = (t: number) => new Date(t * 1000).toLocaleString(undefined, { dateS
 export function useMarket(sku: string) {
   const m = usePoll(
     async () => {
+      // The market address rarely changes, so the book is read alongside the list using the last list this browser saw.
+      const read = (s: Sku) => Promise.all([hasMarket(s) ? readBook(s.market) : { bids: [], asks: [] }, hasMarket(s) ? marketRules(s.market) : undefined] as const)
+      const known = peekSkus()?.find((x) => x.sku === sku)
+      const early = known && read(known)
+      early?.catch(() => {})
       const all = await loadSkus()
       const s = all.find((x) => x.sku === sku)
       if (!s) throw new Error('Card not found')
-      const live = hasMarket(s)
-      const [book, rules] = await Promise.all([live ? readBook(s.market) : { bids: [], asks: [] }, live ? marketRules(s.market) : undefined])
+      const [book, rules] = await (early && known.market === s.market ? early : read(s))
       return { all, s, book, rules, at: Date.now() }
     },
     4000,
     [sku],
   )
-  const h = usePoll(async () => (m.data && hasMarket(m.data.s) ? tradeHistory(m.data.s.market) : undefined), 15000, [m.data?.s.market])
+  const market = m.data?.s.market ?? peekSkus()?.find((x) => x.sku === sku)?.market
+  const h = usePoll(async () => (market && hasMarket({ market }) ? tradeHistory(market) : undefined), 15000, [market])
   return { m, h }
 }
 
@@ -99,10 +105,10 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
   }, [account, sku])
   const signInHere = () => {
     try {
-      sessionStorage.setItem('tivan.returnTo', JSON.stringify({ hash: location.hash }))
+      sessionStorage.setItem('tivan.returnTo', JSON.stringify({ hash: here() }))
       if (mode) sessionStorage.setItem('tivan.order', JSON.stringify({ sku, mode, prefill }))
     } catch {}
-    location.hash = '#/you'
+    navigate('/you')
   }
   const [barOn, setBarOn] = useState(false)
   const actions = useRef<HTMLDivElement>(null)
@@ -120,7 +126,7 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
   if (!d)
     return (
       <>
-        <Breadcrumbs items={[['Markets', '#/markets'], ['Card']]} />
+        <Breadcrumbs items={[['Markets', '/markets'], ['Card']]} />
         {m.error ? <ErrorNote what="Couldn’t load this card." why={m.error} next="Check your connection, then try again." onRetry={m.refresh} /> : <div className="cx" aria-hidden><div className="cx-media"><div className="card-hero"><Skeleton h={460} w={320} r={14} /></div></div><div className="cx-trade"><Skeleton h={14} w="30%" r={4} /><Skeleton h={40} w="80%" r={6} /><Skeleton h={64} r={10} /><Skeleton h={240} r={16} /></div></div>}
       </>
     )
@@ -131,6 +137,7 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
   const title = cardTitle(s.name)
   const label = `${title}, ${parseName(s.name).grader} ${parseName(s.name).grade}`
   const { demo } = parseName(s.name)
+  document.title = `${label} | ${brand}`
   const asksAgg = aggregate(book.asks, 'ask')
   const bidsAgg = aggregate(book.bids, 'bid')
   const askC = asksAgg[0]?.price
@@ -193,7 +200,7 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
 
   return (
     <>
-      <Breadcrumbs items={[['Markets', '#/markets'], ...(c ? ([[c.category, `#/browse?cat=${encodeURIComponent(c.category)}`]] as [string, string][]) : [['Browse', '#/browse']] as [string, string][]), [title]]} />
+      <Breadcrumbs items={[['Markets', '/markets'], ...(c ? ([[c.category, `/browse?cat=${encodeURIComponent(c.category)}`]] as [string, string][]) : [['Browse', '/browse']] as [string, string][]), [title]]} />
       <div className="cx">
         <div className="cx-media">
           <div className="card-hero">
@@ -221,7 +228,7 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
               <span className="lbl-caps">Grade</span>
               <nav className="grades" aria-label="Grades of this card">
                 {sibs.map((x) => (
-                  <a key={x.sku} href={`#/card/${x.sku}`} aria-current={x.sku === sku ? 'page' : undefined}>
+                  <a key={x.sku} href={`/card/${x.sku}`} aria-current={x.sku === sku ? 'page' : undefined}>
                     <b>{parseName(x.name).grade}</b>
                     <small>{x.ask ? usdC(cents(x.ask)) : 'No ask'}</small>
                   </a>
@@ -391,7 +398,7 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
               <ul className="grade-list">
                 {sibs.map((x) => (
                   <li key={x.sku}>
-                    <a href={`#/card/${x.sku}`} aria-current={x.sku === sku ? 'page' : undefined}>
+                    <a href={`/card/${x.sku}`} aria-current={x.sku === sku ? 'page' : undefined}>
                       <span className="gl-grade"><small>{parseName(x.name).grader}</small><b>{parseName(x.name).grade}</b></span>
                       <span className="gl-figs">
                         <span><small>Ask</small><b>{x.ask ? usdC(cents(x.ask)) : '—'}</b></span>
@@ -403,7 +410,7 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
                   </li>
                 ))}
               </ul>
-              {sibs.length > 1 && <a className="linkbtn" href={`#/compare?ids=${sibs.map((x) => x.sku).join(',')}`}>Compare grades side by side</a>}
+              {sibs.length > 1 && <a className="linkbtn" href={`/compare?ids=${sibs.map((x) => x.sku).join(',')}`}>Compare grades side by side</a>}
             </section>
 
           </aside>
@@ -411,7 +418,7 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
 
           {sibs.length > 0 && all.some((x) => x.sku !== sku && catalogOf(x.name)?.set === c?.set) && (
             <section className="related" aria-labelledby="h-related">
-              <div className="block-head"><h2 id="h-related">More from {c?.set ?? 'this set'}</h2><a href="#/browse">Browse all</a></div>
+              <div className="block-head"><h2 id="h-related">More from {c?.set ?? 'this set'}</h2><a href="/browse">Browse all</a></div>
               <div className="related-grid">
                 {all.filter((x) => x.sku !== sku && catalogOf(x.name)?.set === c?.set).slice(0, 5).map((x) => <MarketTile key={x.sku} s={x} pts={[]} />)}
               </div>

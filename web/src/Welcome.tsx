@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button } from './controls'
 import { addTestDollars } from './Cash'
+import { navigate } from './route'
 import { net } from './config'
 
 /** One calm welcome the first time an account opens on this device. It asks for nothing and can be closed at once. */
@@ -17,7 +18,7 @@ export function Welcome() {
     } catch {}
     dlg.current?.close()
     setShow(false)
-    if (to) location.hash = to
+    if (to) navigate(to)
   }
   if (!show) return null
   return (
@@ -33,7 +34,7 @@ export function Welcome() {
         {net.mintableQuote ? (
           <Button size={40} autoFocus onClick={() => (done(), addTestDollars())}>Add $10,000 test dollars</Button>
         ) : (
-          <Button size={40} autoFocus onClick={() => done('#/collection')}>See Get started</Button>
+          <Button size={40} autoFocus onClick={() => done('/collection')}>See Get started</Button>
         )}
         <Button variant="tertiary" size={40} onClick={() => done()}>Look around</Button>
       </div>

@@ -12,7 +12,7 @@ import { useAlertWatcher } from './alerts'
 import { Redeem } from './Redeem'
 import { Sell } from './Sell'
 import { Slab } from './ui'
-import { scrollFor } from './route'
+import { here, navigate, onNav, prev, scrollFor } from './route'
 import { Browse, Compare, Discover } from './Browse'
 import { AccountMenu, DemoStrip, SearchBox, Shortcuts } from './desk'
 import { Portfolio } from './Holdings'
@@ -21,6 +21,7 @@ import { Activity } from './ActivityPage'
 import { TxChip } from './tx'
 import { Palette } from './Palette'
 import { HelpPage } from './Help'
+import { NotFound, PrivacyPage, TermsPage } from './Legal'
 import { Boundary, OfflineBar } from './Boundary'
 import { Tour } from './Tour'
 import { Landing } from './Landing'
@@ -28,22 +29,22 @@ import { Welcome } from './Welcome'
 import { BalancePill, CashSheet } from './Cash'
 import { StatusBar } from './StatusBar'
 
-function useHash() {
-  const [h, setH] = useState(location.hash)
+function usePath() {
+  const [h, setH] = useState(here)
   useEffect(() => {
     // NOTE: the browser morphs any element sharing a view-transition-name (the card image) between pages.
     // Limit: Chromium/Safari only; elsewhere, and with reduced motion, the page just changes.
-    const on = (e: HashChangeEvent) => {
-      const y = scrollFor(e)
-      const go = () => (flushSync(() => setH(location.hash)), window.scrollTo(0, y))
+    return onNav(() => {
+      if (here() === prev()) return void setH(here())
+      const y = scrollFor()
+      const go = () => (flushSync(() => setH(here())), window.scrollTo(0, y))
       const still = matchMedia('(prefers-reduced-motion: reduce)').matches
-      if (document.startViewTransition && !still) document.startViewTransition(go)
+      // A transition cut short by the next navigation rejects; the page has still changed, so that is ignored.
+      if (document.startViewTransition && !still) document.startViewTransition(go).ready.catch(() => {})
       else go()
-    }
-    addEventListener('hashchange', on)
-    return () => removeEventListener('hashchange', on)
+    })
   }, [])
-  return h.replace(/^#\/?/, '').split('?')[0].split('/')
+  return h.replace(/^\/+/, '').split('?')[0].split('/')
 }
 
 export type Acct = LocalAccount | undefined
@@ -76,7 +77,15 @@ export default function App() {
       localStorage.setItem('tivan.rail', rail ? '1' : '0')
     } catch {}
   }, [rail])
-  const [route, ...args] = useHash()
+  const [route, ...args] = usePath()
+  // The tab names the page; a card page names the card itself (CardPage).
+  useEffect(() => {
+    const page = { browse: 'Browse', compare: 'Compare', collection: 'Portfolio', activity: 'Activity', sell: 'Sell a card', vault: 'Vault a card', you: 'Account', help: 'Help', league: 'League', redeem: 'Request the card', markets: 'Markets', privacy: 'Privacy', terms: 'Terms' }[route]
+    const cardPage = route === 'card' || (['buy', 'sell', 'offer', 'done'].includes(route) && !!args[0])
+    if (!cardPage) document.title = page ? `${page} | ${brand}` : route ? `Page not found | ${brand}` : `${brand} | Graded card exchange on Monad`
+    // One canonical address per page, without the query, so search engines do not index every filter as its own page.
+    document.querySelector('link[rel=canonical]')?.setAttribute('href', location.origin + location.pathname)
+  }, [route, args[0]])
   useAlertWatcher()
   // Signing in at an action point returns to that exact place, with what was typed kept.
   useEffect(() => {
@@ -85,7 +94,7 @@ export default function App() {
     if (!r) return
     sessionStorage.removeItem('tivan.returnTo')
     try {
-      location.hash = JSON.parse(r).hash
+      navigate(JSON.parse(r).hash)
     } catch {}
   }, [account])
   // Free hosting sleeps when idle and takes ~a minute to wake: ring the attestor as soon as anyone opens the app, so it is
@@ -93,7 +102,7 @@ export default function App() {
   useEffect(() => void fetch(`${attestorUrl}/health`).catch(() => {}), [])
   const tab = route === 'browse' || route === 'compare' ? 'browse' : route === 'activity' ? 'activity' : route === 'collection' ? 'collection' : route === 'sell' ? 'sell' : route === 'vault' ? 'vault' : route === 'you' ? 'you' : route === 'help' ? 'help' : route === 'league' ? 'league' : 'markets'
   // Browsing is open to everyone; anything that moves money or cards asks for a passkey first.
-  const out = () => (void signOut(), setAccount(undefined), (location.hash = '#/'))
+  const out = () => (void signOut(), setAccount(undefined), navigate('/'))
   const need = (el: (a: LocalAccount) => React.ReactNode) => (account ? el(account) : <SignIn onReady={login} ended={ended} />)
   const page =
     route === 'card' ? <CardPage sku={args[0]} account={account} />
@@ -108,9 +117,12 @@ export default function App() {
     : route === 'league' ? <League account={account} />
     : route === 'you' ? need((a) => <AccountPage account={a} onSignOut={out} />)
     : route === 'help' ? <HelpPage />
-    : <Discover account={account} />
+    : route === 'privacy' ? <PrivacyPage />
+    : route === 'terms' ? <TermsPage />
+    : route === 'markets' || !route ? <Discover account={account} />
+    : <NotFound />
   if (!ready) return null
-  // The site root is always the public front page; the app lives at #/markets. Sessions persist, so sending signed-in
+  // The site root is always the public front page; the app lives at /markets. Sessions persist, so sending signed-in
   // people straight to the app would hide the front page from anyone who has ever signed in.
   if (route === '')
     return (
@@ -121,14 +133,14 @@ export default function App() {
       </>
     )
   const nav = [
-    ['markets', '#/markets', 'Markets', <IconMarkets />],
-    ['browse', '#/browse', 'Browse', <IconCompass />],
-    ['collection', '#/collection', 'Portfolio', <IconCollection />],
-    ['activity', '#/activity', 'Activity', <IconActivity />],
-    ['sell', '#/sell', 'Sell', <IconTag />],
-    ['vault', '#/vault', 'Vault a card', <IconVault />],
+    ['markets', '/markets', 'Markets', <IconMarkets />],
+    ['browse', '/browse', 'Browse', <IconCompass />],
+    ['collection', '/collection', 'Portfolio', <IconCollection />],
+    ['activity', '/activity', 'Activity', <IconActivity />],
+    ['sell', '/sell', 'Sell', <IconTag />],
+    ['vault', '/vault', 'Vault a card', <IconVault />],
   ] as const
-  const tabs = [nav[0], nav[1], nav[2], nav[4], ['you', '#/you', 'Account', <IconYou />]] as const
+  const tabs = [nav[0], nav[1], nav[2], nav[4], ['you', '/you', 'Account', <IconYou />]] as const
   return (
     <>
       <SettingsSheet />
@@ -140,7 +152,7 @@ export default function App() {
       <div className="shell" data-rail={rail ? 'mini' : undefined}>
         <aside className="side" aria-label="Sidebar">
           <div className="side-top">
-            <a className="brand side-brand" href="#/markets" aria-label={`${brand}, markets`}>
+            <a className="brand side-brand" href="/markets" aria-label={`${brand}, markets`}>
               <span className="brand-mark" aria-hidden><IconKeystone /></span>
               <span className="brand-word">{brand}</span>
             </a>
@@ -159,14 +171,14 @@ export default function App() {
           <div className="side-low">
             <DemoStrip />
             <nav className="side-nav" aria-label="Support">
-              <a href="#/help" title={rail ? 'Help' : undefined} className={tab === 'help' ? 'on' : ''} aria-current={tab === 'help' ? 'page' : undefined}><IconHelp /><span>Help</span></a>
+              <a href="/help" title={rail ? 'Help' : undefined} className={tab === 'help' ? 'on' : ''} aria-current={tab === 'help' ? 'page' : undefined}><IconHelp /><span>Help</span></a>
               <button title={rail ? 'Settings' : undefined} onClick={openSettings}><IconSettings /><span>Settings</span></button>
             </nav>
           </div>
         </aside>
         <div className="mainc">
           <header className="top">
-            <a className="brand top-brand" href="#/markets" aria-label={`${brand}, markets`}>
+            <a className="brand top-brand" href="/markets" aria-label={`${brand}, markets`}>
               <span className="brand-mark" aria-hidden><IconKeystone /></span>
             </a>
             <SearchBox />
@@ -178,7 +190,7 @@ export default function App() {
                   <AccountMenu address={account.address} onSignOut={out} />
                 </>
               ) : (
-                <a className="btn md" href="#/you" data-tour="signin">Sign in</a>
+                <a className="btn md" href="/you" data-tour="signin">Sign in</a>
               )}
             </div>
           </header>
@@ -204,7 +216,7 @@ export default function App() {
 }
 
 /** Cash at a glance, always one tap from adding more. */
-export function CashPill({ account }: { account: Acct }) {
+function CashPill({ account }: { account: Acct }) {
   return account ? <BalancePill account={account} /> : null
 }
 

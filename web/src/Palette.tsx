@@ -3,6 +3,7 @@ import { openCash } from './Cash'
 import { useOnClose } from './controls'
 import { catalog, categories } from './config'
 import { openShortcuts } from './desk'
+import { navigate } from './route'
 import { openSettings } from './fx'
 
 // Ctrl or Cmd + K: grouped results (cards, sets, actions), recent searches, and the whole thing by keyboard.
@@ -18,7 +19,7 @@ const recent = (): string[] => {
     return []
   }
 }
-const go = (href: string) => () => void (location.hash = href)
+const go = (href: string) => () => navigate(href)
 const enc = encodeURIComponent
 
 function groups(q: string, signedIn: boolean): Group[] {
@@ -28,27 +29,27 @@ function groups(q: string, signedIn: boolean): Group[] {
     ...(signedIn
       ? [
           { label: 'Add cash', sub: 'Deposit or get test dollars', run: openCash },
-          { label: 'Sell your card', sub: 'Scan or enter a certificate', run: go('#/sell') },
-          { label: 'Open Portfolio', run: go('#/collection') },
-          { label: 'Open Activity', run: go('#/activity') },
-          { label: 'Open Account', run: go('#/you') },
+          { label: 'Sell your card', sub: 'Scan or enter a certificate', run: go('/sell') },
+          { label: 'Open Portfolio', run: go('/collection') },
+          { label: 'Open Activity', run: go('/activity') },
+          { label: 'Open Account', run: go('/you') },
         ]
-      : [{ label: 'Sign in', run: go('#/you') }]),
-    { label: 'Open Browse', run: go('#/browse') },
+      : [{ label: 'Sign in', run: go('/you') }]),
+    { label: 'Open Browse', run: go('/browse') },
     { label: 'Settings', run: openSettings },
     { label: 'Keyboard shortcuts', run: openShortcuts },
   ].filter((a) => !s || has(a.label))
   const out: Group[] = []
   if (!s) {
     const r = recent()
-    if (r.length) out.push({ title: 'Recent searches', items: r.map((x) => ({ label: x, run: go(`#/browse?q=${enc(x)}`) })) })
+    if (r.length) out.push({ title: 'Recent searches', items: r.map((x) => ({ label: x, run: go(`/browse?q=${enc(x)}`) })) })
   } else {
     const cards = catalog.filter((c) => has(`${c.title} ${c.set}`)).slice(0, 6)
-    if (cards.length) out.push({ title: 'Cards', items: cards.map((c) => ({ label: c.title, sub: c.set, run: go(`#/browse?q=${enc(c.title)}`) })) })
+    if (cards.length) out.push({ title: 'Cards', items: cards.map((c) => ({ label: c.title, sub: c.set, run: go(`/browse?q=${enc(c.title)}`) })) })
     const sets = [...new Set(catalog.map((c) => c.set))].filter(has).slice(0, 4)
-    if (sets.length) out.push({ title: 'Sets', items: sets.map((x) => ({ label: x, run: go(`#/browse?set=${enc(x)}`) })) })
+    if (sets.length) out.push({ title: 'Sets', items: sets.map((x) => ({ label: x, run: go(`/browse?set=${enc(x)}`) })) })
     const cats = categories.filter(has)
-    if (cats.length) out.push({ title: 'Categories', items: cats.map((c) => ({ label: c, run: go(`#/browse?cat=${enc(c)}`) })) })
+    if (cats.length) out.push({ title: 'Categories', items: cats.map((c) => ({ label: c, run: go(`/browse?cat=${enc(c)}`) })) })
   }
   if (actions.length) out.push({ title: 'Actions', items: actions })
   return out
@@ -100,7 +101,7 @@ export function Palette({ signedIn }: { signedIn: boolean }) {
     else if (e.key === 'Enter') {
       e.preventDefault()
       if (flat[i]) run(flat[i])
-      else if (q.trim()) run({ label: q, run: go(`#/browse?q=${enc(q.trim())}`) })
+      else if (q.trim()) run({ label: q, run: go(`/browse?q=${enc(q.trim())}`) })
     }
   }
   return (

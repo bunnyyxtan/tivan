@@ -43,7 +43,7 @@ export function Redeem({ sku, account }: { sku: string; account: LocalAccount })
   const own = data ? data.held + data.onExchange : 0n
   return (
     <div className="flow">
-      <Header back={`#/card/${sku}`} backLabel="Cancel" title="Request the card" />
+      <Header back={`/card/${sku}`} backLabel="Cancel" title="Request the card" />
       {data && <div className="item">
         <Slab name={data.s.name} size="xs" />
         <div>

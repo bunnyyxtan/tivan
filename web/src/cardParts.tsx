@@ -8,7 +8,7 @@ export const cents = (dollars: number) => BigInt(Math.round(dollars * 100))
 
 /** The markets this person opened lately, newest first, kept in this browser. */
 const VIEWED = 'tivan.viewed'
-export const readViewed = (): string[] => {
+const readViewed = (): string[] => {
   try {
     return JSON.parse(localStorage.getItem(VIEWED) ?? '[]')
   } catch {
@@ -111,13 +111,3 @@ export function SpreadBar({ bid, ask, last }: { bid?: bigint; ask?: bigint; last
 }
 
 /** The first time someone meets the ask, the best offer and the spread, once, and never again once dismissed. */
-export function FirstHint() {
-  const [off, setOff] = useState(() => localStorage.getItem('tivan.hint.market') === '1')
-  if (off) return null
-  return (
-    <div className="notice hint" role="note">
-      <b>New here?</b> The ask is the lowest price anyone is selling at. The best offer is the highest price anyone is bidding. The spread is the gap between them.{' '}
-      <button className="linkbtn" onClick={() => { try { localStorage.setItem('tivan.hint.market', '1') } catch {} setOff(true) }}>Got it</button>
-    </div>
-  )
-}
