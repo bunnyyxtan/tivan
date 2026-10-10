@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { flushSync } from 'react-dom'
 import type { LocalAccount } from 'viem'
-import { SESSION_MS, createAccount, deviceAccount, endSession, friendlyError, hasDeviceKey, restoreSession, savedPasskey, signIn, signOut } from './account'
+import { SESSION_MS, createAccount, deviceAccount, endSession, friendlyError, hasDeviceKey, prfUnavailable, restoreSession, savedPasskey, signIn, signOut } from './account'
 import { openSettings } from './fx'
 import { IconActivity, IconChevron, IconKeystone, IconCollection, IconCompass, IconHelp, IconMarkets, IconSettings, IconTag, IconVault, IconYou } from './icons'
 import { SettingsSheet } from './Settings'
@@ -211,6 +211,7 @@ export function CashPill({ account }: { account: Acct }) {
 /** One calm sign-in card, shown wherever an action needs an account. Browsing never does. */
 function SignIn({ onReady, ended }: { onReady: (a: LocalAccount) => void; ended?: boolean }) {
   const [err, setErr] = useState<string>()
+  const [noPrf, setNoPrf] = useState(false)
   const [busy, setBusy] = useState(false)
   const returning = !!savedPasskey()
   const go = async (fn: () => Promise<LocalAccount>) => {
@@ -221,6 +222,7 @@ function SignIn({ onReady, ended }: { onReady: (a: LocalAccount) => void; ended?
     } catch (e) {
       console.error(e)
       setErr(friendlyError(e))
+      if (prfUnavailable(e)) setNoPrf(true)
     } finally {
       setBusy(false)
     }
@@ -248,7 +250,7 @@ function SignIn({ onReady, ended }: { onReady: (a: LocalAccount) => void; ended?
           <button className="ghost line wide" disabled={busy} onClick={() => go(returning ? () => signIn(true) : signIn)}>
             {returning ? 'Use a different passkey' : 'I already have an account'}
           </button>
-          {net.name === 'testnet' && (err || hasDeviceKey()) && (
+          {net.name === 'testnet' && (noPrf || hasDeviceKey()) && (
             <button className="ghost wide" disabled={busy} onClick={() => go(async () => deviceAccount())}>
               {hasDeviceKey() ? 'Continue with this device’s test account' : 'Continue without a passkey (test mode)'}
             </button>

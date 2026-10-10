@@ -147,6 +147,12 @@ export const confirmStep = (a: LocalAccount): [string, () => Promise<void>][] =>
 export const endSession = () => idb('readwrite', (s) => s.delete('current')).catch(() => {})
 export const signOut = endSession
 
+/**
+ * True only when this device's passkey provider cannot do PRF. That is the one case `deviceAccount` exists for, so the
+ * fallback is never offered after a cancelled prompt: a passkey account must stay reconstructible from the passkey.
+ */
+export const prfUnavailable = (e: unknown) => isMeraError(e) && e.code === 'PRF_UNAVAILABLE'
+
 export const friendlyError = (e: unknown): string => {
   if (isMeraError(e)) {
     if (e.code === 'PRF_UNAVAILABLE') return 'This device’s passkey provider can’t create a Slab account yet.'
