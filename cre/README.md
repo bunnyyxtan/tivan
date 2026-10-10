@@ -43,6 +43,17 @@ cre workflow simulate ./slab-attest -T testnet-settings --non-interactive \
   --trigger-index 0 --http-payload ./slab-attest/payload.json --broadcast
 ```
 
+**Windows with Smart App Control on.** The compiler shells out to an unsigned `javy.exe`, which Application
+Control blocks, so `cre workflow build` and an unqualified `simulate` both fail with `uv_spawn` / `EUNKNOWN`.
+Build the wasm on Linux instead with the `Build CRE wasm` GitHub Actions workflow, download the
+`slab-attest-wasm` artifact to `slab-attest/binary.wasm`, and pass it with an **absolute** path (a relative one
+is rejected):
+
+```sh
+cre workflow simulate ./slab-attest -T testnet-settings --non-interactive --trigger-index 0 \
+  --http-payload ./slab-attest/payload.json --wasm C:\path\to\cre\slab-attest\binary.wasm --broadcast
+```
+
 ## What ran (2026-10-09, Windows, CRE CLI v1.37.0 from the official release, SHA-256 checked; Bun 1.4.2)
 
 | Step | Result |
