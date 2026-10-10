@@ -3,7 +3,7 @@
 import { Args, Flags } from '@oclif/core'
 import { CommandError, PluginCommand, type CommandIO } from '@metamask/agent-wallet/plugin'
 import type { Address } from 'viem'
-import { CHAIN_ID, bookAbi, findCard, live, marketFor, pub, toCents, ZERO } from '../../tivan.js'
+import { CHAIN_ID, bookAbi, findMarket, listMarkets, live, pub, toCents } from '../../tivan.js'
 
 type Result = { card: string; price: number; size: number; market: Address; hash: string; status: string }
 
@@ -19,13 +19,13 @@ export default class TivanBuy extends PluginCommand<Result> {
 
   async execute(io: CommandIO): Promise<Result> {
     const { args, flags } = await this.parse(TivanBuy)
-    const card = findCard(args.card)
+    const card = findMarket(await listMarkets(pub()), args.card)
     if (!card) throw new Error(`unknown card "${args.card}" — run \`mm tivan markets\` for the list`)
     if (flags.size < 1) throw new Error('size must be at least 1 whole card')
     const cents = toCents(Number(flags.price))
 
-    const { market } = await marketFor(pub(), card.spec, card.grade)
-    if (market === ZERO) throw new Error(`${card.id} has no market yet`)
+    const { market } = card
+    if (!market) throw new Error(`${card.id} has no market yet`)
     // Orders are post-only, so the agent can rest a bid but never take the ask. Kuru reverts a crossing one with
     // PostOnlyError; catch it here, before the wallet prompts, with the price that would have worked.
     const [, ask] = await pub().readContract({ address: market, abi: bookAbi, functionName: 'bestBidAsk' })
@@ -59,7 +59,7 @@ export default class TivanBuy extends PluginCommand<Result> {
     })
     if (result.kind !== 'transaction') throw new Error(`expected a transaction result, got ${result.kind}`)
 
-    io.emit(`bid ${flags.size} x ${card.id} (PSA ${card.grade} ${card.name}) at $${(cents / 100).toFixed(2)} — ${result.hash}`)
+    io.emit(`bid ${flags.size} x ${card.id} (PSA ${card.grade} ${card.card}) at $${(cents / 100).toFixed(2)} — ${result.hash}`)
     return { card: card.id, price: cents / 100, size: flags.size, market, hash: result.hash, status: result.status }
   }
 }

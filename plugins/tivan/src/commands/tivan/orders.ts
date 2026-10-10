@@ -4,7 +4,7 @@
 import { Args } from '@oclif/core'
 import { PluginCommand, type CommandIO } from '@metamask/agent-wallet/plugin'
 import { type Address } from 'viem'
-import { CARDS, forPeople, indexedMarkets, indexedOrders, orderAbi, pub } from '../../tivan.js'
+import { forPeople, indexedOrders, listMarkets, orderAbi, pub } from '../../tivan.js'
 
 type Row = { card: string; id: string; side: 'bid' | 'ask'; price: number; size: number; orderId: string }
 
@@ -18,8 +18,8 @@ export default class TivanOrders extends PluginCommand<{ orders: Row[] } | undef
     const owner = args.address
     const client = pub()
 
-    // Names come from the indexer, which knows every book the vault has deployed, not just the curated card list.
-    const names = new Map((await indexedMarkets()).map((m) => [m.id.toLowerCase(), m.name]))
+    // Every book the vault has deployed, with its card name and short id.
+    const books = new Map((await listMarkets(client)).filter((m) => m.market).map((m) => [m.market!.toLowerCase(), m]))
 
     const indexed = await indexedOrders(owner)
     // Read together so the client folds them into one multicall rather than one request per order.
@@ -28,8 +28,9 @@ export default class TivanOrders extends PluginCommand<{ orders: Row[] } | undef
     )
     const orders: Row[] = []
     indexed.forEach((o, i) => {
-      const name = names.get(o.market.toLowerCase()) ?? o.market
-      const id = CARDS.find((c) => name === `PSA ${c.grade} ${c.name}`)?.id ?? '-'
+      const book = books.get(o.market.toLowerCase())
+      const name = book ? `PSA ${book.grade} ${book.card}` : o.market
+      const id = book?.id ?? '-'
       // Kuru keeps the slot after a fill or a cancel, so size 0 or another owner means this one is gone.
       const [onChainOwner, size] = slots[i]
       if (size === 0n || onChainOwner.toLowerCase() !== owner.toLowerCase()) return

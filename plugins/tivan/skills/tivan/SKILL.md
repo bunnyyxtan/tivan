@@ -25,8 +25,8 @@ The address is required: ask for it rather than guessing.
 
 ### `mm tivan markets`
 
-Lists all 19 markets with their best bid and ask, read live from the Kuru books on Monad
-testnet. No wallet capability, no signing, no cost. Add `--json` for machine-readable output.
+Lists every market the vault has listed, found through Tivan's Envio indexer, with its best bid and ask read live
+from the Kuru books on Monad testnet. A card listed after the plugin was installed shows up here too. No wallet capability, no signing, no cost. Add `--json` for machine-readable output.
 
 Run this **first** whenever the user asks about prices, and before any bid — card ids come
 from here, and the ask tells you what a realistic bid looks like.
@@ -78,4 +78,4 @@ take the ask in the Tivan app.
 - Monad **testnet** (chain 10143). Prices are seeded by an automated market maker; cash and
   custody are simulated.
 - The plugin can **bid**. It cannot sell, cancel, or place market orders — do those in the app.
-- The card catalog is the 19 seeded markets. A card that is not in `mm tivan markets` has no book.
+- Card ids come from each card's token symbol (`PSA10-CHZ` is `CHZ10`). A card that is not in `mm tivan markets` has no book yet.

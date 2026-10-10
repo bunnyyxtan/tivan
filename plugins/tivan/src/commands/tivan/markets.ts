@@ -1,7 +1,7 @@
 // `mm tivan markets` — the live Kuru book for every graded card Tivan has listed.
 // Pure chain reads, so it needs no wallet capability.
 import { PluginCommand, type CommandIO } from '@metamask/agent-wallet/plugin'
-import { CARDS, bookAbi, forPeople, live, marketFor, pub, ZERO } from '../../tivan.js'
+import { bookAbi, forPeople, listMarkets, live, pub } from '../../tivan.js'
 
 type Row = { id: string; card: string; grade: number; market: string | null; bid: number | null; ask: number | null }
 
@@ -11,20 +11,18 @@ export default class TivanMarkets extends PluginCommand<{ markets: Row[] } | und
 
   async execute(io: CommandIO) {
     const client = pub()
-    // Issued together so the client folds them into two multicalls instead of 38 separate requests.
-    const found = await Promise.all(CARDS.map((c) => marketFor(client, c.spec, c.grade)))
+    // Discovered, not listed: the indexer names every book the vault has deployed, prices come from the books.
+    const found = await listMarkets(client)
+    // Issued together so the client folds them into one multicall instead of a request per book.
     const books = await Promise.all(
-      found.map(({ market }) => (market === ZERO ? null : client.readContract({ address: market, abi: bookAbi, functionName: 'bestBidAsk' }))),
+      found.map(({ market }) => (market ? client.readContract({ address: market, abi: bookAbi, functionName: 'bestBidAsk' }) : null)),
     )
-    const markets: Row[] = CARDS.map((c, i) => {
+    const markets: Row[] = found.map((c, i) => {
       const book = books[i]
-      if (!book) return { id: c.id, card: c.name, grade: c.grade, market: null, bid: null, ask: null }
+      if (!book) return { ...c, bid: null, ask: null }
       const [bid, ask] = book
       return {
-        id: c.id,
-        card: c.name,
-        grade: c.grade,
-        market: found[i].market,
+        ...c,
         bid: live(bid) ? Number(bid / 10n ** 16n) / 100 : null,
         ask: live(ask) ? Number(ask / 10n ** 16n) / 100 : null,
       }

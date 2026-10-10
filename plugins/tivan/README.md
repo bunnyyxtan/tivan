@@ -12,7 +12,7 @@ transaction signed by the Agent Wallet.
 
 | Command | Capability | What it does |
 |---|---|---|
-| `mm tivan markets` | none | All 19 markets with live best bid and ask, straight from the Kuru books |
+| `mm tivan markets` | none | Every market the vault has listed, found through the indexer, with live best bid and ask from the Kuru books |
 | `mm tivan orders <address>` | none | That address's resting orders, from Tivan's Envio indexer, each re-checked on the book |
 | `mm tivan buy <card> --price <dollars>` | `wallet-submit` | Rests a bid on that card's book |
 
