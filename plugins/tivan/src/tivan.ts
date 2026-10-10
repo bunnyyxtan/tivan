@@ -46,7 +46,12 @@ export const toCents = (dollars: number): number => {
   return cents
 }
 
-export const pub = (): PublicClient => createPublicClient({ chain: monadTestnet, transport: http() })
+/** A person at a terminal gets the printed table only; --json, --format json/toon or a pipe also gets the data. */
+export const forPeople = (flags: Record<string, unknown>) =>
+  !flags.json && (flags.format === 'text' || (flags.format === undefined && process.stdout.isTTY === true))
+
+// The public RPC allows 15 requests a second, so concurrent reads are folded into Multicall3 calls.
+export const pub = (): PublicClient => createPublicClient({ chain: monadTestnet, batch: { multicall: true }, transport: http() })
 
 const DEAD = 2n ** 255n
 /** Kuru returns a sentinel, not 0, when a side of the book is empty. */
