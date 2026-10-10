@@ -212,10 +212,11 @@ export function CashPill({ account }: { account: Acct }) {
 function SignIn({ onReady, ended }: { onReady: (a: LocalAccount) => void; ended?: boolean }) {
   const [err, setErr] = useState<string>()
   const [noPrf, setNoPrf] = useState(false)
-  const [busy, setBusy] = useState(false)
+  // Which button started the passkey request, so its spinner shows on that button and not on the first one.
+  const [busy, setBusy] = useState<'main' | 'other' | 'device'>()
   const returning = !!savedPasskey()
-  const go = async (fn: () => Promise<LocalAccount>) => {
-    setBusy(true)
+  const go = async (which: 'main' | 'other' | 'device', fn: () => Promise<LocalAccount>) => {
+    setBusy(which)
     setErr(undefined)
     try {
       onReady(await fn())
@@ -224,7 +225,7 @@ function SignIn({ onReady, ended }: { onReady: (a: LocalAccount) => void; ended?
       setErr(friendlyError(e))
       if (prfUnavailable(e)) setNoPrf(true)
     } finally {
-      setBusy(false)
+      setBusy(undefined)
     }
   }
   return (
@@ -237,21 +238,23 @@ function SignIn({ onReady, ended }: { onReady: (a: LocalAccount) => void; ended?
         <p className="gate-sub">{ended ? 'Sessions on a device last 7 days. Your passkey opens a new one; your account, cash and cards are exactly where you left them.' : 'Your passkey is your account: your device’s fingerprint, face or screen lock. Nothing to install and no seed phrase.'}</p>
         <div className="gate-actions">
           {returning ? (
-            <button className="btn wide" disabled={busy} onClick={() => go(signIn)}>
-              {busy ? <span className="spin" aria-hidden /> : null}
+            <button className="btn wide" disabled={!!busy} onClick={() => go('main', signIn)}>
+              {busy === 'main' ? <span className="spin" aria-hidden /> : null}
               Continue with your passkey
             </button>
           ) : (
-            <button className="btn wide" disabled={busy} onClick={() => go(() => createAccount(`Collector ${new Date().toLocaleDateString()}`))}>
-              {busy ? <span className="spin" aria-hidden /> : null}
+            <button className="btn wide" disabled={!!busy} onClick={() => go('main', () => createAccount(`Collector ${new Date().toLocaleDateString()}`))}>
+              {busy === 'main' ? <span className="spin" aria-hidden /> : null}
               Create an account with a passkey
             </button>
           )}
-          <button className="ghost line wide" disabled={busy} onClick={() => go(returning ? () => signIn(true) : signIn)}>
+          <button className="ghost line wide" disabled={!!busy} onClick={() => go('other', returning ? () => signIn(true) : signIn)}>
+            {busy === 'other' ? <span className="spin" aria-hidden /> : null}
             {returning ? 'Use a different passkey' : 'I already have an account'}
           </button>
           {net.name === 'testnet' && (noPrf || hasDeviceKey()) && (
-            <button className="ghost wide" disabled={busy} onClick={() => go(async () => deviceAccount())}>
+            <button className="ghost wide" disabled={!!busy} onClick={() => go('device', async () => deviceAccount())}>
+              {busy === 'device' ? <span className="spin" aria-hidden /> : null}
               {hasDeviceKey() ? 'Continue with this device’s test account' : 'Continue without a passkey (test mode)'}
             </button>
           )}
