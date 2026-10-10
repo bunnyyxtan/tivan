@@ -1,3 +1,5 @@
+import type { IncomingMessage } from 'node:http'
+
 export class HttpError extends Error {
   constructor(public status: number, message: string) {
     super(message)
@@ -27,4 +29,13 @@ export function cap(msg: string, ...limits: [key: string, perHour: number][]) {
 /** Test seam: forget every recorded hit. */
 export const resetCap = () => {
   for (const k in hits) delete hits[k]
+}
+
+/** The caller's IP for per-visitor caps. Render's edge sets cf-connecting-ip; the last X-Forwarded-For hop is the fallback.
+ * A forged header can only move a caller into another per-IP bucket; the global caps still hold. */
+export function clientIp(req: IncomingMessage): string {
+  const cf = req.headers['cf-connecting-ip']
+  if (typeof cf === 'string' && cf) return cf
+  const xff = String(req.headers['x-forwarded-for'] ?? '').split(',').map((s) => s.trim()).filter(Boolean)
+  return xff.at(-1) ?? req.socket.remoteAddress ?? 'unknown'
 }

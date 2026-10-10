@@ -5,7 +5,7 @@ import { createPublicClient, createWalletClient, formatEther, http, isAddress, g
 import { privateKeyToAccount } from 'viem/accounts'
 import { network, deployerKey, port, custodyToken } from './config.ts'
 import { demoRegistryRecord, verifyCert } from './psa.ts'
-import { cap, HttpError } from './cap.ts'
+import { cap, clientIp, HttpError } from './cap.ts'
 
 const oracleAbi = parseAbi(['function grades(uint256) view returns (uint256 specId, uint8 grade, address holder, uint64 at)'])
 const vaultAbi = parseAbi([
@@ -103,13 +103,13 @@ const hex = (v: unknown, field: string, minBytes: number, maxBytes: number): `0x
 const routes: Record<string, (b: Record<string, unknown>, req: IncomingMessage) => Promise<object>> = {
   // Relays a private-vault write and pays its gas. The SealedBox contract itself checks the keeper's signature and nonce,
   // so this relay cannot change anyone's box; it only submits what the keeper signed. Ciphertext only ever passes through.
-  async '/vault/put'(b) {
+  async '/vault/put'(b, req) {
     if (!network.sealedBox) throw new HttpError(404, 'no private vault on this network')
     const locator = hex(b.locator, 'locator', 32, 32)
     const box = hex(b.box, 'box', 1, 4096)
     const nonce = uint(b.nonce, 'nonce', 2n ** 64n)
     const sig = hex(b.sig, 'sig', 65, 65)
-    cap('too many vault saves this hour, try again later', [`box:${locator}`, 12], ['box', 120])
+    cap('too many vault saves this hour, try again later', [`box:${locator}`, 12], [`box-ip:${clientIp(req)}`, 40], ['box', 120])
     const hash = await serial(async () => {
       const { request } = await pub.simulateContract({ account, address: network.sealedBox!, abi: boxAbi, functionName: 'put', args: [locator, box, nonce, sig] })
       const h = await wallet.writeContract(request)
@@ -120,10 +120,11 @@ const routes: Record<string, (b: Record<string, unknown>, req: IncomingMessage) 
     return { txHash: hash }
   },
 
-  async '/attest'(b) {
+  async '/attest'(b, req) {
     // An attest deploys a token and a market on a new SKU: the most expensive thing this signer pays for.
     // A revert costs nothing (simulateContract catches it first), but every valid cert does, so cap the rate.
-    cap('too many attestations this hour, try again later', ['attest', 40])
+    // Per visitor as well as overall, so one caller cannot spend the hour's budget for everyone else.
+    cap('too many attestations this hour, try again later', [`attest-ip:${clientIp(req)}`, 12], ['attest', 40])
     const certId = uint(b.certId, 'certId', U256)
     const specId = uint(b.specId, 'specId', U256)
     const grade = Number(uint(b.grade, 'grade', 10n))
@@ -157,12 +158,12 @@ const routes: Record<string, (b: Record<string, unknown>, req: IncomingMessage) 
       const got = Buffer.from(String(req.headers['x-custody-token'] ?? ''))
       const want = Buffer.from(custodyToken)
       if (got.length !== want.length || !timingSafeEqual(got, want)) throw new HttpError(403, 'custodian only')
-    } else cap('too many custody confirmations this hour, try again later', ['custody', 60])
+    } else cap('too many custody confirmations this hour, try again later', [`custody-ip:${clientIp(req)}`, 20], ['custody', 60])
     const certId = uint(b.certId, 'certId', U256)
     return { txHash: await send('confirmCustody', [certId]) }
   },
 
-  async '/drip'(b) {
+  async '/drip'(b, req) {
     if (!network.drip) throw new HttpError(403, 'drip is testnet only')
     const to = addr(b.address, 'address')
     const last = dripped[to]
@@ -174,6 +175,8 @@ const routes: Record<string, (b: Record<string, unknown>, req: IncomingMessage) 
       if ((await pub.getBalance({ address: to })) >= LOW) throw new HttpError(409, 'this address still has enough MON for fees')
       if ((await pub.getBalance({ address: account.address })) < RESERVE + DRIP)
         throw new HttpError(503, 'faucet is low, use faucet.monad.xyz for MON')
+      // Fresh addresses cost nothing to make, so one visitor is also capped across addresses.
+      cap('too many top-ups from here this hour, try again later or use faucet.monad.xyz', [`drip-ip:${clientIp(req)}`, 8])
       const hash = await serial(async () => {
         const h = await wallet.sendTransaction({ to, value: DRIP })
         await pub.waitForTransactionReceipt({ hash: h }) // next tx from this key must see the new nonce
@@ -195,6 +198,8 @@ function reply(res: ServerResponse, status: number, data: object) {
     'access-control-allow-origin': '*',
     'access-control-allow-methods': 'GET,POST,OPTIONS',
     'access-control-allow-headers': 'content-type, x-custody-token',
+    'x-content-type-options': 'nosniff',
+    'cache-control': 'no-store',
   })
   res.end(JSON.stringify(data))
 }

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { cap, resetCap, HttpError } from '../src/cap.ts'
+import { cap, clientIp, resetCap, HttpError } from '../src/cap.ts'
 
 const refused = (fn: () => void) => {
   try {
@@ -45,4 +45,11 @@ test('hits older than an hour stop counting', () => {
   } finally {
     Date.now = real
   }
+})
+
+test('the caller IP prefers the edge header, then the last forwarded hop', () => {
+  const req = (headers: Record<string, string>) => ({ headers, socket: { remoteAddress: '10.0.0.1' } }) as never
+  assert.equal(clientIp(req({ 'cf-connecting-ip': '1.1.1.1', 'x-forwarded-for': '9.9.9.9' })), '1.1.1.1')
+  assert.equal(clientIp(req({ 'x-forwarded-for': '6.6.6.6, 2.2.2.2' })), '2.2.2.2', 'a forged first hop is ignored')
+  assert.equal(clientIp(req({})), '10.0.0.1')
 })
