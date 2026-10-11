@@ -1,9 +1,14 @@
 import { useState } from 'react'
-import { keccak256, parseEventLogs, toBytes, type LocalAccount } from 'viem'
+import { keccak256, parseEventLogs, toBytes, zeroHash, type LocalAccount } from 'viem'
 import { confirmStep } from './account'
 import { net } from './config'
 import { erc20Abi, loadSkus, marginAbi, marginAccount, pub, send, vaultAbi } from './chain'
 import { Header, Slab, Steps, cardSub, cardTitle, useFlow, usePoll } from './ui'
+
+// A destination is only asked for where cards actually ship. On the test network nothing is held and nothing is
+// posted, so the address field is not shown and the vault records the empty hash. In production only a hash of the
+// address is recorded and the custodian gets the plaintext out of band.
+const test = net.name === 'testnet'
 
 export function Redeem({ sku, account }: { sku: string; account: LocalAccount }) {
   const { data } = usePoll(
@@ -34,7 +39,7 @@ export function Redeem({ sku, account }: { sku: string; account: LocalAccount })
       [
         'Request recorded, token retired',
         async () => {
-          const r = await send(account, { address: net.vault!, abi: vaultAbi, functionName: 'redeem', args: [sku as `0x${string}`, keccak256(toBytes(ship.trim()))] })
+          const r = await send(account, { address: net.vault!, abi: vaultAbi, functionName: 'redeem', args: [sku as `0x${string}`, test ? zeroHash : keccak256(toBytes(ship.trim()))] })
           setCertId(parseEventLogs({ abi: vaultAbi, eventName: 'Redeemed', logs: r.logs })[0].args.certId)
           return r.transactionHash
         },
@@ -61,42 +66,43 @@ export function Redeem({ sku, account }: { sku: string; account: LocalAccount })
           </div>
           <Steps steps={flow.steps} />
           <p className="notice">
-            <b>Demo:</b> no physical cards are held yet, so nothing ships. In production the vault custodian contacts you to arrange insured shipping.
+            {test ? 'No physical cards are held yet, so nothing ships and no address was asked for. ' : ''}In production the vault custodian contacts you to arrange insured shipping.
           </p>
         </>
       ) : (
         <>
-          <label className="lab">
-            Shipping address
-            <textarea className="field" rows={3} value={ship} onChange={(e) => setShip(e.target.value)} placeholder={'Name\nStreet\nCity, postcode'} />
-          </label>
-          {/* NOTE: only a hash of the address is recorded; the custodian gets the plaintext out of band. */}
+          {!test && (
+            <label className="lab">
+              Shipping address
+              <textarea className="field" rows={3} value={ship} onChange={(e) => setShip(e.target.value)} placeholder={'Name\nStreet\nCity, postcode'} />
+            </label>
+          )}
           <div className="rows">
             <div className="kv">
               <span>Who ships it</span>
-              <span>The vault custodian, insured</span>
+              <span>{test ? 'Nobody yet, no cards are held' : 'The vault custodian, insured'}</span>
             </div>
             <div className="kv">
               <span>Next step</span>
-              <span>They contact you to arrange it</span>
+              <span>{test ? 'The cert is assigned to you and the token is retired' : 'They contact you to arrange it'}</span>
             </div>
             <div className="kv">
               <span>Shipping cost</span>
-              <span>Quoted by the custodian</span>
+              <span>{test ? 'None, nothing is posted' : 'Quoted by the custodian'}</span>
             </div>
             <div className="kv">
               <span>Recorded publicly</span>
-              <span>Only a fingerprint of your address</span>
+              <span>{test ? 'The cert id, and nothing about you' : 'Only a fingerprint of your address'}</span>
             </div>
           </div>
           <p className="notice">
-            <b>What changes:</b> when you confirm, your token is retired and the card can no longer be traded here. Demo: no physical cards are held yet, so nothing ships.
+            <b>What changes:</b> when you confirm, your token is retired and the card can no longer be traded here.{test ? ' No physical cards are held yet, so nothing ships and no address is asked for.' : ''}
           </p>
           <button className="check" role="checkbox" aria-checked={ok} onClick={() => setOk(!ok)}>
             <i aria-hidden>{ok ? '✓' : ''}</i>I understand it stops being tradable when I confirm.
           </button>
           <Steps steps={flow.steps} error={flow.error} />
-          <button className="btn wide" disabled={!data || own < 1n || ship.trim().length < 10 || !ok || flow.busy} onClick={go}>
+          <button className="btn wide" disabled={!data || own < 1n || (!test && ship.trim().length < 10) || !ok || flow.busy} onClick={go}>
             {flow.busy && <span className="spin" aria-hidden />}
             {flow.doing ?? (account.source === 'mera' ? 'Request it with Face ID' : 'Request the card')}
           </button>
