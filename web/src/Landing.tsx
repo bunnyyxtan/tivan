@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { brand, catalog, catalogOf, net } from './config'
-import { explorerAddress, loadSkus, peekSkus, pub, readBook, type FeedItem, type Sku } from './chain'
+import { loadSkus, peekSkus, pub, readBook, type FeedItem, type Sku } from './chain'
 import { cents, usdC } from './cardParts'
 import { confetti, still } from './celebrate'
 import { ago, useSales } from './desk'
 import { aggregate } from './logic/orders.ts'
 import { formatBps, formatQty } from './logic/money.ts'
 import { openPalette } from './Palette'
+import { SiteFooter } from './site/Layout'
 import { IconChevron, IconKeystone, IconSearch } from './icons'
 import { Slab, cardTitle, parseName, usePoll } from './ui'
 
@@ -514,36 +515,6 @@ function Cta({ a, b, c }: { a?: Sku; b?: Sku; c?: Sku }) {
   )
 }
 
-function Footer() {
-  return (
-    <footer className="lp-foot">
-      <div className="lp-wrap wide lp-foot-in">
-        <div>
-          <span className="lp-brand">{brand}</span>
-          <p>Graded trading cards held in a vault, each with its own on-chain order book.</p>
-        </div>
-        <nav aria-label="Quick links">
-          <h3>Quick links</h3>
-          <a href="/markets">Markets</a>
-          <a href="/browse">Browse</a>
-          <a href="/sell">Sell a card</a>
-          <a href="/help">Help center</a>
-          <a href="/help?s=fees">Fees</a>
-          <a href="/help?s=custody">Custody and verification</a>
-          <a href="/privacy">Privacy</a>
-          <a href="/terms">Terms</a>
-        </nav>
-        <div>
-          <h3>Built on Monad</h3>
-          <p>Running on {net.chain.name}. Orders and trades are on-chain transactions you can look up.</p>
-          {net.vault && <a className="lp-link" href={explorerAddress(net.vault)} target="_blank" rel="noreferrer">Vault contract on the explorer</a>}
-          {net.name === 'testnet' && <p className="lp-fine">Test network: prices come from an automated market maker; cash and custody are simulated and have no value.</p>}
-        </div>
-      </div>
-      <div className="lp-foot-word" aria-hidden>{brand}</div>
-    </footer>
-  )
-}
 
 export function Landing({ signedIn = false }: { signedIn?: boolean }) {
   const { data } = usePoll(loadSkus, 15000, [], peekSkus)
@@ -580,7 +551,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
       <Cards list={popular.slice(0, 8)} />
       <Pull list={all} />
       <Cta a={byAsk[2]} b={byAsk[0]} c={byAsk[1]} />
-      <Footer />
+      <SiteFooter />
     </div>
   )
 }

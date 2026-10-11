@@ -51,8 +51,8 @@ export function HelpPage() {
             {t.label}
           </button>
         ))}
-        <a href="/privacy">Privacy</a>
-        <a href="/terms">Terms</a>
+        <a href="/docs">Documentation</a>
+        <a href="/legal">Legal</a>
       </nav>
       <div className="help-seg">
         <Seg label="Help topic" value={topic} onChange={(t) => setQuery({ s: t === 'faq' ? '' : t })} options={TOPICS} />

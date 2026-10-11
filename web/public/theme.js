@@ -7,5 +7,5 @@ try {
   r.dataset.theme = t
   r.dataset.appearance = p.theme === 'light' || p.theme === 'system' ? p.theme : 'dark'
   r.style.colorScheme = t
-  document.querySelector('meta[name=theme-color]').setAttribute('content', t === 'light' ? '#eef8f0' : '#0b2b26')
+  document.querySelector('meta[name=theme-color]').setAttribute('content', t === 'light' ? '#edf8f2' : '#0b0f0e')
 } catch {}

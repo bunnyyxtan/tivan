@@ -21,7 +21,12 @@ import { Activity } from './ActivityPage'
 import { TxChip } from './tx'
 import { Palette } from './Palette'
 import { HelpPage } from './Help'
-import { NotFound, PrivacyPage, TermsPage } from './Legal'
+import { SiteFooter } from './site/Layout'
+import { DocPage, DocsIndex } from './site/Docs'
+import { LegalDoc, LegalHub, NotFound } from './site/Legal'
+import { ContractsPage, SecurityPage, StatusPage } from './site/Trust'
+import { WhitepaperPage } from './site/Whitepaper'
+import { docBySlug, legalBySlug } from './site/siteMap'
 import { Boundary, OfflineBar } from './Boundary'
 import { Tour } from './Tour'
 import { Landing } from './Landing'
@@ -40,7 +45,8 @@ function usePath() {
       const go = () => (flushSync(() => setH(here())), window.scrollTo(0, y))
       const still = matchMedia('(prefers-reduced-motion: reduce)').matches
       // A transition cut short by the next navigation rejects; the page has still changed, so that is ignored.
-      if (document.startViewTransition && !still) document.startViewTransition(go).ready.catch(() => {})
+      // A hidden tab cannot animate, so it changes the page directly.
+      if (document.startViewTransition && !still && document.visibilityState === 'visible') document.startViewTransition(go).ready.catch(() => {})
       else go()
     })
   }, [])
@@ -80,7 +86,11 @@ export default function App() {
   const [route, ...args] = usePath()
   // The tab names the page; a card page names the card itself (CardPage).
   useEffect(() => {
-    const page = { browse: 'Browse', compare: 'Compare', collection: 'Portfolio', activity: 'Activity', sell: 'Sell a card', vault: 'Vault a card', you: 'Account', help: 'Help', league: 'League', redeem: 'Request the card', markets: 'Markets', privacy: 'Privacy', terms: 'Terms' }[route]
+    const legal = route === 'privacy' || route === 'terms' ? route : route === 'legal' ? args[0] : undefined
+    const page =
+      route === 'docs' && args[0] ? docBySlug(args[0])?.title
+      : legal ? legalBySlug(legal)?.title
+      : { browse: 'Browse', compare: 'Compare', collection: 'Portfolio', activity: 'Activity', sell: 'Sell a card', vault: 'Vault a card', you: 'Account', help: 'Help', league: 'League', redeem: 'Request the card', markets: 'Markets', docs: 'Documentation', whitepaper: 'Whitepaper', legal: 'Legal', contracts: 'Contracts', security: 'Security', status: 'Status' }[route]
     const cardPage = route === 'card' || (['buy', 'sell', 'offer', 'done'].includes(route) && !!args[0])
     if (!cardPage) document.title = page ? `${page} | ${brand}` : route ? `Page not found | ${brand}` : `${brand} | Graded card exchange on Monad`
     // One canonical address per page, without the query, so search engines do not index every filter as its own page.
@@ -117,11 +127,28 @@ export default function App() {
     : route === 'league' ? <League account={account} />
     : route === 'you' ? need((a) => <AccountPage account={a} onSignOut={out} />)
     : route === 'help' ? <HelpPage />
-    : route === 'privacy' ? <PrivacyPage />
-    : route === 'terms' ? <TermsPage />
     : route === 'markets' || !route ? <Discover account={account} />
+    : undefined
+  // The public site (docs, whitepaper, legal and trust pages) has its own top bar and no app sidebar, like the front page.
+  const site =
+    route === 'docs' ? (args[0] ? <DocPage slug={args[0]} /> : <DocsIndex />)
+    : route === 'whitepaper' ? <WhitepaperPage />
+    : route === 'legal' ? (args[0] ? <LegalDoc slug={args[0]} /> : <LegalHub />)
+    : route === 'privacy' || route === 'terms' ? <LegalDoc slug={route} />
+    : route === 'contracts' ? <ContractsPage />
+    : route === 'security' ? <SecurityPage />
+    : route === 'status' ? <StatusPage />
+    : page ? undefined
     : <NotFound />
   if (!ready) return null
+  if (site)
+    return (
+      <>
+        <SettingsSheet />
+        <Palette signedIn={!!account} />
+        <div key={`${route}/${args[0] ?? ''}`}>{site}</div>
+      </>
+    )
   // The site root is always the public front page; the app lives at /markets. Sessions persist, so sending signed-in
   // people straight to the app would hide the front page from anyone who has ever signed in.
   if (route === '')
@@ -199,6 +226,7 @@ export default function App() {
             <div className="page" key={`${route}/${args[0] ?? ''}`}>
               <Boundary key={`${route}/${args[0] ?? ''}`}>{page}</Boundary>
             </div>
+            <SiteFooter compact />
           </main>
           <StatusBar />
         </div>
