@@ -6,6 +6,8 @@ import { Breadcrumbs } from './desk'
 import { cancelOrder, buyNow, listAsk, makeOffer, repriceAsk, sellListedNow, sellNow, type Built, type Ctx, type Funds } from './flows'
 import { Button, Copyable, Seg } from './controls'
 import { brand, catalogOf, net } from './config'
+import { V2Trade } from './V2Trade'
+import type { Address } from 'viem'
 import { explorerAddress, explorerTx, hasMarket, loadSkus, marketRules, peekSkus, readBook, tradeHistory, type Fill, type Sku } from './chain'
 import { gql } from './chain'
 import { aggregate, averageBuyUnits, spread, unrealisedPnl, walkAsks, walkBids, type Level } from './logic/orders.ts'
@@ -137,6 +139,10 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
   const title = cardTitle(s.name)
   const label = `${title}, ${parseName(s.name).grader} ${parseName(s.name).grade}`
   const { demo } = parseName(s.name)
+  // Development only: ?v2=<market> forces the Kuru V2 panel onto this page against any V2 market, to exercise it before
+  // Kuru deploys card markets. Production shows it only when the card has its own V2 market.
+  const devV2 = import.meta.env.DEV ? (new URLSearchParams(location.search).get('v2') as Address | null) : null
+  const v2 = devV2 ?? s.v2
   document.title = `${label} | ${brand}`
   const asksAgg = aggregate(book.asks, 'ask')
   const bidsAgg = aggregate(book.bids, 'bid')
@@ -303,6 +309,15 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
 
           <div className="pdp-cols">
           <div className="pdp-main">
+            {v2 && (
+              <section id="kuru-v2" className="pnl pnl-wide" aria-labelledby="h-v2">
+                <header className="pnl-h">
+                  <h2 id="h-v2">Kuru Spot V2</h2>
+                  <span className="pnl-meta">This card also trades on Kuru’s V2 exchange contracts</span>
+                </header>
+                <V2Trade market={v2} account={account} unit={import.meta.env.DEV && v2 !== s.v2 ? 'Base' : 'Cards'} />
+              </section>
+            )}
             <section id="history" className="pnl pnl-wide" aria-labelledby="h-history">
               <header className="pnl-h">
                 <h2 id="h-history">Price history</h2>

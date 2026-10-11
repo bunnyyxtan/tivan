@@ -372,3 +372,17 @@ test('failover: every endpoint down throws rather than returning a bad response'
   const f = failoverFetch(URLS, impl)
   await assert.rejects(() => f(''))
 })
+
+test('Kuru V2 units: card prices in cents, whole cards, off-tick prices refused before they reach the chain', async () => {
+  const { rawPrice, bookQty, CARD_PARAMS } = await import('../src/kuru2.ts')
+  const card = { address: '0x0', base: '0x0', quote: '0x0', pricePrecision: CARD_PARAMS.pricePrecision, sizePrecision: CARD_PARAMS.sizePrecision, tickSize: CARD_PARAMS.tickSize, minQuote: 0n, maxQuote: 0n, takerPps: 0n, makerPps: 0n, mult: 1n } as const
+  assert.equal(rawPrice(card, '5040.32'), 504032)
+  assert.equal(rawPrice(card, '475'), 47500)
+  assert.throws(() => rawPrice(card, '1.234'))
+  assert.throws(() => rawPrice(card, '0'))
+  assert.equal(bookQty(card, '2'), 2n)
+  assert.throws(() => bookQty(card, '2.5'))
+  const mon = { ...card, pricePrecision: 1_000_000, sizePrecision: 1_000_000n }
+  assert.equal(rawPrice(mon, '100'), 100_000_000)
+  assert.equal(bookQty(mon, '0.05'), 50_000n)
+})

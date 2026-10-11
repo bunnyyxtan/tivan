@@ -2002,3 +2002,24 @@ html[data-motion='off'] .lp *, html[data-motion='off'] .lp *::before, html[data-
   .pub-doc-grid, .pub-docs-grid { display: block; }
   .pub-main { padding: 0; }
 }
+
+/* Kuru Spot V2 panel on the card page: the V2 book on the left, balances and the four actions on the right. */
+.v2 { display: grid; grid-template-columns: minmax(0, 260px) minmax(0, 1fr); gap: 28px; }
+.v2-book { display: grid; align-content: start; font: 500 13px/1 var(--font-mono); font-variant-numeric: tabular-nums; }
+.v2-row { display: flex; justify-content: space-between; padding: 7px 10px; border-radius: 6px; }
+.v2-head { padding-top: 0; font: 500 11px/1 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+.v2-row.ask span:first-child { color: var(--negative); }
+.v2-row.bid span:first-child { color: var(--positive); }
+.v2-row:not(.v2-head):hover { background: var(--surface-2); }
+.v2-mid { margin: 4px 0; padding: 8px 10px; border-block: 1px solid var(--line); font-size: 12px; color: var(--ink-3); }
+.v2-side { display: grid; gap: 16px; align-content: start; min-width: 0; }
+.v2-bal { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; margin: 0; }
+.v2-bal dt { font: 500 11px/1 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+.v2-bal dd { margin: 6px 0 0; font: 600 16px/1.2 var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink); }
+.v2-bal small { font: 400 12px var(--font-sans); color: var(--ink-3); }
+.v2-inputs { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 12px; }
+.v2-inputs label { display: grid; gap: 6px; font-size: 12px; color: var(--ink-3); }
+.v2-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.v2-actions.quiet:empty { display: none; }
+.fine.neg { color: var(--negative); }
+@media (max-width: 767px) { .v2 { grid-template-columns: minmax(0, 1fr); } .v2-inputs { grid-template-columns: minmax(0, 1fr); } }

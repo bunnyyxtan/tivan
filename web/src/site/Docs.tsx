@@ -150,6 +150,25 @@ const PAGES: Record<string, () => ReactNode> = {
           <p>Kuru keeps trading balances in its margin account. Buying moves dollars there first, and a sale credits it. The app shows both your wallet and your exchange balance, and withdrawing back to your wallet is one transaction.</p>
         </Prose>
       </Section>
+      <Section id="spot-v2" title="Kuru Spot V2">
+        <Prose>
+          <p>Kuru's newer Spot V2 contracts keep cash and tokens in AccountCore, under one numeric account per owner, and every market is an OrderBook settling against Kuru's own test USDC. Creating a V2 market and enabling a token are permissioned, so each card's V2 book is deployed by Kuru with the parameters below, and a card shows its V2 panel only once that book exists.</p>
+          <p>Tivan finds those books by itself. For every card token it asks the V2 router for the address a market with these parameters would have, and checks the router has verified it. A card with a V2 book shows a Kuru Spot V2 panel on its page, beside its original book, with Buy now, Sell now, Make an offer and List. The panel moves cash and cards into Kuru only when an order needs them, and moves them back to the wallet in one tap.</p>
+        </Prose>
+        <KeyValue
+          items={[
+            ['Price precision', '100, so prices are in cents'],
+            ['Size precision', '1, so one token is one whole card'],
+            ['Tick', '1 cent'],
+            ['Order value', '1 USDC to 5,000,000 USDC'],
+            ['Fees', '0 maker and taker'],
+            ['Passive spread', '10 ticks'],
+          ]}
+        />
+        <Prose>
+          <p>Kuru's test USDC can only be minted by Kuru, so Tivan's relay hands each new account a fixed amount once.</p>
+        </Prose>
+      </Section>
     </>
   ),
 

@@ -2,6 +2,7 @@ import { createPublicClient, createWalletClient, encodeAbiParameters, getAddress
 import { house, indexerUrl, net } from './config'
 import { failoverFetch } from './logic/failover'
 import type { Level } from './logic/orders'
+import { findCardMarkets } from './kuru2'
 
 // NOTE: public Monad RPCs allow roughly 15-25 requests/sec per IP each (batched calls count individually). Every call
 // goes through one client-side limiter with a budget per endpoint: reads take whichever endpoint has room, writes and
@@ -53,7 +54,7 @@ export const pub = createPublicClient({ chain: net.chain, transport, batch: { mu
 const directFetch = failoverFetch(net.rpcs.map((e) => e.url))
 const direct = http(undefined, { retryCount: 3, fetchFn: directFetch })
 export const fast = createPublicClient({ chain: net.chain, transport: direct })
-const walletFor = (account: Account) => createWalletClient({ account, chain: net.chain, transport: direct })
+export const walletFor = (account: Account) => createWalletClient({ account, chain: net.chain, transport: direct })
 
 export const vaultAbi = parseAbi([
   'function skuOf(uint256 specId, uint8 grade) pure returns (bytes32)',
@@ -114,6 +115,8 @@ export type Sku = {
   ask?: number
   /** Price of the most recent sale, in dollars. Needs the indexer; undefined when there is none or it is unavailable. */
   last?: number
+  /** The card's Kuru Spot V2 market, when Kuru has deployed one; it trades beside the original book. */
+  v2?: Address
 }
 
 type Listed = { sku: Hex; token: Address; market: Address; name: string; last?: number }
@@ -252,7 +255,16 @@ async function fetchSkus(): Promise<Sku[]> {
       }
     }),
   )
-  return all
+  const v2 = await v2Markets(all.map((s) => s.token))
+  return all.map((s) => ({ ...s, v2: v2.get(s.token.toLowerCase()) }))
+}
+
+// Kuru Spot V2 markets appear only when Kuru deploys them, so the lookup is cached for a minute and never blocks the list.
+let v2Seen: { t: number; p: Promise<Map<string, Address>> } | undefined
+function v2Markets(tokens: Address[]): Promise<Map<string, Address>> {
+  if (net.name !== 'testnet') return Promise.resolve(new Map())
+  if (!v2Seen || Date.now() - v2Seen.t > 60_000) v2Seen = { t: Date.now(), p: findCardMarkets(pub, tokens).catch((e) => (console.warn('Kuru V2 lookup failed', e), new Map())) }
+  return v2Seen.p
 }
 
 const tradeEvent = parseAbiItem('event Trade(uint40 orderId, address makerAddress, bool isBuy, uint256 price, uint96 updatedSize, address takerAddress, address txOrigin, uint96 filledSize)')
