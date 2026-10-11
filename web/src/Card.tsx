@@ -367,7 +367,7 @@ export function CardPage({ sku, account }: { sku: string; account: Acct }) {
 
             {(owned > 0n || mine.length > 0) && (
               <section id="position" className="pnl pnl-full" aria-labelledby="h-position">
-                <header className="pnl-h"><h2 id="h-position">Your position</h2></header>
+                <header className="pnl-h"><h2 id="h-position">Your position</h2>{owned > 0n && <a className="btn xs" href={`/redeem/${sku}`}>Request the card</a>}</header>
                 <dl className="vals">
                   <div><dt>Holdings</dt><dd>{formatQty(owned)}</dd><small>{listed > 0n ? `${formatQty(listed)} listed for sale` : 'In your account'}</small></div>
                   <div><dt>Average cost</dt><dd>{avg ? usdU(avg.avgUnits, 2) : '—'}</dd><small>{avg ? `Average price of ${formatQty(avg.qty)} purchase${avg.qty === 1n ? '' : 's'} on this market` : 'Needs a card bought on this market'}</small></div>
