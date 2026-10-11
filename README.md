@@ -203,6 +203,14 @@ MAKER_KEY=0x... node maker.mjs --once   # one pass
 Parts of the code, tests and documentation were written with AI coding assistants. The design, review and testing are
 the author's.
 
+## Contributing and security
+
+Setup, the checks to run and the commit style are in
+[CONTRIBUTING.md](.github/CONTRIBUTING.md). Report anything that could put
+accounts at risk privately, as described in [SECURITY.md](.github/SECURITY.md),
+never in a public issue. Participation follows the
+[Code of Conduct](.github/CODE_OF_CONDUCT.md).
+
 ## License
 
 [MIT](LICENSE)
