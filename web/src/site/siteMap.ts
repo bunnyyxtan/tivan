@@ -59,7 +59,7 @@ export const legalBySlug = (slug: string) => LEGAL.find((l) => l.slug === slug)
 export type SiteLink = [label: string, href: string]
 export const FOOTER_GROUPS: { title: string; links: SiteLink[] }[] = [
   { title: 'Product', links: [['Markets', '/markets'], ['Browse', '/browse'], ['Sell a card', '/sell'], ['Vault a card', '/vault'], ['Portfolio', '/collection'], ['League', '/league']] },
-  { title: 'Protocol', links: [['Documentation', '/docs'], ['Whitepaper', '/whitepaper'], ['How it works', '/docs/how-it-works'], ['Order books', '/docs/order-books'], ['Grade verification', '/docs/verification'], ['Glossary', '/docs/glossary']] },
+  { title: 'Protocol', links: [['Documentation', '/docs'], ['Whitepaper', '/whitepaper'], ['How Tivan earns', '/economics'], ['How it works', '/docs/how-it-works'], ['Order books', '/docs/order-books'], ['Grade verification', '/docs/verification'], ['Glossary', '/docs/glossary']] },
   { title: 'Trust', links: [['Contracts', '/contracts'], ['Security', '/security'], ['Status', '/status'], ['Source code', REPO], ['Agent plugin', '/docs/agent-plugin'], ['Help center', '/help']] },
   { title: 'Legal', links: [['Legal hub', '/legal'], ...(['terms', 'privacy', 'cookies', 'risk', 'testnet', 'ai'] as const).flatMap((s) => LEGAL.filter((l) => l.slug === s).map((l) => [l.title, legalHref(l.slug)] as SiteLink))] },
 ]
@@ -72,6 +72,7 @@ const INDEX: (SearchHit & { words: string })[] = [
   ...DOCS.map((d) => ({ section: 'Docs', title: d.title, summary: d.summary, href: docHref(d.slug), words: d.keywords.join(' ') })),
   ...LEGAL.map((l) => ({ section: 'Legal', title: l.title, summary: l.summary, href: legalHref(l.slug), words: '' })),
   { section: 'Protocol', title: 'Whitepaper', summary: 'The design document: the vault, one book per card, verification, custody and the trust model.', href: '/whitepaper', words: 'design paper' },
+  { section: 'Protocol', title: 'How Tivan earns', summary: 'The four revenue lines, the rates intended for each, and the order they switch on.', href: '/economics', words: 'business model fees revenue custody lending economics pricing' },
   { section: 'Trust', title: 'Contracts', summary: 'Every deployed address with a link to the explorer.', href: '/contracts', words: 'address vault token oracle' },
   { section: 'Trust', title: 'Security', summary: 'How keys, sessions, the relay and the website are protected, and how to report a problem.', href: '/security', words: 'csp headers audit report bug' },
   { section: 'Trust', title: 'Status', summary: 'Live checks of the chain, the indexer and the attestor.', href: '/status', words: 'uptime health live' },

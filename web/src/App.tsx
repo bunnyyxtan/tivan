@@ -25,6 +25,7 @@ import { SiteFooter } from './site/Layout'
 import { DocPage, DocsIndex } from './site/Docs'
 import { LegalDoc, LegalHub, NotFound } from './site/Legal'
 import { ContractsPage, SecurityPage, StatusPage } from './site/Trust'
+import { EconomicsPage } from './site/Economics'
 import { WhitepaperPage } from './site/Whitepaper'
 import { docBySlug, legalBySlug } from './site/siteMap'
 import { Boundary, OfflineBar } from './Boundary'
@@ -90,7 +91,7 @@ export default function App() {
     const page =
       route === 'docs' && args[0] ? docBySlug(args[0])?.title
       : legal ? legalBySlug(legal)?.title
-      : { browse: 'Browse', compare: 'Compare', collection: 'Portfolio', activity: 'Activity', sell: 'Sell a card', vault: 'Vault a card', you: 'Account', help: 'Help', league: 'League', redeem: 'Request the card', markets: 'Markets', docs: 'Documentation', whitepaper: 'Whitepaper', legal: 'Legal', contracts: 'Contracts', security: 'Security', status: 'Status' }[route]
+      : { browse: 'Browse', compare: 'Compare', collection: 'Portfolio', activity: 'Activity', sell: 'Sell a card', vault: 'Vault a card', you: 'Account', help: 'Help', league: 'League', redeem: 'Request the card', markets: 'Markets', docs: 'Documentation', whitepaper: 'Whitepaper', economics: 'How Tivan earns', legal: 'Legal', contracts: 'Contracts', security: 'Security', status: 'Status' }[route]
     const cardPage = route === 'card' || (['buy', 'sell', 'offer', 'done'].includes(route) && !!args[0])
     if (!cardPage) document.title = page ? `${page} | ${brand}` : route ? `Page not found | ${brand}` : `${brand} | Graded card exchange on Monad`
     // One canonical address per page, without the query, so search engines do not index every filter as its own page.
@@ -133,6 +134,7 @@ export default function App() {
   const site =
     route === 'docs' ? (args[0] ? <DocPage slug={args[0]} /> : <DocsIndex />)
     : route === 'whitepaper' ? <WhitepaperPage />
+    : route === 'economics' ? <EconomicsPage />
     : route === 'legal' ? (args[0] ? <LegalDoc slug={args[0]} /> : <LegalHub />)
     : route === 'privacy' || route === 'terms' ? <LegalDoc slug={route} />
     : route === 'contracts' ? <ContractsPage />

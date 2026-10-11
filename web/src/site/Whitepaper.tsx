@@ -18,6 +18,7 @@ export function WhitepaperPage() {
       after={
         <Related
           links={[
+            ['How Tivan earns', '/economics', 'The four revenue lines, their rates, and the order they switch on.'],
             ['Documentation', '/docs', 'The mechanism at working depth, one page per subject.'],
             ['Contracts', '/contracts', 'Addresses and roles, linked to the explorer.'],
             ['Security', '/security', 'The trust model and how to report a problem.'],
@@ -107,7 +108,8 @@ export function WhitepaperPage() {
 
       <Section id="economics" title="10. Economics">
         <Prose>
-          <p>Trading fees are 0% today. The plan is a taker fee well below the low-teens percentage of the large marketplaces, a fee for vaulting and for redemption that covers handling and insurance, and revenue from liquidity {brand} provides on new books until outside market makers arrive. Each fee will be set in the contracts and shown on every review screen before anyone confirms.</p>
+          <p>Trading fees are 0% today. Each book takes its taker and maker fee as parameters when the vault deploys it, so a fee is a number set on new books rather than a new contract, and the rate in force is read from the book and shown on the review screen before anyone confirms.</p>
+          <p>The plan is custody charged on the insured value held, a taker fee an order of magnitude below the large marketplaces with makers paying nothing, flat fees for vaulting and redemption that cover handling and insurance, and later credit against a vaulted slab priced off that slab’s own book. Revenue from the liquidity {brand} provides on a new book is a bridge until outside market makers arrive, not a permanent line. The full model, with rates and the order they switch on, is on the <A href="/economics">how {brand} earns</A> page.</p>
         </Prose>
       </Section>
 
