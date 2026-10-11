@@ -11,7 +11,7 @@ import { DOC_GROUPS, DOCS, FOOTER_GROUPS, FOOTER_RAIL, docHref, docNeighbours, i
 const ext = (href: string) => (isExternal(href) ? { target: '_blank', rel: 'noreferrer' } : {})
 
 export function PublicNav() {
-  const links: [string, string][] = [['Markets', '/markets'], ['Docs', '/docs'], ['Whitepaper', '/whitepaper'], ['Security', '/security'], ['Legal', '/legal']]
+  const links: [string, string][] = [['Markets', '/markets'], ['Docs', '/docs'], ['Whitepaper', '/whitepaper'], ['Economics', '/economics'], ['Security', '/security'], ['Legal', '/legal']]
   const here = location.pathname
   return (
     <header className="pub-nav">
