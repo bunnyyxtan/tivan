@@ -3,7 +3,7 @@ import { flushSync } from 'react-dom'
 import type { LocalAccount } from 'viem'
 import { SESSION_MS, createAccount, deviceAccount, endSession, friendlyError, hasDeviceKey, prfUnavailable, restoreSession, savedPasskey, signIn, signOut } from './account'
 import { openSettings } from './fx'
-import { IconActivity, IconChevron, IconKeystone, IconCollection, IconCompass, IconHelp, IconMarkets, IconSettings, IconTag, IconVault, IconYou } from './icons'
+import { IconActivity, IconChevron, IconKeystone, IconCollection, IconCompass, IconDocs, IconHelp, IconMarkets, IconSettings, IconTag, IconVault, IconYou } from './icons'
 import { SettingsSheet } from './Settings'
 import { attestorUrl, brand, net } from './config'
 import { CardPage } from './Card'
@@ -21,7 +21,6 @@ import { Activity } from './ActivityPage'
 import { TxChip } from './tx'
 import { Palette } from './Palette'
 import { HelpPage } from './Help'
-import { SiteFooter } from './site/Layout'
 import { DocPage, DocsIndex } from './site/Docs'
 import { LegalDoc, LegalHub, NotFound } from './site/Legal'
 import { ContractsPage, SecurityPage, StatusPage } from './site/Trust'
@@ -200,6 +199,7 @@ export default function App() {
           <div className="side-low">
             <DemoStrip />
             <nav className="side-nav" aria-label="Support">
+              <a href="/docs" title={rail ? 'Documentation' : undefined}><IconDocs /><span>Docs</span></a>
               <a href="/help" title={rail ? 'Help' : undefined} className={tab === 'help' ? 'on' : ''} aria-current={tab === 'help' ? 'page' : undefined}><IconHelp /><span>Help</span></a>
               <button title={rail ? 'Settings' : undefined} onClick={openSettings}><IconSettings /><span>Settings</span></button>
             </nav>
@@ -228,7 +228,6 @@ export default function App() {
             <div className="page" key={`${route}/${args[0] ?? ''}`}>
               <Boundary key={`${route}/${args[0] ?? ''}`}>{page}</Boundary>
             </div>
-            <SiteFooter compact />
           </main>
           <StatusBar />
         </div>

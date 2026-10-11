@@ -331,15 +331,15 @@ function Plate() {
 }
 
 /** The one footer: identity, four link groups, a small-print rail and the network line. */
-export function SiteFooter({ compact = false }: { compact?: boolean }) {
+export function SiteFooter() {
   return (
-    <footer className={`site-foot ${compact ? 'compact' : ''}`}>
+    <footer className="site-foot">
       <Plate />
       <div className="pub-wrap site-foot-in">
         <div className="site-foot-top">
           <div className="site-foot-id">
             <a href="/" className="site-foot-word" aria-label={`${brand} home`}>
-              <span className="brand-mark" aria-hidden><IconKeystone h={compact ? 24 : 34} /></span>
+              <span className="brand-mark" aria-hidden><IconKeystone h={34} /></span>
               <span>{brand}</span>
             </a>
             <p>The graded card exchange where every card and grade has its own order book.</p>
