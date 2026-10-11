@@ -1447,10 +1447,7 @@ button.method:disabled { opacity: 0.6; cursor: not-allowed; }
 .lp-nav nav a::after { content: ''; position: absolute; left: 0; right: 0; bottom: -6px; height: 2px; border-radius: 2px; background: var(--lp-green); transform: scaleX(0); transition: transform 0.25s var(--lp-ease); }
 .lp-nav nav a:hover { color: #fff; }
 .lp-nav nav a:hover::after { transform: scaleX(1); }
-.lp-search { display: flex; align-items: center; gap: 8px; margin-left: auto; height: 36px; padding: 0 8px 0 12px; min-width: 240px; border-radius: 999px; background: #10332d; border: 1px solid #235347; color: #a3c6ae; font-size: 13px; }
-.lp-search .ico { width: 15px; height: 15px; }
-.lp-search kbd { margin-left: auto; background: #163832; border-color: #2f6455; color: #c3dfca; }
-.lp-signin { font: 600 12px/1 var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--lp-mint); }
+.lp-signin { margin-left: auto; font: 600 12px/1 var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--lp-mint); }
 .lp-btn { position: relative; display: inline-flex; align-items: center; justify-content: center; height: 50px; padding: 0 28px; overflow: hidden; border-radius: 999px; background: var(--lp-green); color: var(--lp-dark); font: 700 13px/1 var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; box-shadow: 0 10px 30px rgba(63, 229, 155, 0.28); transition: transform 0.2s var(--lp-ease), box-shadow 0.2s; }
 .lp-btn::after { content: ''; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.55) 50%, transparent 70%); transform: translateX(-120%); transition: transform 0.7s var(--lp-ease); }
 .lp-btn:hover { transform: translateY(-2px); box-shadow: 0 16px 36px rgba(63, 229, 155, 0.38); }
@@ -1763,8 +1760,7 @@ button.method:disabled { opacity: 0.6; cursor: not-allowed; }
 
 @media (min-width: 1024px) { .lp-hero .lp-poster .ln { white-space: nowrap; } }
 @media (max-width: 1023px) {
-  .lp-nav nav, .lp-search { display: none; }
-  .lp-signin { margin-left: auto; }
+  .lp-nav nav { display: none; }
   .lp-hero { min-height: 0; }
   .lp-hero-in, .lp-ex-in, .lp-pull-in, .lp-cta-in { grid-template-columns: 1fr; }
   .lp-term-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }

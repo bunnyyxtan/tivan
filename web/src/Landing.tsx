@@ -6,9 +6,8 @@ import { confetti, still } from './celebrate'
 import { ago, useSales } from './desk'
 import { aggregate } from './logic/orders.ts'
 import { formatBps, formatQty } from './logic/money.ts'
-import { openPalette } from './Palette'
 import { SiteFooter } from './site/Layout'
-import { IconChevron, IconKeystone, IconSearch } from './icons'
+import { IconChevron, IconKeystone } from './icons'
 import { Slab, cardTitle, parseName, usePoll } from './ui'
 
 // The public front door, shown at the site root to visitors. A poster-style hero over a moving wall of cards, a tape of
@@ -538,7 +537,6 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
             <a href="/sell">Sell</a>
             <a href="/help">Help</a>
           </nav>
-          <button className="lp-search" onClick={openPalette}><IconSearch />Search cards and sets<kbd>Ctrl K</kbd></button>
           {signedIn ? <a className="lp-signin" href="/collection">Portfolio</a> : <a className="lp-signin" href="/you">Sign in</a>}
           <a className="lp-btn sm" href="/markets">Open the app</a>
         </div>
