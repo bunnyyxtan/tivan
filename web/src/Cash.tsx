@@ -5,6 +5,7 @@ import { erc20Abi, explorerAddress, marginAbi, pub, sendTx } from './chain'
 import { net } from './config'
 import { centsToUnits, formatUsd, parseAmount, toDecimal } from './logic/money.ts'
 import { usePortfolio } from './portfolio'
+import { V2, balanceOf, rootIdOf } from './kuru2.ts'
 import { cents } from './cardParts'
 import { useTx, useTxLog, writeLog, type StepSpec, type TxSpec } from './tx'
 import { usePoll } from './ui'
@@ -30,13 +31,25 @@ export function reservedUnits(orders?: Record<string, { price: number; size: num
   return Object.values(orders ?? {}).flat().filter((o) => o.isBuy).reduce((n, o) => n + centsToUnits(cents(o.price)) * BigInt(o.size), 0n)
 }
 
-/** The header's balance: available cash and Add. It opens the cash sheet. */
+/** The header's balance: available cash and Add. It opens the cash sheet. When the account holds Kuru V2 test USDC
+ *  (in the wallet or inside Kuru), that total shows as a second figure so moving it into the exchange never looks lost. */
 export function BalancePill({ account }: { account: LocalAccount }) {
   const { data } = usePortfolio(account.address)
+  const { data: v2 } = usePoll(async () => {
+    const [wallet, root] = await Promise.all([
+      pub.readContract({ address: V2.usdc, abi: erc20Abi, functionName: 'balanceOf', args: [account.address] }),
+      rootIdOf(pub, account.address),
+    ])
+    if (!root) return wallet
+    const b = await balanceOf(pub, root, V2.usdc)
+    return wallet + b.free + b.reserved
+  }, 5000, [account.address])
   const available = data ? data.cashRaw + data.exCashRaw : undefined
+  const label = `${available === undefined ? 'Checking balance' : `${usd(available, 2)} available`}${v2 ? `, plus ${usd(v2, 2)} on Kuru V2` : ''}. Add cash`
   return (
-    <button className="cash-pill" data-tour="cash" onClick={openCash} aria-label={`${available === undefined ? 'Checking balance' : `${usd(available, 2)} available`}. Add cash`}>
+    <button className="cash-pill" data-tour="cash" onClick={openCash} aria-label={label}>
       {available === undefined ? '…' : usd(available)}
+      {v2 ? <b className="cash-v2">{usd(v2)} V2</b> : null}
       <span>Add</span>
     </button>
   )
