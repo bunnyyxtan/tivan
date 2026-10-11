@@ -209,9 +209,7 @@ main { flex: 1; width: 100%; max-width: 1760px; padding: 28px var(--gut) 64px; }
 .statusbar { position: sticky; bottom: 0; z-index: 20; display: flex; align-items: center; gap: 18px; height: 34px; padding: 0 var(--gut); border-top: 1px solid var(--line); background: var(--canvas); font: 500 11px/1 var(--font-mono); letter-spacing: 0.02em; color: var(--ink-3); }
 .statusbar .net-chip { height: 22px; padding: 0 8px; font: inherit; border-radius: 6px; }
 .sb-item { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
-.sb-item i { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-3); }
-.sb-item.ok i { background: var(--positive); box-shadow: 0 0 0 3px var(--positive-tint); }
-.sb-item.bad i { background: var(--negative); }
+.sb-item.bad { color: var(--negative); }
 .sb-gap { flex: 1; }
 .sb-theme { display: inline-flex; gap: 2px; padding: 2px; border-radius: 6px; background: var(--surface-1); border: 1px solid var(--line); }
 .sb-theme button { height: 20px; padding: 0 8px; border-radius: 4px; font: inherit; color: var(--ink-3); }
@@ -403,9 +401,8 @@ label.lab, .lab { display: flex; flex-direction: column; gap: 8px; font: var(--f
 .phead-sub { margin-top: 6px; font-size: 14px; color: var(--ink-2); }
 .phead-sub b { color: var(--ink); font-weight: 500; }
 .phead-act { display: flex; gap: 8px; flex-wrap: wrap; }
-.live { display: inline-flex; align-items: center; gap: 6px; font: 500 12px/1 var(--font-mono); color: var(--ink-2); }
-.live i { width: 6px; height: 6px; border-radius: 50%; background: var(--positive); box-shadow: 0 0 0 3px var(--positive-tint); animation: pulse 2.4s ease-in-out infinite; }
-@keyframes pulse { 50% { box-shadow: 0 0 0 5px transparent; } }
+.live-tag { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border: 1px solid var(--line-strong); border-radius: 6px; font: 500 10.5px/1 var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2); }
+.live-at { white-space: nowrap; }
 .crumbs ol { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; padding: 0; list-style: none; font-size: 13px; color: var(--ink-3); }
 .crumbs li + li::before { content: '/'; margin-right: 6px; color: var(--line-strong); }
 .crumbs li[aria-current] { color: var(--ink-2); }
@@ -1079,6 +1076,18 @@ label.lab, .lab { display: flex; flex-direction: column; gap: 8px; font: var(--f
   .card-title { font-size: 28px; }
 }
 .buy-actions > :nth-child(2):last-child { grid-column: 1 / -1; }
+/* The markets table fits its panel at every width: it measures its own width (the sidebar can be open or folded),
+   long names truncate, and the least used columns step aside in order, Vaulted, Recent sales, Last sale, Change,
+   so Buy is always in view and the panel never scrolls sideways. */
+.dash .tscroll { container-type: inline-size; }
+.dash .dtable :is(th, td):nth-child(2) { width: 100%; max-width: 0; }
+.dash .tcard > span { overflow: hidden; }
+.dash .tcard :is(b, small) { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@container (max-width: 1180px) { .dash .dtable :is(th, td):nth-child(8) { display: none; } }
+@container (max-width: 1060px) { .dash .dtable :is(th, td):nth-child(7) { display: none; } }
+@container (max-width: 900px) { .dash .dtable :is(th, td):nth-child(5) { display: none; } }
+@container (max-width: 760px) { .dash .dtable :is(th, td):nth-child(6) { display: none; } }
+@container (max-width: 660px) { .dash .dtable :is(th, td):nth-child(1) { display: none; } .dash .dtable :is(th, td):nth-child(2) { padding-left: 16px; } }
 /* the markets table on smaller screens: market, ask and change carry the row */
 @media (max-width: 1023px) { .dash .dtable :is(th, td):nth-child(7), .dash .dtable :is(th, td):nth-child(8) { display: none; } }
 @media (max-width: 640px) {
@@ -1086,7 +1095,6 @@ label.lab, .lab { display: flex; flex-direction: column; gap: 8px; font: var(--f
   .dash .dtable :is(th, td):nth-child(2) { padding-left: 16px; }
   .tpanel { padding: 0 16px 4px; }
   .tscroll { margin: 0 -16px -4px; }
-  .dash .tcard b { max-width: 18ch; }
 }
 .item-wrap:hover .fresh, .item-wrap:focus-within .fresh { opacity: 0; }
 /* browse table: the less used columns step aside as the screen narrows */
@@ -1951,11 +1959,6 @@ html[data-motion='off'] .lp *, html[data-motion='off'] .lp *::before, html[data-
 .site-foot-word .brand-mark { width: 0.74em; height: 0.74em; border-radius: 0.22em; }
 .site-foot-word .brand-mark svg { width: 56%; height: auto; }
 .site-foot-id > p { max-width: 32ch; font-size: 16px; line-height: 1.6; color: var(--ink-2); }
-.site-foot-id .pub-eyebrow { margin-top: 12px; }
-.site-foot-contact { font-size: 15px; }
-.site-foot-contact a { font-weight: 500; color: var(--ink); }
-.site-foot-contact a:hover { color: var(--brand); }
-.site-foot-contact span { color: var(--ink-3); }
 .site-foot-cols { flex: 1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 40px 28px; }
 .site-foot-cols nav { display: grid; gap: 14px; align-content: start; }
 .site-foot-cols nav .pub-eyebrow { margin-bottom: 8px; }

@@ -69,13 +69,9 @@ export function Stat({ label, value, note, tone }: { label: string; value: React
 }
 
 /** A live dot and the time the data was read. */
-export const Live = ({ at, label = 'Live' }: { at?: number; label?: string }) => (
-  <span className="live">
-    <i aria-hidden />
-    {label}
-    {at ? ` · ${new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}
-  </span>
-)
+/** Freshness without a pulsing dot: a quiet LIVE tag on a feed, or the time of the last read beside a figure. */
+export const Live = ({ at, label = 'Live' }: { at?: number; label?: string }) =>
+  at ? <span className="live-at">Updated {new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span> : <span className="live-tag">{label}</span>
 
 /** The market tile used in every grid: the slab on its stage, then price, change, the recent sales and the depth. */
 export function MarketTile({ s, c, pts, tag, at }: { s: Sku; c?: Change; pts: number[]; tag?: string; at?: number }) {

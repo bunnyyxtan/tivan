@@ -24,8 +24,7 @@ export function StatusBar() {
   return (
     <footer className="statusbar" aria-label="Status">
       <NetworkChip />
-      <span className={`sb-item ${down ? 'bad' : block ? 'ok' : ''}`} role="status">
-        <i aria-hidden />
+      <span className={`sb-item ${down ? 'bad' : ''}`} role="status">
         {down ? 'Reconnecting to the network' : block ? `Block ${block.toLocaleString('en-US')}` : 'Connecting'}
       </span>
       <span className="sb-item sb-wide">Trades from {indexerUrl ? 'the Envio indexer' : 'recent chain logs'}</span>

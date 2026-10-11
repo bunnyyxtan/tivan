@@ -343,10 +343,6 @@ export function SiteFooter({ compact = false }: { compact?: boolean }) {
               <span>{brand}</span>
             </a>
             <p>The graded card exchange where every card and grade has its own order book.</p>
-            <span className="pub-eyebrow">Contact</span>
-            <p className="site-foot-contact">
-              <a href={`https://github.com/bunnyyxtan/tivan/issues`} target="_blank" rel="noreferrer">bunnyyxtan/tivan</a> <span>on GitHub</span>
-            </p>
           </div>
           <div className="site-foot-cols">
             {FOOTER_GROUPS.map((g) => (
@@ -366,9 +362,6 @@ export function SiteFooter({ compact = false }: { compact?: boolean }) {
         </div>
         <div className="site-foot-bottom">
           <span><IconKeystone h={14} /> 2026 {brand}</span>
-          <a href="/status">
-            {net.chain.name} · chain {net.chain.id}{net.name === 'testnet' ? ' · test dollars, simulated custody' : ''}
-          </a>
           {net.vault && <a href={explorerAddress(net.vault)} target="_blank" rel="noreferrer">Built on Monad</a>}
         </div>
       </div>
