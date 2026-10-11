@@ -10,7 +10,7 @@ import { cents } from './cardParts'
 import { useTx, useTxLog, writeLog, type StepSpec, type TxSpec } from './tx'
 import { usePoll } from './ui'
 import { drip } from './attestor'
-import { IconClose } from './icons'
+import { IconClose, IconInfo } from './icons'
 
 export const openCash = () => dispatchEvent(new Event('tivan-cash'))
 /** Goes straight to the review for $10,000 of test dollars (testnet), the shortest path to a first transaction. */
@@ -49,7 +49,11 @@ export function BalancePill({ account }: { account: LocalAccount }) {
   return (
     <button className="cash-pill" data-tour="cash" onClick={openCash} aria-label={label}>
       {available === undefined ? '…' : usd(available)}
-      {v2 ? <b className="cash-v2">{usd(v2)} V2</b> : null}
+      {v2 ? (
+        <b className="cash-v2" title="Your cash on Kuru's new V2 exchange, in test USDC. Counts your wallet plus anything you have moved into Kuru.">
+          {usd(v2)} V2 <IconInfo size={13} />
+        </b>
+      ) : null}
       <span>Add</span>
     </button>
   )

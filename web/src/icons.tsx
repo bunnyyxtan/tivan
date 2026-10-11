@@ -92,6 +92,12 @@ export const IconHelp = ({ size }: { size?: number }) => (
     <path d="M9.6 9.5a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.1-2.4 3.6M12 17h.01" />
   </Icon>
 )
+export const IconInfo = ({ size }: { size?: number }) => (
+  <Icon size={size}>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M12 11v5.5M12 7.5h.01" />
+  </Icon>
+)
 export const IconDocs = ({ size }: { size?: number }) => (
   <Icon size={size}>
     <path d="M5.5 4.5h8l5 5v10a1 1 0 0 1-1 1h-12a1 1 0 0 1-1-1v-14a1 1 0 0 1 1-1Z" />
