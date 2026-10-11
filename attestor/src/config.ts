@@ -23,6 +23,8 @@ const networks = {
     gradeOracle: '0x63cbb0c3200ea053c3d487b31f4f3aa0323db3a0' as Address | undefined,
     // Private-vault storage; the relay pays gas for writes the vault's own keeper key signed (contracts/src/SealedBox.sol)
     sealedBox: '0x6f2e62cb9fd52c23348d8a26140cb6eb2aaf61b9' as Address | undefined,
+    // Kuru Spot V2 test USDC. Only Kuru can mint it, so the relay hands out what Kuru sent it (POST /v2/usdc).
+    kuruUsdc: '0xA402B424f392EAA05DBc8779e4502A1F6A96fEF1' as Address | undefined,
     drip: true,
   },
   mainnet: {
@@ -37,6 +39,7 @@ const networks = {
     kuruRouter: '0xd651346d7c789536ebf06dc72aE3C8502cd695CC' as Address,
     gradeOracle: undefined as Address | undefined,
     sealedBox: undefined as Address | undefined,
+    kuruUsdc: undefined as Address | undefined,
     drip: false,
   },
 } as const

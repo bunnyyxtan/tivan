@@ -1,7 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { timingSafeEqual } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
-import { createPublicClient, createWalletClient, formatEther, http, isAddress, getAddress, parseAbi, parseEther, BaseError, type Address } from 'viem'
+import { createPublicClient, createWalletClient, formatEther, formatUnits, http, isAddress, getAddress, parseAbi, parseEther, parseUnits, BaseError, type Address } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { network, deployerKey, port, custodyToken } from './config.ts'
 import { demoRegistryRecord, verifyCert } from './psa.ts'
@@ -94,6 +94,10 @@ async function sendNow(functionName: 'attest' | 'confirmCustody', args: readonly
 }
 
 const boxAbi = parseAbi(['function put(bytes32 locator, bytes box, uint256 nonce, bytes sig)'])
+const erc20 = parseAbi(['function balanceOf(address) view returns (uint256)', 'function transfer(address, uint256) returns (bool)'])
+// NOTE: in-memory, like the hourly caps. Limit: a redeploy lets an address claim again; the hourly cap still bounds it.
+const usdcGiven = new Set<string>()
+const USDC_GIFT = parseUnits(process.env.V2_USDC ?? '10000', 6)
 
 const hex = (v: unknown, field: string, minBytes: number, maxBytes: number): `0x${string}` => {
   if (typeof v !== 'string' || !/^0x([0-9a-fA-F]{2})*$/.test(v) || (v.length - 2) / 2 < minBytes || (v.length - 2) / 2 > maxBytes) throw new HttpError(400, `${field}: hex, ${minBytes}-${maxBytes} bytes`)
@@ -161,6 +165,30 @@ const routes: Record<string, (b: Record<string, unknown>, req: IncomingMessage) 
     } else cap('too many custody confirmations this hour, try again later', [`custody-ip:${clientIp(req)}`, 20], ['custody', 60])
     const certId = uint(b.certId, 'certId', U256)
     return { txHash: await send('confirmCustody', [certId]) }
+  },
+
+  // Kuru Spot V2 settles in Kuru's own test USDC, which nobody but Kuru can mint. The relay passes on what Kuru sent it:
+  // a fixed amount, once per address, capped per visitor and per hour like the gas drip.
+  async '/v2/usdc'(b, req) {
+    if (!network.kuruUsdc) throw new HttpError(403, 'Kuru test USDC is testnet only')
+    const to = addr(b.address, 'address')
+    if (usdcGiven.has(to)) throw new HttpError(409, 'this address already received Kuru test USDC')
+    if ((await pub.readContract({ address: network.kuruUsdc, abi: erc20, functionName: 'balanceOf', args: [account.address] })) < USDC_GIFT)
+      throw new HttpError(503, 'Kuru test USDC is not available yet')
+    cap('too many USDC requests this hour, try again later', [`usdc-ip:${clientIp(req)}`, 3], ['usdc', 60])
+    usdcGiven.add(to)
+    try {
+      const hash = await serial(async () => {
+        const { request } = await pub.simulateContract({ account, address: network.kuruUsdc!, abi: erc20, functionName: 'transfer', args: [to, USDC_GIFT] })
+        const h = await wallet.writeContract(request)
+        await pub.waitForTransactionReceipt({ hash: h })
+        return h
+      })
+      return { txHash: hash, amount: formatUnits(USDC_GIFT, 6) }
+    } catch (e) {
+      usdcGiven.delete(to)
+      throw e
+    }
   },
 
   async '/drip'(b, req) {
