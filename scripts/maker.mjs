@@ -63,8 +63,11 @@ const quote = (ref, short, grade) => {
 const key = process.env.MAKER_KEY
 if (!key) throw new Error('Set MAKER_KEY to a funded testnet key')
 const account = privateKeyToAccount(key)
-const pub = createPublicClient({ chain: monadTestnet, transport: http() })
-const wal = createWalletClient({ account, chain: monadTestnet, transport: http() })
+// Prefer the dedicated RPC (Alchemy) that Render sets for the attestor; the public testnet RPC rate-limits Render's
+// shared egress IPs, which is what the retrying "RPC Request failed" passes in the logs were.
+const rpc = process.env.RPC_URL || undefined
+const pub = createPublicClient({ chain: monadTestnet, transport: http(rpc) })
+const wal = createWalletClient({ account, chain: monadTestnet, transport: http(rpc) })
 
 const vaultAbi = parseAbi(['function skuInfo(bytes32) view returns (address token, address market, uint256 vaulted)'])
 const erc20 = parseAbi(['function balanceOf(address) view returns (uint256)', 'function approve(address,uint256) returns (bool)'])
@@ -163,7 +166,7 @@ async function pass() {
 // maker's quotes, buying a copy it does not hold and selling one it does, so the sales feed shows many cards, not just one.
 // NOTE: untested on chain at the time of writing. Limit: one copy at a time, crossing orders at the top of book.
 const taker = process.env.TAKER_KEY ? privateKeyToAccount(process.env.TAKER_KEY) : undefined
-const takerWal = taker && createWalletClient({ account: taker, chain: monadTestnet, transport: http() })
+const takerWal = taker && createWalletClient({ account: taker, chain: monadTestnet, transport: http(rpc) })
 let tick = 0
 async function takerPass() {
   if (!taker) return
