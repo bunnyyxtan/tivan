@@ -52,7 +52,7 @@ const DEAD = 2n ** 255n
 /** Kuru returns a sentinel, not 0, when a side of the book is empty. */
 export const live = (x: bigint) => x > 0n && x < DEAD
 
-export const INDEXER = process.env.TIVAN_INDEXER ?? 'https://indexer.dev.hyperindex.xyz/fb766ca/v1/graphql'
+export const INDEXER = process.env.TIVAN_INDEXER ?? 'https://indexer.dev.hyperindex.xyz/c9a41ae/v1/graphql'
 export const orderAbi = parseAbi([
   'function s_orders(uint40) view returns (address owner, uint96 size, uint40 prev, uint40 next, uint40 flippedId, uint32 price, uint32 flippedPrice, bool isBuy)',
 ])
