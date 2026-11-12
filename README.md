@@ -15,6 +15,10 @@ under a second. Holders can redeem the physical slab at any time.
   <img src="docs/screenshots/card-desktop-light.jpg" alt="Card page, desktop, light theme" width="49%">
 </p>
 
+**Status:** a Metropolis hackathon project, kept live as a public demo and portfolio piece. Not actively
+maintained. The market data view depends on a hosted indexer that may lapse; the contracts on Monad testnet are
+permanent.
+
 Built for [Monad Metropolis](https://hackathon.monad.xyz). Tivan runs on Monad testnet. A vault with four DEMO tokens
 is also deployed on mainnet, but it has no order books: Kuru told us on 10 October 2026 that they do not deploy markets
 on mainnet for security reasons. Addresses and transaction hashes are in [docs/DEPLOYMENTS.md](docs/DEPLOYMENTS.md).
